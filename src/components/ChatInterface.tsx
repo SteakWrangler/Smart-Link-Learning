@@ -1,6 +1,6 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Bot, User } from 'lucide-react';
+import { Send, ArrowLeft, Bot, User, Clock, Users, BookOpen } from 'lucide-react';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -73,65 +73,210 @@ Feel free to share as much or as little as you'd like - I'm here to listen and h
     setTimeout(() => {
       let response = '';
       
-      // Simple response logic based on keywords
+      // Enhanced response logic with detailed lesson plans
       if (userMessage.toLowerCase().includes('math')) {
-        response = `I understand math can be challenging! Here are some engaging ways to make math more fun:
+        response = `Here's a complete **Math Adventure Lesson Plan** ready for you to use today:
 
-🎮 **Math Games Ideas:**
-- Use cooking to practice fractions and measurements
-- Play "Math Detective" - hide numbers around the house
-- Use building blocks for geometry and counting
-- Try math apps like Prodigy or Khan Academy Kids
+## 🎯 **"Kitchen Math Explorer" - 45 Minute Lesson**
 
-🧩 **Hands-on Activities:**
-- Use colorful manipulatives (counting bears, blocks)
-- Create math stories with their favorite characters
-- Play board games that involve counting and strategy
+### **Materials Needed:**
+- 2 cups flour
+- 1 cup water
+- Measuring cups (1/4, 1/2, 1 cup)
+- Large mixing bowl
+- Ruler or measuring tape
+- Timer
+- Paper and pencils
+- Small treats for rewards
 
-Would you like me to suggest specific activities based on what math topics they're working on? Also, what does your child enjoy doing in their free time? This will help me tailor the suggestions better! 😊`;
+### **Lesson Structure:**
+
+**⏰ Warm-up (10 minutes)**
+1. Start with a "Math Detective" hunt around the kitchen
+2. Have your child find 5 round objects and 5 square objects
+3. Count them together and write the numbers down
+
+**⏰ Main Activity - Fraction Pizza (25 minutes)**
+1. **Step 1 (5 min):** Mix flour and water to make play dough
+   - Measure 1 cup flour together, let them pour
+   - Add 1/2 cup water, discuss "half"
+2. **Step 2 (10 min):** Roll into a circle for "pizza"
+   - Cut into 2 pieces - "These are halves!"
+   - Cut each half in half - "Now we have quarters!"
+   - Let them arrange and count: "How many quarters make a whole?"
+3. **Step 3 (10 min):** Pizza topping math
+   - Add pretend toppings in patterns
+   - "Put 3 pepperonis on each quarter - how many total?"
+   - Practice addition: 3+3+3+3 = ?
+
+**⏰ Cool Down (10 minutes)**
+- Clean up while skip counting by 2s, 5s, or 10s
+- Review what fractions they learned
+- Give a small celebration treat
+
+### **Learning Goals Achieved:**
+✅ Fractions (halves, quarters, wholes)
+✅ Basic addition and multiplication
+✅ Measurement and counting
+✅ Following multi-step instructions
+
+### **Extension for Tomorrow:**
+Use the same dough to make different shapes and practice geometry!
+
+Would you like me to create another lesson plan for a different math concept, or shall we try a different subject? 😊`;
+
       } else if (userMessage.toLowerCase().includes('reading') || userMessage.toLowerCase().includes('dyslexia')) {
-        response = `Reading support is so important! Here are some strategies that can really help:
+        response = `Here's your **Reading Adventure Lesson Plan** - completely prepared and ready to go:
 
-📚 **Reading Engagement:**
-- Start with books about their interests (dinosaurs, sports, etc.)
-- Try audiobooks while following along with text
-- Use graphic novels and comics
-- Create a cozy reading nook with soft lighting
+## 📚 **"Detective Story Builder" - 40 Minute Lesson**
 
-🎯 **Specific Strategies:**
-- Break reading into short 10-15 minute sessions
-- Use finger tracking or reading rulers
-- Try different fonts (some kids read better with dyslexia-friendly fonts)
-- Celebrate small wins with a reading chart
+### **Materials Ready:**
+- 10 index cards
+- Colored markers/crayons
+- A simple mystery book or story
+- Small magnifying glass (toy or real)
+- Timer
+- Sticker rewards
 
-What type of books or stories does your child gravitate toward? And are there any specific reading skills they're working on (phonics, comprehension, fluency)?`;
+### **Complete Lesson Plan:**
+
+**⏰ Mystery Warm-Up (8 minutes)**
+1. **Minutes 1-3:** Put on "detective hats" (real or pretend)
+2. **Minutes 4-6:** Look around room with magnifying glass for letter clues
+   - Hide cards with letters B, A, T beforehand
+   - When found, sound out each letter together
+3. **Minutes 7-8:** Arrange letters to spell "BAT" - celebrate discovery!
+
+**⏰ Story Detective Work (22 minutes)**
+1. **Reading Together (10 min):**
+   - Choose a 2-3 page mystery story
+   - You read first paragraph aloud
+   - Child reads next sentence (help with difficult words)
+   - Take turns, keep it fun and pressure-free
+
+2. **Story Mapping (7 min):**
+   - Draw the main character on index card
+   - Draw the problem on another card
+   - Draw the solution on third card
+   - Arrange in order while retelling story
+
+3. **Word Detective Game (5 min):**
+   - Find 3 "action words" in the story (ran, jumped, looked)
+   - Act out each word together
+   - Write them on cards for word collection
+
+**⏰ Creative Wrap-Up (10 minutes)**
+- Create their own 3-sentence mystery
+- Example template: "The ____ was missing. I looked ____. I found it ____!"
+- Draw a picture of their mystery
+- Read their story aloud like a real detective
+
+### **Success Markers:**
+✅ Practiced phonics in natural way
+✅ Built reading comprehension
+✅ Created personal connection to story
+✅ Boosted confidence through success
+
+### **For Struggling Readers:**
+- Let them point to words while you read
+- Use different voices for characters
+- Pause to predict what happens next
+
+Ready to be reading detectives? Want another themed lesson plan? 🔍`;
+
       } else if (userMessage.toLowerCase().includes('focus') || userMessage.toLowerCase().includes('adhd')) {
-        response = `Focus challenges are very common! Here are some strategies that work well:
+        response = `Here's your **Focus-Friendly Learning Plan** designed specifically for active minds:
 
-⏰ **Attention Strategies:**
-- Use timers for short work bursts (10-15 minutes)
-- Create a calm, distraction-free workspace
-- Try fidget tools or standing desks
-- Use visual schedules and checklists
+## 🎯 **"Movement Learning Lab" - 30 Minute Session**
 
-🎯 **Engagement Techniques:**
-- Incorporate movement breaks every 20 minutes
-- Use colorful, interactive materials
-- Break tasks into smaller, manageable chunks
-- Offer choices when possible
+### **Setup (5 minutes before starting):**
+- Clear 6x6 foot space
+- Set up 4 "stations" with masking tape squares
+- Have timer, fidget ball, and worksheet ready
+- Prepare movement songs playlist
 
-What subjects or activities does your child focus on best? And what time of day do they seem most alert and ready to learn?`;
+### **The Complete Session:**
+
+**⏰ Energy Release Start (5 minutes)**
+1. **Jumping Jacks Learning (2 min):**
+   - Count by 2s while doing jumping jacks
+   - "2, 4, 6, 8... let's count and concentrate!"
+2. **Focus Breathing (1 min):**
+   - "Smell the flower" (deep breath in)
+   - "Blow out the candle" (long breath out)
+   - Repeat 5 times
+3. **Body Check (2 min):**
+   - Wiggle everything out - fingers, toes, shoulders
+   - End in "statue pose" for 10 seconds
+
+**⏰ Station Learning Circuit (20 minutes - 5 min each)**
+
+**Station 1: Standing Desk Work**
+- Use tall table or counter
+- 5 math problems while standing
+- Fidget ball in non-writing hand
+- Timer set for 5 minutes
+
+**Station 2: Floor Work**
+- Lie on stomach, prop on elbows
+- Practice writing letters in sandbox/rice tray
+- Engages core muscles for focus
+- Very calming position
+
+**Station 3: Balance Challenge**
+- Stand on one foot while reciting alphabet
+- Switch feet halfway through
+- If they lose balance, start that letter again
+- Makes brain work harder = better focus
+
+**Station 4: Quiet Corner**
+- Soft pillows and dim lighting
+- Read quietly for 5 minutes
+- Weighted lap pad if available
+- This is their "reset" station
+
+**⏰ Celebration Finish (5 minutes)**
+- Dance to one favorite song
+- Talk about what they accomplished
+- Choose tomorrow's fidget tool
+- High fives and specific praise
+
+### **Why This Works:**
+✅ Burns excess energy first
+✅ Changes position every 5 minutes
+✅ Provides sensory input for regulation
+✅ Builds success momentum
+
+### **Quick Modifications:**
+- Too wiggly? Add more movement breaks
+- Too tired? Start with quiet station
+- Having great day? Extend successful stations
+
+Want me to create tomorrow's session plan with different activities? 🌟`;
+
       } else {
-        response = `Thank you for sharing that with me! To help me give you the best suggestions, could you tell me more about:
+        response = `I'd love to create a complete, ready-to-use lesson plan for you! To design the perfect activity that you can start immediately, help me understand:
 
-🤔 **A few questions to help me understand better:**
-- What specific subjects or skills are you working on?
-- What does your child enjoy doing? (sports, art, video games, etc.)
-- What time of day works best for learning activities?
-- Have you noticed any patterns in what helps them stay engaged?
-- Are there any particular challenges that come up repeatedly?
+🎯 **Quick Planning Questions:**
+1. **Subject focus:** What specific skill needs work? (like "addition facts" or "reading comprehension" or "staying in seat")
 
-The more I know about your child's interests and learning style, the better I can tailor fun, engaging activities that will help them succeed! 😊`;
+2. **Time available:** How long can you dedicate? (15 min, 30 min, 45 min?)
+
+3. **Space:** Where will you do this? (kitchen table, living room floor, outside?)
+
+4. **Your child's favorites:** What do they love? (animals, superheroes, building, music, cooking?)
+
+5. **Energy level:** Are they usually high-energy or more calm and focused?
+
+Once I know these details, I'll create a complete lesson plan with:
+📋 Exact materials list (things you already have at home)
+⏰ Minute-by-minute timing
+📝 Word-for-word scripts for tricky parts
+🎯 Clear learning goals
+🏆 Built-in rewards and celebrations
+🔄 Tomorrow's follow-up activity
+
+Just give me those 5 details and I'll have your custom lesson plan ready in seconds! 😊`;
       }
 
       setMessages(prev => [...prev, {
@@ -185,8 +330,8 @@ The more I know about your child's interests and learning style, the better I ca
               <Bot className="text-white" size={20} />
             </div>
             <div>
-              <h1 className="font-semibold text-gray-800">Learning Support Assistant</h1>
-              <p className="text-sm text-gray-600">Here to help with your child's learning journey</p>
+              <h1 className="font-semibold text-gray-800">Lesson Plan Creator</h1>
+              <p className="text-sm text-gray-600">Ready-to-use activities designed for your child</p>
             </div>
           </div>
         </div>
@@ -202,7 +347,7 @@ The more I know about your child's interests and learning style, the better I ca
             >
               {message.type === 'ai' && (
                 <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                  <Bot className="text-white" size={16} />
+                  <BookOpen className="text-white" size={16} />
                 </div>
               )}
               <div
@@ -212,7 +357,7 @@ The more I know about your child's interests and learning style, the better I ca
                     : 'bg-white/80 backdrop-blur-sm text-gray-800 border border-white/20 shadow-sm'
                 }`}
               >
-                <p className="whitespace-pre-wrap">{message.content}</p>
+                <div className="whitespace-pre-wrap">{message.content}</div>
                 <div className={`text-xs mt-2 ${message.type === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
                   {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </div>
@@ -228,7 +373,7 @@ The more I know about your child's interests and learning style, the better I ca
           {isTyping && (
             <div className="flex gap-3 justify-start">
               <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-                <Bot className="text-white" size={16} />
+                <BookOpen className="text-white" size={16} />
               </div>
               <div className="bg-white/80 backdrop-blur-sm px-4 py-3 rounded-2xl border border-white/20 shadow-sm">
                 <div className="flex gap-1">
@@ -251,7 +396,7 @@ The more I know about your child's interests and learning style, the better I ca
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Describe your child's situation, challenges, or what you'd like help with..."
+              placeholder="Tell me about your child's learning needs and I'll create a complete lesson plan you can use today..."
               className="flex-1 border border-gray-300 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={2}
             />
