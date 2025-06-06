@@ -133,12 +133,16 @@ I'll create a detailed lesson plan with exact materials, minute-by-minute timing
                            userMessage.toLowerCase().includes('stay on task') ||
                            userMessage.toLowerCase().includes('frustrated');
 
+      const hasFrustrationInfo = userMessage.toLowerCase().includes('frustrated') ||
+                                userMessage.toLowerCase().includes('frustration') ||
+                                userMessage.toLowerCase().includes('getting upset');
+
       // If user provided comprehensive planning info, generate a lesson plan
-      if (hasSubjectInfo && (hasTimeInfo || hasEnergyInfo || hasInterestInfo)) {
+      if (hasSubjectInfo && (hasTimeInfo || hasEnergyInfo || hasInterestInfo || hasFrustrationInfo)) {
         
         // Division lesson plan with dinosaur theme for high-energy child
         if (userMessage.toLowerCase().includes('division')) {
-          response = `Perfect! Here's your **"Dinosaur Division Adventure"** - designed specifically for ${selectedChild?.name || 'your'} high-energy ${selectedChild?.name ? 'son' : 'child'} who loves dinosaurs and action figures:
+          response = `Perfect! Here's your **"Dinosaur Division Adventure"** - designed specifically for ${selectedChild?.name || 'your child'} who loves dinosaurs and action figures:
 
 ## 🦕 **"Dinosaur Division Rescue Mission" - 25 Minute Lesson**
 *(Shorter segments to prevent frustration buildup)*
@@ -176,7 +180,7 @@ I'll create a detailed lesson plan with exact materials, minute-by-minute timing
 **⏰ Quick Success Round (4 minutes)**
 12. **Easier division for confidence:** "8 dinosaurs, 2 per rescue boat"
 13. **Let ${selectedChild?.name || 'them'} solve:** 8 ÷ 2 = ?
-14. **Immediate celebration:** "${selectedChild?.name || 'You're'} a division detective!"
+14. **Immediate celebration:** "${selectedChild?.name || 'You are'} a division detective!"
 15. **Sticker reward** on mission map
 
 **⏰ Mission Complete Celebration (5 minutes)**
@@ -196,11 +200,11 @@ I'll create a detailed lesson plan with exact materials, minute-by-minute timing
 - **"How many groups can we make?"**
 - **Always count the groups together, don't quiz**
 
-### **If ${selectedChild?.name || 'They'} Get${selectedChild?.name ? 's' : ''} Frustrated:**
+### **If ${selectedChild?.name || 'They'} Get Frustrated:**
 1. **Stop immediately** - "Let's rescue just 2 dinosaurs first"
 2. **Make it easier** - use 6 ÷ 2 or 4 ÷ 2
 3. **Add more movement** - run to get each group
-4. **Celebrate small wins** - "${selectedChild?.name || 'You'} understand${selectedChild?.name ? 's' : ''} grouping perfectly!"
+4. **Celebrate small wins** - "${selectedChild?.name || 'You'} understand grouping perfectly!"
 
 **Ready to start the Dinosaur Division Rescue? This approach turns frustrating math into an adventure game ${selectedChild?.name || 'they'} can win! 🦕⚡**
 
