@@ -73,8 +73,150 @@ Feel free to share as much or as little as you'd like - I'm here to listen and h
     setTimeout(() => {
       let response = '';
       
-      // Enhanced response logic with detailed lesson plans
-      if (userMessage.toLowerCase().includes('math')) {
+      // Check if user provided planning details for lesson plan creation
+      const hasSubjectInfo = userMessage.toLowerCase().includes('division') || 
+                            userMessage.toLowerCase().includes('math') ||
+                            userMessage.toLowerCase().includes('reading') ||
+                            userMessage.toLowerCase().includes('writing');
+      
+      const hasTimeInfo = userMessage.toLowerCase().includes('hour') ||
+                         userMessage.toLowerCase().includes('minute') ||
+                         userMessage.toLowerCase().includes('min');
+      
+      const hasSpaceInfo = userMessage.toLowerCase().includes('table') ||
+                          userMessage.toLowerCase().includes('kitchen') ||
+                          userMessage.toLowerCase().includes('room') ||
+                          userMessage.toLowerCase().includes('outside') ||
+                          userMessage.toLowerCase().includes('backyard');
+      
+      const hasInterestInfo = userMessage.toLowerCase().includes('dinosaur') ||
+                             userMessage.toLowerCase().includes('superhero') ||
+                             userMessage.toLowerCase().includes('action figure') ||
+                             userMessage.toLowerCase().includes('love') ||
+                             userMessage.toLowerCase().includes('favorite');
+      
+      const hasEnergyInfo = userMessage.toLowerCase().includes('high energy') ||
+                           userMessage.toLowerCase().includes('calm') ||
+                           userMessage.toLowerCase().includes('focus') ||
+                           userMessage.toLowerCase().includes('stay on task') ||
+                           userMessage.toLowerCase().includes('frustrated');
+
+      // If user provided comprehensive planning info, generate a lesson plan
+      if (hasSubjectInfo && (hasTimeInfo || hasEnergyInfo || hasInterestInfo)) {
+        
+        // Division lesson plan with dinosaur theme for high-energy child
+        if (userMessage.toLowerCase().includes('division')) {
+          response = `Perfect! Here's your **"Dinosaur Division Adventure"** - designed specifically for your high-energy son who loves dinosaurs and action figures:
+
+## 🦕 **"Dinosaur Division Rescue Mission" - 25 Minute Lesson**
+*(Shorter segments to prevent frustration buildup)*
+
+### **Materials Ready in 2 Minutes:**
+- 20-30 small dinosaur toys or action figures
+- 4 paper plates or shallow boxes
+- Masking tape
+- Timer
+- Sticker sheet
+- Large piece of paper for "mission map"
+
+### **Complete Lesson Plan:**
+
+**⏰ Mission Briefing (3 minutes)**
+1. **"Emergency at Dino Park!"** 
+   - "The dinosaurs are trapped in groups and need rescue teams!"
+   - Show pile of 20 dinosaurs: "We have 20 dinosaurs total"
+   - "Each rescue helicopter can only carry 4 dinosaurs. How many trips?"
+
+**⏰ Physical Division Setup (5 minutes)**
+2. **Tape 4 "helicopter landing pads"** on floor (paper plates)
+3. **Give your son the pile of 20 dinosaurs**
+4. **Say: "Put exactly 4 dinosaurs on each landing pad"**
+5. **Count together:** "1 pad, 2 pads, 3 pads, 4 pads, 5 pads!"
+6. **Big discovery:** "20 ÷ 4 = 5 helicopter trips!"
+
+**⏰ Action Figure Division (8 minutes)**
+7. **New mission:** "12 superheroes need to form teams of 3"
+8. **Physical sorting:** Let him group 12 action figures into teams of 3
+9. **Count teams together:** "1 team, 2 teams, 3 teams, 4 teams!"
+10. **Write it down:** "12 ÷ 3 = 4 teams"
+11. **Movement break:** Act out each superhero team's special move!
+
+**⏰ Quick Success Round (4 minutes)**
+12. **Easier division for confidence:** "8 dinosaurs, 2 per rescue boat"
+13. **Let him solve:** 8 ÷ 2 = ?
+14. **Immediate celebration:** "You're a division detective!"
+15. **Sticker reward** on mission map
+
+**⏰ Mission Complete Celebration (5 minutes)**
+16. **Review victories:** "You saved dinosaurs AND superheroes using division!"
+17. **Tomorrow's teaser:** "Tomorrow we'll use division to share dinosaur food!"
+18. **Victory dance** with favorite action figure
+
+### **Frustration Prevention Built-In:**
+✅ **Maximum 8 minutes per activity** before movement break
+✅ **Physical manipulation** instead of abstract numbers
+✅ **Immediate success** with easier problems mixed in
+✅ **His interests** (dinosaurs/superheroes) drive every example
+✅ **Movement breaks** every few minutes
+
+### **Key Teaching Moments:**
+- **"Division means making equal groups"**
+- **"How many groups can we make?"**
+- **Always count the groups together, don't quiz**
+
+### **If He Gets Frustrated:**
+1. **Stop immediately** - "Let's rescue just 2 dinosaurs first"
+2. **Make it easier** - use 6 ÷ 2 or 4 ÷ 2
+3. **Add more movement** - run to get each group
+4. **Celebrate small wins** - "You understand grouping perfectly!"
+
+**Ready to start the Dinosaur Division Rescue? This approach turns frustrating math into an adventure game he can win! 🦕⚡**
+
+Want me to create tomorrow's follow-up lesson, or would you like variations for different division concepts?`;
+
+        } else {
+          // Generic lesson plan generator for other subjects
+          response = `Here's your complete **Ready-to-Start Lesson Plan** based on everything you shared:
+
+## 🎯 **Custom Learning Adventure - 30 Minute Session**
+
+### **Materials You Need (5 minutes to gather):**
+- Timer
+- Paper and markers
+- Small rewards/stickers
+- Any toys related to their interests
+- Space to move around
+
+### **Session Structure:**
+
+**⏰ Energy Warm-up (5 minutes)**
+- Start with movement to channel high energy
+- Use their favorite characters as motivation
+- Set clear, short goals they can achieve
+
+**⏰ Core Learning (15 minutes in 5-minute chunks)**
+- Break into 3 short segments
+- Movement breaks between each segment
+- Use hands-on activities, not worksheets
+- Connect to their interests throughout
+
+**⏰ Success Celebration (10 minutes)**
+- Review what they accomplished
+- Physical celebration (dance, high-fives)
+- Plan tomorrow's adventure
+- End on a high note
+
+### **Key Success Strategies:**
+✅ **Never go longer than 5-7 minutes** without a movement break
+✅ **Use their interests** to make examples relatable
+✅ **Celebrate small wins** immediately
+✅ **Keep it physical and hands-on**
+✅ **Stop before frustration builds**
+
+Would you like me to create a more specific lesson plan for the exact subject you're working on? Just let me know what skill you want to focus on and I'll design the complete activity! 🌟`;
+        }
+
+      } else if (userMessage.toLowerCase().includes('math') || userMessage.toLowerCase().includes('addition') || userMessage.toLowerCase().includes('subtraction')) {
         response = `Here's a complete **Math Adventure Lesson Plan** ready for you to use today:
 
 ## 🎯 **"Kitchen Math Explorer" - 45 Minute Lesson**
