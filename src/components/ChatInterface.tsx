@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, ArrowLeft, Bot, User, Clock, Users, BookOpen } from 'lucide-react';
+import { Send, ArrowLeft, Bot, User, Clock, Users, BookOpen, Star, Heart } from 'lucide-react';
+import { Child, SavedConversation, Message } from '../types';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -9,19 +10,20 @@ interface ChatInterfaceProps {
     challenge: string;
   };
   onBack: () => void;
+  selectedChild?: Child;
+  onSaveConversation?: (conversation: Omit<SavedConversation, 'id' | 'createdAt'>) => void;
 }
 
-interface Message {
-  id: string;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedCategories, onBack }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
+  selectedCategories, 
+  onBack, 
+  selectedChild,
+  onSaveConversation 
+}) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [conversationTitle, setConversationTitle] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -45,9 +47,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedCategories, onBac
     };
     
     setTimeout(initMessage, 500);
-  }, [selectedCategories]);
+  }, [selectedCategories, selectedChild]);
 
   const generateInitialGreeting = () => {
+    if (selectedChild) {
+      const categoryInfo = [];
+      if (selectedChild.subjects.length > 0) categoryInfo.push(`subjects: ${selectedChild.subjects.join(', ')}`);
+      if (selectedChild.ageGroup) categoryInfo.push(`age group: ${selectedChild.ageGroup}`);
+      if (selectedChild.challenges.length > 0) categoryInfo.push(`challenges: ${selectedChild.challenges.join(', ')}`);
+
+      const categoryText = categoryInfo.length > 0 
+        ? ` I can see ${selectedChild.name}'s profile shows ${categoryInfo.join(', ')}.` 
+        : '';
+
+      return `Hi! I'm excited to help create a perfect lesson plan for ${selectedChild.name}!${categoryText}
+
+To design the most effective activity, could you tell me:
+- What specific skill or concept does ${selectedChild.name} need to work on today?
+- How much time do you have available?
+- What space will you be using for the activity?
+- What's ${selectedChild.name}'s energy level like right now?
+
+I'll create a complete, step-by-step lesson plan with exact materials, timing, and instructions! 🌟`;
+    }
+
+    // Fallback for non-child specific usage
     const categoryInfo = [];
     if (selectedCategories.subject) categoryInfo.push(`subject: ${selectedCategories.subject}`);
     if (selectedCategories.ageGroup) categoryInfo.push(`age group: ${selectedCategories.ageGroup}`);
@@ -57,18 +81,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ selectedCategories, onBac
       ? ` I see you've selected ${categoryInfo.join(', ')}.` 
       : '';
 
-    return `Hi there! I'm here to help you find fun and engaging ways to support your child's learning.${categoryText}
+    return `Hi there! I'm here to help you create complete, ready-to-use lesson plans for your child.${categoryText}
 
-To get started, could you tell me a bit about your child and what specific challenges or goals you're working on? For example:
-- What subjects are they struggling with most?
-- What activities do they enjoy?
-- Have you tried any learning methods that worked well or didn't work?
+To get started, could you tell me:
+- What specific skill needs work? (like "division" or "reading comprehension")
+- How much time do you have? (15 min, 30 min, 45 min?)
+- Where will you do this? (kitchen table, living room, outside?)
+- What does your child love? (dinosaurs, superheroes, building, music?)
+- What's their energy level like? (high-energy or calm and focused?)
 
-Feel free to share as much or as little as you'd like - I'm here to listen and help! 😊`;
+I'll create a detailed lesson plan with exact materials, minute-by-minute timing, and step-by-step instructions! 😊`;
   };
 
   const simulateAIResponse = (userMessage: string) => {
     setIsTyping(true);
+    
+    // Generate conversation title if not set
+    if (!conversationTitle && userMessage.length > 10) {
+      const words = userMessage.split(' ').slice(0, 5).join(' ');
+      setConversationTitle(words.length > 30 ? words.substring(0, 30) + '...' : words);
+    }
     
     setTimeout(() => {
       let response = '';
@@ -106,7 +138,7 @@ Feel free to share as much or as little as you'd like - I'm here to listen and h
         
         // Division lesson plan with dinosaur theme for high-energy child
         if (userMessage.toLowerCase().includes('division')) {
-          response = `Perfect! Here's your **"Dinosaur Division Adventure"** - designed specifically for your high-energy son who loves dinosaurs and action figures:
+          response = `Perfect! Here's your **"Dinosaur Division Adventure"** - designed specifically for ${selectedChild?.name || 'your'} high-energy ${selectedChild?.name ? 'son' : 'child'} who loves dinosaurs and action figures:
 
 ## 🦕 **"Dinosaur Division Rescue Mission" - 25 Minute Lesson**
 *(Shorter segments to prevent frustration buildup)*
@@ -129,26 +161,26 @@ Feel free to share as much or as little as you'd like - I'm here to listen and h
 
 **⏰ Physical Division Setup (5 minutes)**
 2. **Tape 4 "helicopter landing pads"** on floor (paper plates)
-3. **Give your son the pile of 20 dinosaurs**
+3. **Give ${selectedChild?.name || 'your child'} the pile of 20 dinosaurs**
 4. **Say: "Put exactly 4 dinosaurs on each landing pad"**
 5. **Count together:** "1 pad, 2 pads, 3 pads, 4 pads, 5 pads!"
 6. **Big discovery:** "20 ÷ 4 = 5 helicopter trips!"
 
 **⏰ Action Figure Division (8 minutes)**
 7. **New mission:** "12 superheroes need to form teams of 3"
-8. **Physical sorting:** Let him group 12 action figures into teams of 3
+8. **Physical sorting:** Let ${selectedChild?.name || 'them'} group 12 action figures into teams of 3
 9. **Count teams together:** "1 team, 2 teams, 3 teams, 4 teams!"
 10. **Write it down:** "12 ÷ 3 = 4 teams"
 11. **Movement break:** Act out each superhero team's special move!
 
 **⏰ Quick Success Round (4 minutes)**
 12. **Easier division for confidence:** "8 dinosaurs, 2 per rescue boat"
-13. **Let him solve:** 8 ÷ 2 = ?
-14. **Immediate celebration:** "You're a division detective!"
+13. **Let ${selectedChild?.name || 'them'} solve:** 8 ÷ 2 = ?
+14. **Immediate celebration:** "${selectedChild?.name || 'You're'} a division detective!"
 15. **Sticker reward** on mission map
 
 **⏰ Mission Complete Celebration (5 minutes)**
-16. **Review victories:** "You saved dinosaurs AND superheroes using division!"
+16. **Review victories:** "${selectedChild?.name || 'You'} saved dinosaurs AND superheroes using division!"
 17. **Tomorrow's teaser:** "Tomorrow we'll use division to share dinosaur food!"
 18. **Victory dance** with favorite action figure
 
@@ -156,7 +188,7 @@ Feel free to share as much or as little as you'd like - I'm here to listen and h
 ✅ **Maximum 8 minutes per activity** before movement break
 ✅ **Physical manipulation** instead of abstract numbers
 ✅ **Immediate success** with easier problems mixed in
-✅ **His interests** (dinosaurs/superheroes) drive every example
+✅ **${selectedChild?.name || 'Their'} interests** (dinosaurs/superheroes) drive every example
 ✅ **Movement breaks** every few minutes
 
 ### **Key Teaching Moments:**
@@ -164,13 +196,13 @@ Feel free to share as much or as little as you'd like - I'm here to listen and h
 - **"How many groups can we make?"**
 - **Always count the groups together, don't quiz**
 
-### **If He Gets Frustrated:**
+### **If ${selectedChild?.name || 'They'} Get${selectedChild?.name ? 's' : ''} Frustrated:**
 1. **Stop immediately** - "Let's rescue just 2 dinosaurs first"
 2. **Make it easier** - use 6 ÷ 2 or 4 ÷ 2
 3. **Add more movement** - run to get each group
-4. **Celebrate small wins** - "You understand grouping perfectly!"
+4. **Celebrate small wins** - "${selectedChild?.name || 'You'} understand${selectedChild?.name ? 's' : ''} grouping perfectly!"
 
-**Ready to start the Dinosaur Division Rescue? This approach turns frustrating math into an adventure game he can win! 🦕⚡**
+**Ready to start the Dinosaur Division Rescue? This approach turns frustrating math into an adventure game ${selectedChild?.name || 'they'} can win! 🦕⚡**
 
 Want me to create tomorrow's follow-up lesson, or would you like variations for different division concepts?`;
 
@@ -216,188 +248,8 @@ Want me to create tomorrow's follow-up lesson, or would you like variations for 
 Would you like me to create a more specific lesson plan for the exact subject you're working on? Just let me know what skill you want to focus on and I'll design the complete activity! 🌟`;
         }
 
-      } else if (userMessage.toLowerCase().includes('math') || userMessage.toLowerCase().includes('addition') || userMessage.toLowerCase().includes('subtraction')) {
-        response = `Here's a complete **Math Adventure Lesson Plan** ready for you to use today:
-
-## 🎯 **"Kitchen Math Explorer" - 45 Minute Lesson**
-
-### **Materials Needed:**
-- 2 cups flour
-- 1 cup water
-- Measuring cups (1/4, 1/2, 1 cup)
-- Large mixing bowl
-- Ruler or measuring tape
-- Timer
-- Paper and pencils
-- Small treats for rewards
-
-### **Lesson Structure:**
-
-**⏰ Warm-up (10 minutes)**
-1. Start with a "Math Detective" hunt around the kitchen
-2. Have your child find 5 round objects and 5 square objects
-3. Count them together and write the numbers down
-
-**⏰ Main Activity - Fraction Pizza (25 minutes)**
-1. **Step 1 (5 min):** Mix flour and water to make play dough
-   - Measure 1 cup flour together, let them pour
-   - Add 1/2 cup water, discuss "half"
-2. **Step 2 (10 min):** Roll into a circle for "pizza"
-   - Cut into 2 pieces - "These are halves!"
-   - Cut each half in half - "Now we have quarters!"
-   - Let them arrange and count: "How many quarters make a whole?"
-3. **Step 3 (10 min):** Pizza topping math
-   - Add pretend toppings in patterns
-   - "Put 3 pepperonis on each quarter - how many total?"
-   - Practice addition: 3+3+3+3 = ?
-
-**⏰ Cool Down (10 minutes)**
-- Clean up while skip counting by 2s, 5s, or 10s
-- Review what fractions they learned
-- Give a small celebration treat
-
-### **Learning Goals Achieved:**
-✅ Fractions (halves, quarters, wholes)
-✅ Basic addition and multiplication
-✅ Measurement and counting
-✅ Following multi-step instructions
-
-### **Extension for Tomorrow:**
-Use the same dough to make different shapes and practice geometry!
-
-Would you like me to create another lesson plan for a different math concept, or shall we try a different subject? 😊`;
-
-      } else if (userMessage.toLowerCase().includes('reading') || userMessage.toLowerCase().includes('dyslexia')) {
-        response = `Here's your **Reading Adventure Lesson Plan** - completely prepared and ready to go:
-
-## 📚 **"Detective Story Builder" - 40 Minute Lesson**
-
-### **Materials Ready:**
-- 10 index cards
-- Colored markers/crayons
-- A simple mystery book or story
-- Small magnifying glass (toy or real)
-- Timer
-- Sticker rewards
-
-### **Complete Lesson Plan:**
-
-**⏰ Mystery Warm-Up (8 minutes)**
-1. **Minutes 1-3:** Put on "detective hats" (real or pretend)
-2. **Minutes 4-6:** Look around room with magnifying glass for letter clues
-   - Hide cards with letters B, A, T beforehand
-   - When found, sound out each letter together
-3. **Minutes 7-8:** Arrange letters to spell "BAT" - celebrate discovery!
-
-**⏰ Story Detective Work (22 minutes)**
-1. **Reading Together (10 min):**
-   - Choose a 2-3 page mystery story
-   - You read first paragraph aloud
-   - Child reads next sentence (help with difficult words)
-   - Take turns, keep it fun and pressure-free
-
-2. **Story Mapping (7 min):**
-   - Draw the main character on index card
-   - Draw the problem on another card
-   - Draw the solution on third card
-   - Arrange in order while retelling story
-
-3. **Word Detective Game (5 min):**
-   - Find 3 "action words" in the story (ran, jumped, looked)
-   - Act out each word together
-   - Write them on cards for word collection
-
-**⏰ Creative Wrap-Up (10 minutes)**
-- Create their own 3-sentence mystery
-- Example template: "The ____ was missing. I looked ____. I found it ____!"
-- Draw a picture of their mystery
-- Read their story aloud like a real detective
-
-### **Success Markers:**
-✅ Practiced phonics in natural way
-✅ Built reading comprehension
-✅ Created personal connection to story
-✅ Boosted confidence through success
-
-### **For Struggling Readers:**
-- Let them point to words while you read
-- Use different voices for characters
-- Pause to predict what happens next
-
-Ready to be reading detectives? Want another themed lesson plan? 🔍`;
-
-      } else if (userMessage.toLowerCase().includes('focus') || userMessage.toLowerCase().includes('adhd')) {
-        response = `Here's your **Focus-Friendly Learning Plan** designed specifically for active minds:
-
-## 🎯 **"Movement Learning Lab" - 30 Minute Session**
-
-### **Setup (5 minutes before starting):**
-- Clear 6x6 foot space
-- Set up 4 "stations" with masking tape squares
-- Have timer, fidget ball, and worksheet ready
-- Prepare movement songs playlist
-
-### **The Complete Session:**
-
-**⏰ Energy Release Start (5 minutes)**
-1. **Jumping Jacks Learning (2 min):**
-   - Count by 2s while doing jumping jacks
-   - "2, 4, 6, 8... let's count and concentrate!"
-2. **Focus Breathing (1 min):**
-   - "Smell the flower" (deep breath in)
-   - "Blow out the candle" (long breath out)
-   - Repeat 5 times
-3. **Body Check (2 min):**
-   - Wiggle everything out - fingers, toes, shoulders
-   - End in "statue pose" for 10 seconds
-
-**⏰ Station Learning Circuit (20 minutes - 5 min each)**
-
-**Station 1: Standing Desk Work**
-- Use tall table or counter
-- 5 math problems while standing
-- Fidget ball in non-writing hand
-- Timer set for 5 minutes
-
-**Station 2: Floor Work**
-- Lie on stomach, prop on elbows
-- Practice writing letters in sandbox/rice tray
-- Engages core muscles for focus
-- Very calming position
-
-**Station 3: Balance Challenge**
-- Stand on one foot while reciting alphabet
-- Switch feet halfway through
-- If they lose balance, start that letter again
-- Makes brain work harder = better focus
-
-**Station 4: Quiet Corner**
-- Soft pillows and dim lighting
-- Read quietly for 5 minutes
-- Weighted lap pad if available
-- This is their "reset" station
-
-**⏰ Celebration Finish (5 minutes)**
-- Dance to one favorite song
-- Talk about what they accomplished
-- Choose tomorrow's fidget tool
-- High fives and specific praise
-
-### **Why This Works:**
-✅ Burns excess energy first
-✅ Changes position every 5 minutes
-✅ Provides sensory input for regulation
-✅ Builds success momentum
-
-### **Quick Modifications:**
-- Too wiggly? Add more movement breaks
-- Too tired? Start with quiet station
-- Having great day? Extend successful stations
-
-Want me to create tomorrow's session plan with different activities? 🌟`;
-
       } else {
-        response = `I'd love to create a complete, ready-to-use lesson plan for you! To design the perfect activity that you can start immediately, help me understand:
+        response = `I'd love to create a complete, ready-to-use lesson plan for ${selectedChild?.name || 'your child'}! To design the perfect activity that you can start immediately, help me understand:
 
 🎯 **Quick Planning Questions:**
 1. **Subject focus:** What specific skill needs work? (like "addition facts" or "reading comprehension" or "staying in seat")
@@ -406,7 +258,7 @@ Want me to create tomorrow's session plan with different activities? 🌟`;
 
 3. **Space:** Where will you do this? (kitchen table, living room floor, outside?)
 
-4. **Your child's favorites:** What do they love? (animals, superheroes, building, music, cooking?)
+4. **${selectedChild?.name || 'Your child'}'s current mood:** How are they feeling right now? (frustrated, excited, tired, ready to learn?)
 
 5. **Energy level:** Are they usually high-energy or more calm and focused?
 
@@ -455,27 +307,54 @@ Just give me those 5 details and I'll have your custom lesson plan ready in seco
     }
   };
 
+  const handleSaveConversation = () => {
+    if (onSaveConversation && selectedChild && messages.length > 0) {
+      onSaveConversation({
+        childId: selectedChild.id,
+        title: conversationTitle || `Lesson Plan - ${new Date().toLocaleDateString()}`,
+        messages: messages,
+        isFavorite: false,
+        tags: [selectedChild.subjects[0] || 'general']
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-4">
-          <button
-            onClick={onBack}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-          >
-            <ArrowLeft size={20} />
-            Back
-          </button>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
-              <Bot className="text-white" size={20} />
-            </div>
-            <div>
-              <h1 className="font-semibold text-gray-800">Lesson Plan Creator</h1>
-              <p className="text-sm text-gray-600">Ready-to-use activities designed for your child</p>
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <ArrowLeft size={20} />
+              Back
+            </button>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-green-500 rounded-full flex items-center justify-center">
+                <Bot className="text-white" size={20} />
+              </div>
+              <div>
+                <h1 className="font-semibold text-gray-800">
+                  {selectedChild ? `${selectedChild.name}'s Lesson Planner` : 'Lesson Plan Creator'}
+                </h1>
+                <p className="text-sm text-gray-600">Ready-to-use activities designed for your child</p>
+              </div>
             </div>
           </div>
+          {selectedChild && messages.length > 1 && (
+            <div className="flex gap-2">
+              <button
+                onClick={handleSaveConversation}
+                className="flex items-center gap-2 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+              >
+                <Heart size={16} />
+                Save Lesson
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -538,7 +417,7 @@ Just give me those 5 details and I'll have your custom lesson plan ready in seco
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder="Tell me about your child's learning needs and I'll create a complete lesson plan you can use today..."
+              placeholder={`Tell me about ${selectedChild?.name || 'your child'}'s learning needs and I'll create a complete lesson plan you can use today...`}
               className="flex-1 border border-gray-300 rounded-xl px-4 py-3 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               rows={2}
             />
