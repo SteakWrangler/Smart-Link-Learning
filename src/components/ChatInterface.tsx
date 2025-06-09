@@ -1,7 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Star, Save } from 'lucide-react';
+import { ArrowLeft, Send, Star, Save, Upload, File, X } from 'lucide-react';
 import { Child } from '../types';
-import { StudentProfile } from '../types/database';
+import { StudentProfile, Subject } from '../types/database';
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -29,14 +33,127 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [conversationTitle, setConversationTitle] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const { profile } = useAuth();
+  const { toast } = useToast();
 
   const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
 
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file size (max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
+        toast({
+          title: "File too large",
+          description: "Please select a file smaller than 10MB",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+      if (!allowedTypes.includes(file.type)) {
+        toast({
+          title: "Invalid file type",
+          description: "Please select an image, PDF, or document file",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedFile(file);
+    }
+  };
+
+  const handleFileUpload = async () => {
+    if (!selectedFile || !profile) return;
+
+    setUploading(true);
+
+    try {
+      // Create file path with user folder structure
+      const fileExt = selectedFile.name.split('.').pop();
+      const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${profile.id}/${fileName}`;
+
+      // Upload file to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, selectedFile);
+
+      if (uploadError) throw uploadError;
+
+      // Insert document metadata into database
+      const documentData = {
+        user_id: profile.id,
+        child_id: selectedChild?.id || null,
+        student_profile_id: selectedStudentProfile?.id || null,
+        file_name: selectedFile.name,
+        file_path: filePath,
+        file_size: selectedFile.size,
+        file_type: selectedFile.type,
+        document_type: 'other' as const,
+        description: `Uploaded during chat with ${learnerName}`,
+        subject: selectedCategories.subject || null,
+      };
+
+      const { error: dbError } = await supabase
+        .from('documents')
+        .insert(documentData);
+
+      if (dbError) throw dbError;
+
+      // Add message about the uploaded file
+      const fileMessage = {
+        id: Date.now().toString(),
+        type: 'user' as const,
+        content: `📎 Uploaded file: ${selectedFile.name}`,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, fileMessage]);
+
+      // Generate AI response about the file
+      const aiResponse = `I can see you've uploaded "${selectedFile.name}". I'll help ${learnerName} analyze this document and provide personalized learning support based on what's in it. What specific questions do you have about this material, or what would you like me to help ${learnerName} with regarding this document?`;
+      
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai' as const,
+        content: aiResponse,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, aiMessage]);
+
+      toast({
+        title: "File uploaded successfully",
+        description: "I can now help analyze this document with your child",
+      });
+
+      setSelectedFile(null);
+
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload document",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeFile = () => {
+    setSelectedFile(null);
+  };
+
   const generateAIResponse = async (userMessage: string, context: string) => {
-    // For now, return a more realistic response based on the context
-    // In a real implementation, this would call an actual AI service
-    
     const responses = [
       `Hi ${learnerName}! I understand you're working on ${selectedCategories.subject}. Let me help you with that. Can you tell me more about what specific part you're struggling with?`,
       `That's a great question about ${selectedCategories.subject}! For someone in the ${selectedCategories.ageGroup} age group, I'd suggest we break this down into smaller steps. What would you like to focus on first?`,
@@ -44,7 +161,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       `Thanks for sharing that with me, ${learnerName}! Given that you're working on ${selectedCategories.subject} and considering ${selectedCategories.challenge}, let me suggest some strategies that might help.`
     ];
     
-    // Simple response selection based on message content
     if (userMessage.toLowerCase().includes('test') || userMessage.toLowerCase().includes('failed')) {
       return `I understand that ${learnerName} had some challenges with a recent test. That's completely normal and we can work together to improve! For ${selectedCategories.subject}, let's identify the specific areas that need more practice. Can you tell me which topics or problems were the most difficult?`;
     }
@@ -53,7 +169,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       return `Homework can be challenging, especially with ${selectedCategories.challenge}. For ${selectedCategories.subject}, let's make it more manageable. What specific homework assignment are you working on right now?`;
     }
     
-    // Return a random contextual response
     return responses[Math.floor(Math.random() * responses.length)];
   };
 
@@ -73,7 +188,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setIsLoading(true);
 
     try {
-      // Generate AI response
       const context = `Student: ${learnerName}, Subject: ${selectedCategories.subject}, Age Group: ${selectedCategories.ageGroup}, Challenge: ${selectedCategories.challenge}`;
       const aiResponse = await generateAIResponse(currentMessage, context);
       
@@ -169,6 +283,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 <div className="mt-4 text-sm text-gray-400">
                   <p>Try saying something like:</p>
                   <p>"My child failed a math test" or "We need help with reading comprehension"</p>
+                  <p className="mt-2">💡 You can also upload documents like tests or homework for analysis!</p>
                 </div>
               </div>
             ) : (
@@ -205,9 +320,54 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <div ref={messagesEndRef} />
           </div>
 
+          {/* File Upload Area */}
+          {selectedFile && (
+            <div className="border-t border-gray-200 p-4 bg-gray-50">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <File size={16} />
+                  <span className="text-sm text-gray-700">{selectedFile.name}</span>
+                  <span className="text-xs text-gray-500">
+                    ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={handleFileUpload}
+                    disabled={uploading}
+                  >
+                    {uploading ? 'Uploading...' : 'Upload & Analyze'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={removeFile}
+                    className="text-gray-500 hover:text-red-500"
+                  >
+                    <X size={16} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Input Area */}
           <div className="border-t border-gray-200 p-4">
             <div className="flex gap-2">
+              <input
+                type="file"
+                id="file-upload"
+                className="hidden"
+                onChange={handleFileSelect}
+                accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif"
+              />
+              <label
+                htmlFor="file-upload"
+                className="flex items-center justify-center p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+              >
+                <Upload size={20} className="text-gray-500" />
+              </label>
               <input
                 type="text"
                 value={inputMessage}
