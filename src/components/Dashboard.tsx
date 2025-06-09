@@ -39,33 +39,48 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
     try {
       setLoading(true);
+      console.log('Fetching children for profile:', profile.id);
       
-      // Fetch children from database
+      // Fetch children from database with their subjects and challenges
       const { data: childrenData, error: childrenError } = await supabase
         .from('children')
         .select(`
           *,
-          child_subjects!inner(
+          child_subjects(
             subjects(name)
           ),
-          child_challenges!inner(
+          child_challenges(
             challenges(name)
           )
         `)
-        .eq('parent_id', profile.id);
+        .eq('parent_id', profile.id)
+        .order('created_at', { ascending: false });
 
-      if (childrenError) throw childrenError;
+      if (childrenError) {
+        console.error('Error fetching children:', childrenError);
+        throw childrenError;
+      }
+
+      console.log('Raw children data from database:', childrenData);
 
       // Transform database children to frontend format
-      const transformedChildren: Child[] = (childrenData || []).map((dbChild: any) => ({
-        id: dbChild.id,
-        name: dbChild.name,
-        ageGroup: dbChild.age_group,
-        subjects: dbChild.child_subjects?.map((cs: any) => cs.subjects.name) || [],
-        challenges: dbChild.child_challenges?.map((cc: any) => cc.challenges.name) || [],
-        createdAt: new Date(dbChild.created_at)
-      }));
+      const transformedChildren: Child[] = (childrenData || []).map((dbChild: any) => {
+        console.log('Transforming child:', dbChild);
+        
+        const subjects = dbChild.child_subjects?.map((cs: any) => cs.subjects?.name).filter(Boolean) || [];
+        const challenges = dbChild.child_challenges?.map((cc: any) => cc.challenges?.name).filter(Boolean) || [];
+        
+        return {
+          id: dbChild.id,
+          name: dbChild.name,
+          ageGroup: dbChild.age_group,
+          subjects,
+          challenges,
+          createdAt: new Date(dbChild.created_at)
+        };
+      });
 
+      console.log('Transformed children:', transformedChildren);
       setChildren(transformedChildren);
     } catch (error) {
       console.error('Error fetching children:', error);
@@ -83,6 +98,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     if (!profile) return;
 
     try {
+      console.log('Adding/updating child:', childData);
+
       if (editingChild) {
         // Update existing child
         const { error: updateError } = await supabase
@@ -116,6 +133,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           .single();
 
         if (insertError) throw insertError;
+        console.log('Created new child:', newChild);
 
         // Add subjects and challenges
         await updateChildSubjectsAndChallenges(newChild.id, childData.subjects, childData.challenges);
@@ -141,37 +159,49 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   };
 
   const updateChildSubjectsAndChallenges = async (childId: string, subjects: string[], challenges: string[]) => {
-    // Remove existing subjects and challenges
-    await supabase.from('child_subjects').delete().eq('child_id', childId);
-    await supabase.from('child_challenges').delete().eq('child_id', childId);
+    try {
+      console.log('Updating subjects and challenges for child:', childId, { subjects, challenges });
 
-    // Get subject and challenge IDs
-    const { data: subjectsData } = await supabase
-      .from('subjects')
-      .select('id, name')
-      .in('name', subjects);
+      // Remove existing subjects and challenges
+      await supabase.from('child_subjects').delete().eq('child_id', childId);
+      await supabase.from('child_challenges').delete().eq('child_id', childId);
 
-    const { data: challengesData } = await supabase
-      .from('challenges')
-      .select('id, name')
-      .in('name', challenges);
+      // Get subject and challenge IDs
+      const { data: subjectsData } = await supabase
+        .from('subjects')
+        .select('id, name')
+        .in('name', subjects);
 
-    // Add new subject associations
-    if (subjectsData && subjectsData.length > 0) {
-      const subjectInserts = subjectsData.map(subject => ({
-        child_id: childId,
-        subject_id: subject.id
-      }));
-      await supabase.from('child_subjects').insert(subjectInserts);
-    }
+      const { data: challengesData } = await supabase
+        .from('challenges')
+        .select('id, name')
+        .in('name', challenges);
 
-    // Add new challenge associations
-    if (challengesData && challengesData.length > 0) {
-      const challengeInserts = challengesData.map(challenge => ({
-        child_id: childId,
-        challenge_id: challenge.id
-      }));
-      await supabase.from('child_challenges').insert(challengeInserts);
+      console.log('Found subjects:', subjectsData);
+      console.log('Found challenges:', challengesData);
+
+      // Add new subject associations
+      if (subjectsData && subjectsData.length > 0) {
+        const subjectInserts = subjectsData.map(subject => ({
+          child_id: childId,
+          subject_id: subject.id
+        }));
+        const { error: subjectError } = await supabase.from('child_subjects').insert(subjectInserts);
+        if (subjectError) throw subjectError;
+      }
+
+      // Add new challenge associations
+      if (challengesData && challengesData.length > 0) {
+        const challengeInserts = challengesData.map(challenge => ({
+          child_id: childId,
+          challenge_id: challenge.id
+        }));
+        const { error: challengeError } = await supabase.from('child_challenges').insert(challengeInserts);
+        if (challengeError) throw challengeError;
+      }
+    } catch (error) {
+      console.error('Error updating child subjects and challenges:', error);
+      throw error;
     }
   };
 
