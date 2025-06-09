@@ -151,19 +151,6 @@ const Dashboard: React.FC = () => {
     createdAt: new Date(dbChild.created_at)
   });
 
-  // Transform conversations for ConversationHistory
-  const transformConversationsForHistory = (conversations: Conversation[]): SavedConversation[] => {
-    return conversations.map(conv => ({
-      id: conv.id,
-      childId: conv.child_id || '',
-      title: conv.title,
-      messages: [], // Messages would need to be fetched separately if needed
-      isFavorite: conv.is_favorite,
-      createdAt: new Date(conv.created_at),
-      tags: [] // Tags would need to be fetched separately if needed
-    }));
-  };
-
   if (showChat && selectedChild && selectedCategories) {
     return (
       <ChatInterface
@@ -188,7 +175,7 @@ const Dashboard: React.FC = () => {
   if (showConversationHistory) {
     return (
       <ConversationHistory
-        conversations={transformConversationsForHistory(conversations)}
+        conversations={conversations}
         onBack={() => setShowConversationHistory(false)}
       />
     );
