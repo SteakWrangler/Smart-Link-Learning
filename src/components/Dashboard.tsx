@@ -1,11 +1,11 @@
-
 import React, { useState } from 'react';
-import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft } from 'lucide-react';
+import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import ChildProfile from './ChildProfile';
 import AddChildForm from './AddChildForm';
 import ConversationHistory from './ConversationHistory';
 import ChatInterface from './ChatInterface';
+import DocumentManager from './DocumentManager';
 
 interface DashboardProps {
   onBack: () => void;
@@ -17,8 +17,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | undefined>();
   const [selectedChild, setSelectedChild] = useState<Child | undefined>();
-  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'support'>('children');
+  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
   const [showChat, setShowChat] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
 
   const handleAddChild = (childData: Omit<Child, 'id' | 'createdAt'>) => {
     if (editingChild) {
@@ -80,6 +81,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     );
   }
 
+  if (showDocuments) {
+    return (
+      <DocumentManager onClose={() => setShowDocuments(false)} />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
@@ -117,6 +124,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
             >
               <MessageSquare size={16} className="inline mr-2" />
               History
+            </button>
+            <button
+              onClick={() => setActiveTab('documents')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'documents'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+            >
+              <FileText size={16} className="inline mr-2" />
+              Documents
             </button>
             <button
               onClick={() => setActiveTab('support')}
@@ -192,6 +210,36 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               }
             }}
           />
+        )}
+
+        {activeTab === 'documents' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-800">Document Manager</h2>
+              <button
+                onClick={() => setShowDocuments(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+              >
+                <FileText size={20} />
+                Manage Documents
+              </button>
+            </div>
+            <div className="bg-white rounded-xl shadow-lg p-8">
+              <div className="text-center">
+                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-800 mb-2">Upload and Manage Documents</h3>
+                <p className="text-gray-600 mb-4">
+                  Upload documents like failed tests, study guides, and homework to help create personalized learning plans.
+                </p>
+                <button
+                  onClick={() => setShowDocuments(true)}
+                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                >
+                  Open Document Manager
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {activeTab === 'support' && (
