@@ -1,20 +1,39 @@
 
 import React from 'react';
 import { BookOpen, Users, Brain } from 'lucide-react';
+import { Child } from '@/types/database';
 
 interface CategorySelectorProps {
-  selectedCategories: {
+  onCategoriesSelected: (categories: {
     subject: string;
     ageGroup: string;
     challenge: string;
-  };
-  onCategoryChange: (type: string, value: string) => void;
+  }) => void;
+  onBack: () => void;
+  selectedChild: Child;
 }
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({
-  selectedCategories,
-  onCategoryChange
+  onCategoriesSelected,
+  onBack,
+  selectedChild
 }) => {
+  const [selectedCategories, setSelectedCategories] = React.useState({
+    subject: '',
+    ageGroup: '',
+    challenge: ''
+  });
+
+  const handleCategoryChange = (type: string, value: string) => {
+    const updated = { ...selectedCategories, [type]: value };
+    setSelectedCategories(updated);
+    
+    // Auto-proceed when all categories are selected
+    if (updated.subject && updated.ageGroup && updated.challenge) {
+      onCategoriesSelected(updated);
+    }
+  };
+
   const subjects = [
     { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
     { id: 'reading', label: 'Reading', color: 'bg-green-100 text-green-700' },
@@ -59,7 +78,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
         {items.map((item) => (
           <button
             key={item.id}
-            onClick={() => onCategoryChange(categoryType, item.id)}
+            onClick={() => handleCategoryChange(categoryType, item.id)}
             className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 border-2 ${
               selectedValue === item.id
                 ? `${item.color} border-current shadow-md scale-105`
@@ -74,30 +93,47 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   );
 
   return (
-    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
-      <CategorySection
-        title="Subject Area"
-        icon={BookOpen}
-        items={subjects}
-        selectedValue={selectedCategories.subject}
-        categoryType="subject"
-      />
-      
-      <CategorySection
-        title="Age Group"
-        icon={Users}
-        items={ageGroups}
-        selectedValue={selectedCategories.ageGroup}
-        categoryType="ageGroup"
-      />
-      
-      <CategorySection
-        title="Learning Challenge"
-        icon={Brain}
-        items={challenges}
-        selectedValue={selectedCategories.challenge}
-        categoryType="challenge"
-      />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <button
+            onClick={onBack}
+            className="text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            ← Back
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Choose Learning Focus for {selectedChild.name}</h1>
+            <p className="text-gray-600">Select the subject, age group, and any learning challenges</p>
+          </div>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
+          <CategorySection
+            title="Subject Area"
+            icon={BookOpen}
+            items={subjects}
+            selectedValue={selectedCategories.subject}
+            categoryType="subject"
+          />
+          
+          <CategorySection
+            title="Age Group"
+            icon={Users}
+            items={ageGroups}
+            selectedValue={selectedCategories.ageGroup}
+            categoryType="ageGroup"
+          />
+          
+          <CategorySection
+            title="Learning Challenge"
+            icon={Brain}
+            items={challenges}
+            selectedValue={selectedCategories.challenge}
+            categoryType="challenge"
+          />
+        </div>
+      </div>
     </div>
   );
 };

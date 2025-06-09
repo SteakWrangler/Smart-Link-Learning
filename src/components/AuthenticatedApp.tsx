@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Auth from './Auth';
@@ -29,7 +28,7 @@ const AuthenticatedApp = () => {
 
   if (showDashboard) {
     if (isParent) {
-      return <Dashboard onBack={() => setShowDashboard(false)} />;
+      return <Dashboard />;
     } else if (isStudent) {
       return <StudentDashboard onBack={() => setShowDashboard(false)} />;
     }

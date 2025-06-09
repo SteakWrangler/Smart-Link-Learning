@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
-import { Plus, MessageCircle, FileText, Star } from 'lucide-react';
+import { Plus, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import AddChildForm from './AddChildForm';
