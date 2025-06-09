@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Star, Save } from 'lucide-react';
+import { ArrowLeft, Send, Star, Save, FileText } from 'lucide-react';
 import { Child } from '../types';
-import { StudentProfile } from '../types/database';
+import { StudentProfile, DocumentData } from '../types/database';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -22,6 +24,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   selectedStudentProfile,
   onSaveConversation
 }) => {
+  const { profile } = useAuth();
   const [messages, setMessages] = useState<Array<{ id: string; type: 'user' | 'ai'; content: string; timestamp: Date }>>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -29,14 +32,79 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [conversationTitle, setConversationTitle] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<DocumentData[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
 
+  useEffect(() => {
+    if (profile) {
+      fetchDocuments();
+    }
+  }, [profile, selectedChild]);
+
+  const fetchDocuments = async () => {
+    if (!profile) return;
+
+    try {
+      let query = supabase
+        .from('documents')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false });
+
+      // Filter by child if parent user
+      if (profile.user_type === 'parent' && selectedChild?.id) {
+        query = query.eq('child_id', selectedChild.id);
+      }
+
+      // Filter by student profile if student user
+      if (profile.user_type === 'student' && selectedStudentProfile?.id) {
+        query = query.eq('student_profile_id', selectedStudentProfile.id);
+      }
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      console.log('Fetched documents for chat:', data);
+      setDocuments(data || []);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    }
+  };
+
   const generateAIResponse = async (userMessage: string, context: string) => {
-    // For now, return a more realistic response based on the context
-    // In a real implementation, this would call an actual AI service
-    
+    // Check if user is asking about uploaded documents
+    const mentionsDocument = userMessage.toLowerCase().includes('test') || 
+                           userMessage.toLowerCase().includes('upload') || 
+                           userMessage.toLowerCase().includes('document') ||
+                           userMessage.toLowerCase().includes('look at');
+
+    if (mentionsDocument && documents.length > 0) {
+      const recentDocuments = documents.slice(0, 3); // Get most recent 3 documents
+      const documentInfo = recentDocuments.map(doc => 
+        `- ${doc.file_name} (${doc.document_type}) - Subject: ${doc.subject || 'Not specified'}`
+      ).join('\n');
+
+      return `I can see you've uploaded some documents for ${learnerName}! Here are the recent ones I have access to:
+
+${documentInfo}
+
+While I can see these documents have been uploaded, I'd love to help you create activities based on the specific problems ${learnerName} struggled with. Could you tell me:
+
+1. What specific math topics or problem types were challenging in the test?
+2. What grade level math concepts should we focus on?
+
+For the outer space and aliens theme you mentioned, I can create some really fun activities! For example:
+- "Alien Math Missions" where each correct answer helps rescue aliens
+- "Space Station Problems" where math helps build and maintain alien spacecraft
+- "Galactic Trading" games for practicing different math operations
+
+What specific math concepts from the test should we turn into space adventures?`;
+    }
+
+    // Original responses for other cases
     const responses = [
       `Hi ${learnerName}! I understand you're working on ${selectedCategories.subject}. Let me help you with that. Can you tell me more about what specific part you're struggling with?`,
       `That's a great question about ${selectedCategories.subject}! For someone in the ${selectedCategories.ageGroup} age group, I'd suggest we break this down into smaller steps. What would you like to focus on first?`,
@@ -142,6 +210,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <p className="text-sm text-gray-600">
                 {selectedCategories.subject} • {selectedCategories.ageGroup} • {selectedCategories.challenge}
               </p>
+              {documents.length > 0 && (
+                <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
+                  <FileText size={12} />
+                  {documents.length} document{documents.length !== 1 ? 's' : ''} available
+                </p>
+              )}
             </div>
           </div>
           
@@ -166,9 +240,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="text-center text-gray-500 mt-12">
                 <p className="text-lg mb-2">Let's start learning together! 🌟</p>
                 <p>I'm here to help {learnerName} with personalized lessons and activities.</p>
+                {documents.length > 0 && (
+                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800 font-medium mb-2">
+                      📁 I can see you have {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
+                    </p>
+                    <p className="text-xs text-blue-600">
+                      Ask me to analyze them or create activities based on the content!
+                    </p>
+                  </div>
+                )}
                 <div className="mt-4 text-sm text-gray-400">
                   <p>Try saying something like:</p>
-                  <p>"My child failed a math test" or "We need help with reading comprehension"</p>
+                  <p>"Check out the failed test I uploaded" or "Create a fun activity based on my uploaded document"</p>
                 </div>
               </div>
             ) : (
