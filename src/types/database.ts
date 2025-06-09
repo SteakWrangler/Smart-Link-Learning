@@ -76,6 +76,8 @@ export interface DocumentData {
   document_type: 'failed_test' | 'study_guide' | 'homework' | 'other';
   description?: string;
   subject?: string;
+  extracted_content?: string;
+  ai_analysis?: any;
   created_at: string;
   updated_at: string;
 }
