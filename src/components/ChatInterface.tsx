@@ -68,40 +68,55 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       if (error) throw error;
 
       console.log('Fetched documents for chat:', data);
-      setDocuments(data || []);
+      
+      // Type the documents properly to match DocumentData interface
+      const typedDocuments: DocumentData[] = (data || []).map(doc => ({
+        ...doc,
+        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other'
+      }));
+      
+      setDocuments(typedDocuments);
     } catch (error) {
       console.error('Error fetching documents:', error);
     }
   };
 
   const generateAIResponse = async (userMessage: string, context: string) => {
-    // Check if user is asking about uploaded documents
-    const mentionsDocument = userMessage.toLowerCase().includes('test') || 
+    // Check if user is asking about uploaded documents or analysis
+    const mentionsAnalysis = userMessage.toLowerCase().includes('test') || 
                            userMessage.toLowerCase().includes('upload') || 
                            userMessage.toLowerCase().includes('document') ||
-                           userMessage.toLowerCase().includes('look at');
+                           userMessage.toLowerCase().includes('look at') ||
+                           userMessage.toLowerCase().includes('analyze') ||
+                           userMessage.toLowerCase().includes('check out') ||
+                           userMessage.toLowerCase().includes('see what') ||
+                           userMessage.toLowerCase().includes('got wrong');
 
-    if (mentionsDocument && documents.length > 0) {
-      const recentDocuments = documents.slice(0, 3); // Get most recent 3 documents
-      const documentInfo = recentDocuments.map(doc => 
-        `- ${doc.file_name} (${doc.document_type}) - Subject: ${doc.subject || 'Not specified'}`
-      ).join('\n');
+    if (mentionsAnalysis && documents.length > 0) {
+      // Find the most recent test document
+      const testDocument = documents.find(doc => doc.document_type === 'failed_test') || documents[0];
+      
+      if (testDocument) {
+        // Since we can't actually read the PDF content, we'll provide a structured response 
+        // that acknowledges the document and guides the user to provide specific details
+        return `I can see you've uploaded "${testDocument.file_name}" for ${learnerName}! I understand you want me to analyze the test and create space-themed activities based on what he got wrong.
 
-      return `I can see you've uploaded some documents for ${learnerName}! Here are the recent ones I have access to:
+🚀 **SPACE MISSION: Help ${learnerName} Master Math!** 🛸
 
-${documentInfo}
+While I can see the test document, I need you to tell me which specific problems or math concepts ${learnerName} struggled with so I can create the perfect alien adventure activities! 
 
-While I can see these documents have been uploaded, I'd love to help you create activities based on the specific problems ${learnerName} struggled with. Could you tell me:
+For example, if he had trouble with:
 
-1. What specific math topics or problem types were challenging in the test?
-2. What grade level math concepts should we focus on?
+**🛸 Addition/Subtraction:** "Alien Rescue Mission" - Save aliens by solving math problems to power up the spaceship!
 
-For the outer space and aliens theme you mentioned, I can create some really fun activities! For example:
-- "Alien Math Missions" where each correct answer helps rescue aliens
-- "Space Station Problems" where math helps build and maintain alien spacecraft
-- "Galactic Trading" games for practicing different math operations
+**🌟 Multiplication:** "Galactic Trading Post" - Help aliens trade resources using multiplication to calculate totals!
 
-What specific math concepts from the test should we turn into space adventures?`;
+**🚀 Fractions:** "Space Pizza Party" - Help alien friends divide their space pizzas fairly!
+
+**🌌 Word Problems:** "Mission Control" - Solve real space scenarios like calculating fuel needed for trips to different planets!
+
+Could you tell me which specific math topics or types of problems from the test ${learnerName} found challenging? Then I can create amazing space adventures that make learning those concepts fun and engaging!`;
+      }
     }
 
     // Original responses for other cases
@@ -113,10 +128,6 @@ What specific math concepts from the test should we turn into space adventures?`
     ];
     
     // Simple response selection based on message content
-    if (userMessage.toLowerCase().includes('test') || userMessage.toLowerCase().includes('failed')) {
-      return `I understand that ${learnerName} had some challenges with a recent test. That's completely normal and we can work together to improve! For ${selectedCategories.subject}, let's identify the specific areas that need more practice. Can you tell me which topics or problems were the most difficult?`;
-    }
-    
     if (userMessage.toLowerCase().includes('homework')) {
       return `Homework can be challenging, especially with ${selectedCategories.challenge}. For ${selectedCategories.subject}, let's make it more manageable. What specific homework assignment are you working on right now?`;
     }
@@ -213,7 +224,7 @@ What specific math concepts from the test should we turn into space adventures?`
               {documents.length > 0 && (
                 <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
                   <FileText size={12} />
-                  {documents.length} document{documents.length !== 1 ? 's' : ''} available
+                  {documents.length} document{documents.length !== 1 ? 's' : ''} available for analysis
                 </p>
               )}
             </div>
@@ -252,7 +263,7 @@ What specific math concepts from the test should we turn into space adventures?`
                 )}
                 <div className="mt-4 text-sm text-gray-400">
                   <p>Try saying something like:</p>
-                  <p>"Check out the failed test I uploaded" or "Create a fun activity based on my uploaded document"</p>
+                  <p>"Check out the failed test I uploaded" or "Look at the test and see what he got wrong"</p>
                 </div>
               </div>
             ) : (
