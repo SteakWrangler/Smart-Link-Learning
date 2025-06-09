@@ -10,13 +10,14 @@ import ChildProfile from './ChildProfile';
 import CategorySelector from './CategorySelector';
 import ChatInterface from './ChatInterface';
 import ConversationHistory from './ConversationHistory';
-import type { Child, Conversation } from '@/types/database';
+import type { Child as DatabaseChild, Conversation } from '@/types/database';
+import type { Child as FrontendChild, SavedConversation } from '@/types/index';
 
 const Dashboard: React.FC = () => {
   const { profile } = useAuth();
-  const [children, setChildren] = useState<Child[]>([]);
+  const [children, setChildren] = useState<DatabaseChild[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
-  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [selectedChild, setSelectedChild] = useState<DatabaseChild | null>(null);
   const [showCategorySelector, setShowCategorySelector] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<any>(null);
@@ -71,7 +72,7 @@ const Dashboard: React.FC = () => {
     fetchChildren();
   };
 
-  const handleStartChat = (child: Child) => {
+  const handleStartChat = (child: DatabaseChild) => {
     setSelectedChild(child);
     setShowCategorySelector(true);
   };
@@ -140,8 +141,8 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Transform database Child to frontend Child for ChildProfile component
-  const transformChildForProfile = (dbChild: Child) => ({
+  // Transform database Child to frontend Child for components that need it
+  const transformChildForProfile = (dbChild: DatabaseChild): FrontendChild => ({
     id: dbChild.id,
     name: dbChild.name,
     subjects: [], // Default empty array since database Child doesn't have subjects
@@ -149,6 +150,19 @@ const Dashboard: React.FC = () => {
     challenges: [], // Default empty array since database Child doesn't have challenges
     createdAt: new Date(dbChild.created_at)
   });
+
+  // Transform conversations for ConversationHistory
+  const transformConversationsForHistory = (conversations: Conversation[]): SavedConversation[] => {
+    return conversations.map(conv => ({
+      id: conv.id,
+      childId: conv.child_id || '',
+      title: conv.title,
+      messages: [], // Messages would need to be fetched separately if needed
+      isFavorite: conv.is_favorite,
+      createdAt: new Date(conv.created_at),
+      tags: [] // Tags would need to be fetched separately if needed
+    }));
+  };
 
   if (showChat && selectedChild && selectedCategories) {
     return (
@@ -166,7 +180,7 @@ const Dashboard: React.FC = () => {
       <CategorySelector
         onCategoriesSelected={handleCategoriesSelected}
         onBack={handleBackToDashboard}
-        selectedChild={selectedChild}
+        selectedChild={transformChildForProfile(selectedChild)}
       />
     );
   }
@@ -174,7 +188,7 @@ const Dashboard: React.FC = () => {
   if (showConversationHistory) {
     return (
       <ConversationHistory
-        conversations={conversations}
+        conversations={transformConversationsForHistory(conversations)}
         onBack={() => setShowConversationHistory(false)}
       />
     );
