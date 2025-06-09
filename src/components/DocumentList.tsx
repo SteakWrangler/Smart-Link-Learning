@@ -7,10 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { Document, Child } from '@/types/database';
+import type { DocumentData, Child } from '@/types/database';
 
 interface DocumentListProps {
-  documents: Document[];
+  documents: DocumentData[];
   children?: Child[];
   onDocumentDeleted: () => void;
 }
@@ -55,7 +55,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
     return child?.name;
   };
 
-  const handleDownload = async (document: Document) => {
+  const handleDownload = async (document: DocumentData) => {
     try {
       const { data, error } = await supabase.storage
         .from('documents')
@@ -65,12 +65,12 @@ const DocumentList: React.FC<DocumentListProps> = ({
 
       // Create download link
       const url = URL.createObjectURL(data);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = document.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = document.file_name;
+      window.document.body.appendChild(link);
+      link.click();
+      window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
     } catch (error: any) {
@@ -83,7 +83,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
     }
   };
 
-  const handleDelete = async (document: Document) => {
+  const handleDelete = async (document: DocumentData) => {
     if (!confirm('Are you sure you want to delete this document?')) {
       return;
     }
