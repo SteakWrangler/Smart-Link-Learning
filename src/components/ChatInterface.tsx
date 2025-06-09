@@ -33,7 +33,31 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
 
-  function handleSendMessage() {
+  const generateAIResponse = async (userMessage: string, context: string) => {
+    // For now, return a more realistic response based on the context
+    // In a real implementation, this would call an actual AI service
+    
+    const responses = [
+      `Hi ${learnerName}! I understand you're working on ${selectedCategories.subject}. Let me help you with that. Can you tell me more about what specific part you're struggling with?`,
+      `That's a great question about ${selectedCategories.subject}! For someone in the ${selectedCategories.ageGroup} age group, I'd suggest we break this down into smaller steps. What would you like to focus on first?`,
+      `I see you're dealing with ${selectedCategories.challenge}. Let's work together to make ${selectedCategories.subject} more manageable. What specific topic or problem would you like help with?`,
+      `Thanks for sharing that with me, ${learnerName}! Given that you're working on ${selectedCategories.subject} and considering ${selectedCategories.challenge}, let me suggest some strategies that might help.`
+    ];
+    
+    // Simple response selection based on message content
+    if (userMessage.toLowerCase().includes('test') || userMessage.toLowerCase().includes('failed')) {
+      return `I understand that ${learnerName} had some challenges with a recent test. That's completely normal and we can work together to improve! For ${selectedCategories.subject}, let's identify the specific areas that need more practice. Can you tell me which topics or problems were the most difficult?`;
+    }
+    
+    if (userMessage.toLowerCase().includes('homework')) {
+      return `Homework can be challenging, especially with ${selectedCategories.challenge}. For ${selectedCategories.subject}, let's make it more manageable. What specific homework assignment are you working on right now?`;
+    }
+    
+    // Return a random contextual response
+    return responses[Math.floor(Math.random() * responses.length)];
+  };
+
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     
     const userMessage = {
@@ -44,21 +68,36 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentMessage = inputMessage.trim();
     setInputMessage('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Generate AI response
+      const context = `Student: ${learnerName}, Subject: ${selectedCategories.subject}, Age Group: ${selectedCategories.ageGroup}, Challenge: ${selectedCategories.challenge}`;
+      const aiResponse = await generateAIResponse(currentMessage, context);
+      
       const aiMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai' as const,
-        content: `Great question! Let me help ${learnerName} with that. Since we're working on ${selectedCategories.subject} and focusing on ${selectedCategories.challenge}, here's what I suggest...`,
+        content: aiResponse,
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error generating AI response:', error);
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai' as const,
+        content: "I'm sorry, I'm having trouble responding right now. Please try again.",
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1500);
-  }
+    }
+  };
 
   function handleSaveConversation() {
     if (!conversationTitle.trim()) return;
@@ -127,6 +166,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="text-center text-gray-500 mt-12">
                 <p className="text-lg mb-2">Let's start learning together! 🌟</p>
                 <p>I'm here to help {learnerName} with personalized lessons and activities.</p>
+                <div className="mt-4 text-sm text-gray-400">
+                  <p>Try saying something like:</p>
+                  <p>"My child failed a math test" or "We need help with reading comprehension"</p>
+                </div>
               </div>
             ) : (
               messages.map((message) => (
