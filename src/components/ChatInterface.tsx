@@ -81,6 +81,47 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  const processUnanalyzedDocuments = async () => {
+    const unprocessedDocs = documents.filter(doc => 
+      doc.file_type === 'application/pdf' && 
+      (!doc.extracted_content || !doc.ai_analysis)
+    );
+    
+    if (unprocessedDocs.length === 0) return;
+    
+    console.log('Processing unanalyzed documents:', unprocessedDocs.length);
+    
+    for (const doc of unprocessedDocs) {
+      try {
+        console.log('Processing document:', doc.file_name);
+        
+        // Get the file from storage
+        const { data: fileData, error: downloadError } = await supabase.storage
+          .from('documents')
+          .download(doc.file_path);
+        
+        if (downloadError) {
+          console.error('Error downloading file for processing:', downloadError);
+          continue;
+        }
+        
+        const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
+        
+        // Import and use the processing service
+        const { processDocument } = await import('@/services/documentProcessingService');
+        await processDocument(doc.id, fileData as File, learnerName);
+        
+        console.log('Document processing completed for:', doc.file_name);
+        
+      } catch (error) {
+        console.error('Error processing document:', error);
+      }
+    }
+    
+    // Refresh documents list after processing
+    await fetchDocuments();
+  };
+
   const generateAIResponse = async (userMessage: string, context: string) => {
     // Check if user is asking about uploaded documents or analysis
     const mentionsAnalysis = userMessage.toLowerCase().includes('test') || 
@@ -95,42 +136,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                            userMessage.toLowerCase().includes('teach');
 
     if (mentionsAnalysis && documents.length > 0) {
-      // Check if we have any documents that need processing
-      const unprocessedDocs = documents.filter(doc => 
-        doc.file_type === 'application/pdf' && 
-        (!doc.extracted_content || !doc.ai_analysis)
-      );
-      
-      if (unprocessedDocs.length > 0) {
-        // Process any unprocessed PDFs first
-        for (const doc of unprocessedDocs) {
-          try {
-            console.log('Processing unanalyzed document:', doc.file_name);
-            
-            // Get the file from storage
-            const { data: fileData, error: downloadError } = await supabase.storage
-              .from('documents')
-              .download(doc.file_path);
-            
-            if (downloadError) {
-              console.error('Error downloading file for processing:', downloadError);
-              continue;
-            }
-            
-            const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
-            
-            // Import and use the processing service
-            const { processDocument } = await import('@/services/documentProcessingService');
-            await processDocument(doc.id, fileData as File, learnerName);
-            
-            // Refresh documents list
-            await fetchDocuments();
-            
-          } catch (error) {
-            console.error('Error processing document:', error);
-          }
-        }
-      }
+      // First, process any unanalyzed documents and wait for completion
+      await processUnanalyzedDocuments();
       
       // Now find documents with extracted content and analysis
       const analyzedDocs = documents.filter(doc => doc.extracted_content && doc.ai_analysis);
@@ -199,19 +206,16 @@ Based on the content I found, let's create some general math adventures to stren
         }
       }
       
-      // If we have documents but no analysis yet
-      const testDocument = documents.find(doc => doc.document_type === 'failed_test') || documents[0];
-      
-      if (testDocument && !testDocument.ai_analysis) {
-        return `I can see you've uploaded "${testDocument.file_name}" for ${learnerName}! 
+      // If still no analysis after processing, check if we have any PDFs at all
+      const pdfDocs = documents.filter(doc => doc.file_type === 'application/pdf');
+      if (pdfDocs.length > 0) {
+        return `I found your uploaded PDF "${pdfDocs[0].file_name}" but I'm having trouble extracting the content. This might be due to:
 
-🔄 **Processing the document now...** 
+- The PDF contains scanned images instead of text
+- The file is password protected
+- The PDF format is not compatible with our text extraction
 
-I'm extracting the content and analyzing ${learnerName}'s responses. This may take a moment for larger files.
-
-Once I'm done analyzing, I'll be able to create personalized space-themed learning adventures based on exactly what ${learnerName} needs to work on! 🚀
-
-Try asking me again in a moment to see the analysis results.`;
+Could you try uploading a different version of the test, or let me know what specific math topics ${learnerName} is working on so I can create personalized activities?`;
       }
     }
 
@@ -388,7 +392,7 @@ Try asking me again in a moment to see the analysis results.`;
                 <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                    <span className="text-gray-600">Thinking...</span>
+                    <span className="text-gray-600">Processing documents and analyzing content...</span>
                   </div>
                 </div>
               </div>
