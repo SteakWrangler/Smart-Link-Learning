@@ -66,6 +66,7 @@ To design the most effective activity, could you tell me:
 - What specific skill or concept does ${selectedChild.name} need to work on today?
 - How much time do you have available?
 - What space will you be using for the activity?
+- What does ${selectedChild.name} love? And how are they feeling right now?
 - What's ${selectedChild.name}'s energy level like right now?
 
 I'll create a complete, step-by-step lesson plan with exact materials, timing, and instructions! 🌟`;
@@ -87,7 +88,7 @@ To get started, could you tell me:
 - What specific skill needs work? (like "division" or "reading comprehension")
 - How much time do you have? (15 min, 30 min, 45 min?)
 - Where will you do this? (kitchen table, living room, outside?)
-- What does your child love? (dinosaurs, superheroes, building, music?)
+- What does your child love? And how are they feeling right now? (dinosaurs, superheroes, excited, frustrated, calm?)
 - What's their energy level like? (high-energy or calm and focused?)
 
 I'll create a detailed lesson plan with exact materials, minute-by-minute timing, and step-by-step instructions! 😊`;
@@ -262,7 +263,7 @@ Would you like me to create a more specific lesson plan for the exact subject yo
 
 3. **Space:** Where will you do this? (kitchen table, living room floor, outside?)
 
-4. **${selectedChild?.name || 'Your child'}'s current mood:** How are they feeling right now? (frustrated, excited, tired, ready to learn?)
+4. **Favorites & mood:** What does ${selectedChild?.name || 'your child'} love? And how are they feeling right now? (dinosaurs, superheroes, excited, frustrated, calm?)
 
 5. **Energy level:** Are they usually high-energy or more calm and focused?
 
