@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, User, BookOpen, Brain, MessageSquare } from 'lucide-react';
+import { ArrowLeft, User, BookOpen, Brain, MessageSquare, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -8,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { StudentProfile, Subject, Challenge } from '@/types/database';
 import StudentProfileForm from './StudentProfileForm';
 import ChatInterface from './ChatInterface';
+import DocumentManager from './DocumentManager';
 
 interface StudentDashboardProps {
   onBack: () => void;
@@ -22,6 +22,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [showProfileForm, setShowProfileForm] = useState(false);
   const [showChat, setShowChat] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -139,6 +140,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
             </button>
             <h1 className="text-2xl font-bold text-gray-800">My Learning Dashboard</h1>
           </div>
+          <Button
+            onClick={() => setShowDocuments(true)}
+            variant="outline"
+            className="flex items-center gap-2"
+          >
+            <FileText size={16} />
+            My Documents
+          </Button>
         </div>
       </div>
 
@@ -254,6 +263,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
           subjects={subjects}
           challenges={challenges}
         />
+      )}
+
+      {/* Document Manager Modal */}
+      {showDocuments && (
+        <DocumentManager onClose={() => setShowDocuments(false)} />
       )}
     </div>
   );

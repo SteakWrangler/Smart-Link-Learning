@@ -63,3 +63,19 @@ export interface ConversationTag {
   conversation_id: string;
   tag: string;
 }
+
+export interface Document {
+  id: string;
+  user_id: string;
+  child_id?: string;
+  student_profile_id?: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  document_type: 'failed_test' | 'study_guide' | 'homework' | 'other';
+  description?: string;
+  subject?: string;
+  created_at: string;
+  updated_at: string;
+}

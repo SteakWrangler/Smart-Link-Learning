@@ -202,6 +202,76 @@ export type Database = {
           },
         ]
       }
+      documents: {
+        Row: {
+          child_id: string | null
+          created_at: string
+          description: string | null
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          student_profile_id: string | null
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          child_id?: string | null
+          created_at?: string
+          description?: string | null
+          document_type: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          student_profile_id?: string | null
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          child_id?: string | null
+          created_at?: string
+          description?: string | null
+          document_type?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          student_profile_id?: string | null
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "documents_child_id_fkey"
+            columns: ["child_id"]
+            isOneToOne: false
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string
