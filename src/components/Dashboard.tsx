@@ -1,17 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
+import { Child as DatabaseChild } from '../types/database';
 import ChildProfile from './ChildProfile';
 import AddChildForm from './AddChildForm';
 import ConversationHistory from './ConversationHistory';
 import ChatInterface from './ChatInterface';
 import DocumentManager from './DocumentManager';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
   onBack: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
+  const { profile } = useAuth();
+  const { toast } = useToast();
   const [children, setChildren] = useState<Child[]>([]);
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
@@ -20,24 +26,153 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
   const [showChat, setShowChat] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddChild = (childData: Omit<Child, 'id' | 'createdAt'>) => {
-    if (editingChild) {
-      setChildren(prev => prev.map(child => 
-        child.id === editingChild.id 
-          ? { ...childData, id: editingChild.id, createdAt: editingChild.createdAt }
-          : child
-      ));
-      setEditingChild(undefined);
-    } else {
-      const newChild: Child = {
-        ...childData,
-        id: Date.now().toString(),
-        createdAt: new Date()
-      };
-      setChildren(prev => [...prev, newChild]);
+  useEffect(() => {
+    if (profile) {
+      fetchChildren();
     }
-    setShowAddChild(false);
+  }, [profile]);
+
+  const fetchChildren = async () => {
+    if (!profile) return;
+
+    try {
+      setLoading(true);
+      
+      // Fetch children from database
+      const { data: childrenData, error: childrenError } = await supabase
+        .from('children')
+        .select(`
+          *,
+          child_subjects!inner(
+            subjects(name)
+          ),
+          child_challenges!inner(
+            challenges(name)
+          )
+        `)
+        .eq('parent_id', profile.id);
+
+      if (childrenError) throw childrenError;
+
+      // Transform database children to frontend format
+      const transformedChildren: Child[] = (childrenData || []).map((dbChild: any) => ({
+        id: dbChild.id,
+        name: dbChild.name,
+        ageGroup: dbChild.age_group,
+        subjects: dbChild.child_subjects?.map((cs: any) => cs.subjects.name) || [],
+        challenges: dbChild.child_challenges?.map((cc: any) => cc.challenges.name) || [],
+        createdAt: new Date(dbChild.created_at)
+      }));
+
+      setChildren(transformedChildren);
+    } catch (error) {
+      console.error('Error fetching children:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load children",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddChild = async (childData: Omit<Child, 'id' | 'createdAt'>) => {
+    if (!profile) return;
+
+    try {
+      if (editingChild) {
+        // Update existing child
+        const { error: updateError } = await supabase
+          .from('children')
+          .update({
+            name: childData.name,
+            age_group: childData.ageGroup,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', editingChild.id);
+
+        if (updateError) throw updateError;
+
+        // Update subjects and challenges
+        await updateChildSubjectsAndChallenges(editingChild.id, childData.subjects, childData.challenges);
+        
+        toast({
+          title: "Success",
+          description: "Child updated successfully",
+        });
+      } else {
+        // Create new child
+        const { data: newChild, error: insertError } = await supabase
+          .from('children')
+          .insert({
+            name: childData.name,
+            age_group: childData.ageGroup,
+            parent_id: profile.id
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        // Add subjects and challenges
+        await updateChildSubjectsAndChallenges(newChild.id, childData.subjects, childData.challenges);
+
+        toast({
+          title: "Success",
+          description: "Child added successfully",
+        });
+      }
+
+      // Refresh children list
+      await fetchChildren();
+      setEditingChild(undefined);
+      setShowAddChild(false);
+    } catch (error) {
+      console.error('Error saving child:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save child",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateChildSubjectsAndChallenges = async (childId: string, subjects: string[], challenges: string[]) => {
+    // Remove existing subjects and challenges
+    await supabase.from('child_subjects').delete().eq('child_id', childId);
+    await supabase.from('child_challenges').delete().eq('child_id', childId);
+
+    // Get subject and challenge IDs
+    const { data: subjectsData } = await supabase
+      .from('subjects')
+      .select('id, name')
+      .in('name', subjects);
+
+    const { data: challengesData } = await supabase
+      .from('challenges')
+      .select('id, name')
+      .in('name', challenges);
+
+    // Add new subject associations
+    if (subjectsData && subjectsData.length > 0) {
+      const subjectInserts = subjectsData.map(subject => ({
+        child_id: childId,
+        subject_id: subject.id
+      }));
+      await supabase.from('child_subjects').insert(subjectInserts);
+    }
+
+    // Add new challenge associations
+    if (challengesData && challengesData.length > 0) {
+      const challengeInserts = challengesData.map(challenge => ({
+        child_id: childId,
+        challenge_id: challenge.id
+      }));
+      await supabase.from('child_challenges').insert(challengeInserts);
+    }
   };
 
   const handleEditChild = (child: Child) => {
@@ -45,10 +180,37 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     setShowAddChild(true);
   };
 
-  const handleDeleteChild = (childId: string) => {
-    if (confirm('Are you sure you want to delete this child profile?')) {
-      setChildren(prev => prev.filter(child => child.id !== childId));
+  const handleDeleteChild = async (childId: string) => {
+    if (!confirm('Are you sure you want to delete this child profile?')) return;
+
+    try {
+      // Delete child associations first
+      await supabase.from('child_subjects').delete().eq('child_id', childId);
+      await supabase.from('child_challenges').delete().eq('child_id', childId);
+      
+      // Delete child
+      const { error } = await supabase
+        .from('children')
+        .delete()
+        .eq('id', childId);
+
+      if (error) throw error;
+
+      // Refresh children list
+      await fetchChildren();
       setSavedConversations(prev => prev.filter(conv => conv.childId !== childId));
+      
+      toast({
+        title: "Success",
+        description: "Child deleted successfully",
+      });
+    } catch (error) {
+      console.error('Error deleting child:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete child",
+        variant: "destructive",
+      });
     }
   };
 
@@ -84,6 +246,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   if (showDocuments) {
     return (
       <DocumentManager onClose={() => setShowDocuments(false)} />
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
     );
   }
 

@@ -68,6 +68,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
           .eq('parent_id', profile.id);
 
         if (childrenError) throw childrenError;
+        console.log('Fetched children for document manager:', childrenData);
         setChildren(childrenData || []);
       }
 
