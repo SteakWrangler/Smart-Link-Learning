@@ -36,14 +36,15 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
             last_name: lastName,
             user_type: userType,
           },
+          emailRedirectTo: `${window.location.origin}/`,
         },
       });
 
       if (error) throw error;
 
       toast({
-        title: "Success!",
-        description: "Please check your email to confirm your account.",
+        title: "Account Created!",
+        description: "Please check your email and click the confirmation link. After confirming, return here and sign in with your credentials.",
       });
     } catch (error: any) {
       toast({
@@ -68,11 +69,24 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
 
       if (error) throw error;
 
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      });
+      
       onAuthSuccess();
     } catch (error: any) {
+      let errorMessage = error.message;
+      
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = "Invalid email or password. Please check your credentials and try again.";
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = "Please check your email and confirm your account before signing in.";
+      }
+      
       toast({
-        title: "Error",
-        description: error.message,
+        title: "Sign In Error",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -118,6 +132,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                 <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? 'Signing In...' : 'Sign In'}
                 </Button>
+                <p className="text-sm text-gray-600 text-center">
+                  Just created an account? Check your email for a confirmation link, then sign in here.
+                </p>
               </form>
             </TabsContent>
             

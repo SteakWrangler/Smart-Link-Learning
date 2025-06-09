@@ -23,6 +23,7 @@ export const useAuth = () => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email);
         setUser(session?.user ?? null);
         if (session?.user) {
           fetchProfile(session.user.id);
@@ -45,7 +46,14 @@ export const useAuth = () => {
         .single();
 
       if (error) throw error;
-      setProfile(data);
+      
+      // Ensure user_type is properly typed
+      const typedProfile: Profile = {
+        ...data,
+        user_type: data.user_type as 'parent' | 'student'
+      };
+      
+      setProfile(typedProfile);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
