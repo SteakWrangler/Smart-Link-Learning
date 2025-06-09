@@ -90,32 +90,86 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                            userMessage.toLowerCase().includes('analyze') ||
                            userMessage.toLowerCase().includes('check out') ||
                            userMessage.toLowerCase().includes('see what') ||
-                           userMessage.toLowerCase().includes('got wrong');
+                           userMessage.toLowerCase().includes('got wrong') ||
+                           userMessage.toLowerCase().includes('help') ||
+                           userMessage.toLowerCase().includes('teach');
 
     if (mentionsAnalysis && documents.length > 0) {
-      // Find the most recent test document
+      // Find documents with extracted content and analysis
+      const analyzedDocs = documents.filter(doc => doc.extracted_content && doc.ai_analysis);
+      
+      if (analyzedDocs.length > 0) {
+        const doc = analyzedDocs[0];
+        const analysis = doc.ai_analysis as any;
+        
+        if (analysis && analysis.detailedResults) {
+          const incorrectAnswers = analysis.detailedResults.incorrect || [];
+          const problemAreas = analysis.problemAreas || [];
+          
+          let response = `🚀 **SPACE MISSION ANALYSIS COMPLETE!** 🛸
+
+I've analyzed ${learnerName}'s test "${doc.file_name}" and here's what I found:
+
+📊 **Mission Stats:**
+- Total Questions: ${analysis.totalQuestions}
+- Correct Answers: ${analysis.correctAnswers} ✅
+- Accuracy: ${analysis.accuracy}%
+- Areas needing reinforcement: ${problemAreas.join(', ')}
+
+🛸 **Problems that need our help:**`;
+
+          incorrectAnswers.forEach((answer: any, index: number) => {
+            response += `\n\n**Problem ${index + 1}:** ${answer.question}
+- ${learnerName}'s Answer: ${answer.studentAnswer}
+- Correct Answer: ${answer.correctAnswer}`;
+          });
+
+          response += `\n\n🌟 **SPACE-THEMED RESCUE MISSIONS:**\n`;
+
+          if (problemAreas.includes('addition')) {
+            response += `\n🚀 **ASTEROID ADDITION MISSION:**
+Help alien miners collect space crystals! Each problem solved correctly adds crystals to power their spaceship home.
+- Practice: Two-digit addition with regrouping
+- Story: "The Zorblings need 42 crystals total. They found 25 on one asteroid and 17 on another..."`;
+          }
+
+          if (problemAreas.includes('subtraction')) {
+            response += `\n\n🛸 **ESCAPE POD SUBTRACTION:**
+Help aliens escape by calculating fuel remaining after each jump through space!
+- Practice: Two-digit subtraction with borrowing  
+- Story: "Commander Zorb started with 73 fuel units, but used 29 in the first jump..."`;
+          }
+
+          if (problemAreas.includes('multiplication')) {
+            response += `\n\n👽 **GALACTIC GROUPS MISSION:**
+Help organize alien families into transport ships!
+- Practice: Multiplication groups and times tables
+- Story: "If each alien family has 7 members and there are 3 families, how many aliens need transport?"`;
+          }
+
+          response += `\n\n🎮 Ready to start a space mission? Pick which adventure ${learnerName} wants to try first!`;
+          
+          return response;
+        }
+      }
+      
+      // Fallback if document exists but no analysis
       const testDocument = documents.find(doc => doc.document_type === 'failed_test') || documents[0];
       
       if (testDocument) {
-        // Since we can't actually read the PDF content, we'll provide a structured response 
-        // that acknowledges the document and guides the user to provide specific details
-        return `I can see you've uploaded "${testDocument.file_name}" for ${learnerName}! I understand you want me to analyze the test and create space-themed activities based on what he got wrong.
+        return `I can see you've uploaded "${testDocument.file_name}" for ${learnerName}! I'm working on analyzing the content. 
 
 🚀 **SPACE MISSION: Help ${learnerName} Master Math!** 🛸
 
-While I can see the test document, I need you to tell me which specific problems or math concepts ${learnerName} struggled with so I can create the perfect alien adventure activities! 
+The document is being processed for content analysis. In the meantime, could you tell me which specific math concepts from the test ${learnerName} found challenging? 
 
-For example, if he had trouble with:
+For example:
+- **🛸 Addition/Subtraction problems**
+- **🌟 Multiplication tables** 
+- **🚀 Division facts**
+- **🌌 Word problems**
 
-**🛸 Addition/Subtraction:** "Alien Rescue Mission" - Save aliens by solving math problems to power up the spaceship!
-
-**🌟 Multiplication:** "Galactic Trading Post" - Help aliens trade resources using multiplication to calculate totals!
-
-**🚀 Fractions:** "Space Pizza Party" - Help alien friends divide their space pizzas fairly!
-
-**🌌 Word Problems:** "Mission Control" - Solve real space scenarios like calculating fuel needed for trips to different planets!
-
-Could you tell me which specific math topics or types of problems from the test ${learnerName} found challenging? Then I can create amazing space adventures that make learning those concepts fun and engaging!`;
+Once I know the specific areas, I can create amazing space adventures that make learning fun!`;
       }
     }
 

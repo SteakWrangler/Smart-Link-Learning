@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { File, Download, Trash2, Eye } from 'lucide-react';
+import { File, Download, Trash2, Eye, Brain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -156,10 +156,22 @@ const DocumentList: React.FC<DocumentListProps> = ({
                     <Badge className={getDocumentTypeColor(doc.document_type)}>
                       {getDocumentTypeLabel(doc.document_type)}
                     </Badge>
+                    {doc.extracted_content && (
+                      <Badge variant="outline" className="text-blue-600">
+                        <Brain size={12} className="mr-1" />
+                        Analyzed
+                      </Badge>
+                    )}
                   </div>
                   
                   {doc.description && (
                     <p className="text-sm text-gray-600 mb-2">{doc.description}</p>
+                  )}
+                  
+                  {doc.ai_analysis && (
+                    <div className="text-xs text-blue-600 mb-2">
+                      <p>📊 Analysis: {(doc.ai_analysis as any).accuracy}% accuracy, {(doc.ai_analysis as any).incorrectAnswers} areas to improve</p>
+                    </div>
                   )}
                   
                   <div className="flex items-center gap-4 text-xs text-gray-500">

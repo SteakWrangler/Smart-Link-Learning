@@ -204,10 +204,12 @@ export type Database = {
       }
       documents: {
         Row: {
+          ai_analysis: Json | null
           child_id: string | null
           created_at: string
           description: string | null
           document_type: string
+          extracted_content: string | null
           file_name: string
           file_path: string
           file_size: number
@@ -219,10 +221,12 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          ai_analysis?: Json | null
           child_id?: string | null
           created_at?: string
           description?: string | null
           document_type: string
+          extracted_content?: string | null
           file_name: string
           file_path: string
           file_size: number
@@ -234,10 +238,12 @@ export type Database = {
           user_id: string
         }
         Update: {
+          ai_analysis?: Json | null
           child_id?: string | null
           created_at?: string
           description?: string | null
           document_type?: string
+          extracted_content?: string | null
           file_name?: string
           file_path?: string
           file_size?: number

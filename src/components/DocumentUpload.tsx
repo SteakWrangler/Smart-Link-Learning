@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { processDocument } from '@/services/documentProcessingService';
 import type { Child, StudentProfile, Subject } from '@/types/database';
 
 interface DocumentUploadProps {
@@ -29,6 +30,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const [documentType, setDocumentType] = useState<string>('');
   const [selectedChild, setSelectedChild] = useState<string>('');
   const [subject, setSubject] = useState<string>('');
@@ -110,9 +112,11 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         subject: subject || null,
       };
 
-      const { error: dbError } = await supabase
+      const { data: insertedDoc, error: dbError } = await supabase
         .from('documents')
-        .insert(documentData);
+        .insert(documentData)
+        .select()
+        .single();
 
       if (dbError) throw dbError;
 
@@ -120,6 +124,33 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         title: "Upload successful",
         description: "Your document has been uploaded successfully",
       });
+
+      // Process PDF content if it's a PDF file
+      if (selectedFile.type === 'application/pdf' && insertedDoc) {
+        setProcessing(true);
+        
+        try {
+          const learnerName = profile.user_type === 'parent' 
+            ? children.find(child => child.id === selectedChild)?.name || 'Student'
+            : studentProfile?.name || 'Student';
+            
+          await processDocument(insertedDoc.id, selectedFile, learnerName);
+          
+          toast({
+            title: "Document processed",
+            description: "PDF content has been extracted and analyzed",
+          });
+        } catch (processError) {
+          console.error('Processing error:', processError);
+          toast({
+            title: "Processing warning",
+            description: "Document uploaded but content analysis failed",
+            variant: "destructive",
+          });
+        } finally {
+          setProcessing(false);
+        }
+      }
 
       // Reset form
       setSelectedFile(null);
@@ -151,6 +182,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         <CardTitle className="flex items-center gap-2">
           <Upload size={24} />
           Upload Document
+          {processing && (
+            <span className="text-sm text-blue-600 ml-2">Processing...</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -261,10 +295,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
         <Button
           onClick={handleUpload}
-          disabled={!selectedFile || !documentType || uploading}
+          disabled={!selectedFile || !documentType || uploading || processing}
           className="w-full"
         >
-          {uploading ? 'Uploading...' : 'Upload Document'}
+          {uploading ? 'Uploading...' : processing ? 'Processing...' : 'Upload Document'}
         </Button>
       </CardContent>
     </Card>
