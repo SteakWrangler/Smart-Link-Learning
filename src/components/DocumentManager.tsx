@@ -69,6 +69,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
 
         if (childrenError) throw childrenError;
         setChildren(childrenData || []);
+        console.log('Fetched children for parent:', childrenData);
       }
 
       // If student, fetch student profile
