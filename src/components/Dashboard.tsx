@@ -169,7 +169,7 @@ const Dashboard: React.FC = () => {
       <ChatInterface
         selectedCategories={selectedCategories}
         onBack={handleBackToCategories}
-        selectedChild={selectedChild}
+        selectedChild={transformChildForProfile(selectedChild)}
         onSaveConversation={handleSaveConversation}
       />
     );
