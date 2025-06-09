@@ -140,6 +140,16 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Transform database Child to frontend Child for ChildProfile component
+  const transformChildForProfile = (dbChild: Child) => ({
+    id: dbChild.id,
+    name: dbChild.name,
+    subjects: [], // Default empty array since database Child doesn't have subjects
+    ageGroup: dbChild.age_group,
+    challenges: [], // Default empty array since database Child doesn't have challenges
+    createdAt: new Date(dbChild.created_at)
+  });
+
   if (showChat && selectedChild && selectedCategories) {
     return (
       <ChatInterface
@@ -194,8 +204,10 @@ const Dashboard: React.FC = () => {
           {children.map((child) => (
             <ChildProfile
               key={child.id}
-              child={child}
-              onStartChat={() => handleStartChat(child)}
+              child={transformChildForProfile(child)}
+              onEdit={() => {}} // Placeholder for now
+              onDelete={() => {}} // Placeholder for now
+              onSelect={() => handleStartChat(child)}
             />
           ))}
 
@@ -211,7 +223,7 @@ const Dashboard: React.FC = () => {
 
         {showAddChild && (
           <AddChildForm
-            onChildAdded={handleChildAdded}
+            onSave={handleChildAdded}
             onCancel={() => setShowAddChild(false)}
           />
         )}

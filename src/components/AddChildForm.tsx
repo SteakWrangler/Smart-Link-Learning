@@ -1,31 +1,21 @@
 
 import React, { useState } from 'react';
 import { X, BookOpen, Users, Brain } from 'lucide-react';
-import { Child } from '../types';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
 interface AddChildFormProps {
-  onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
+  onSave: () => void;
   onCancel: () => void;
-  editingChild?: Child;
 }
 
 const AddChildForm: React.FC<AddChildFormProps> = ({
   onSave,
-  onCancel,
-  editingChild
+  onCancel
 }) => {
-  const [name, setName] = useState(editingChild?.name || '');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(editingChild?.challenges || []);
-
-  const subjects = [
-    { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
-    { id: 'reading', label: 'Reading', color: 'bg-green-100 text-green-700' },
-    { id: 'writing', label: 'Writing', color: 'bg-purple-100 text-purple-700' },
-    { id: 'science', label: 'Science', color: 'bg-orange-100 text-orange-700' },
-    { id: 'social-studies', label: 'Social Studies', color: 'bg-red-100 text-red-700' }
-  ];
+  const { profile } = useAuth();
+  const [name, setName] = useState('');
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState('');
 
   const ageGroups = [
     { id: 'early-elementary', label: 'Early Elementary (5-7)', color: 'bg-pink-100 text-pink-700' },
@@ -33,86 +23,31 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
     { id: 'middle-school', label: 'Middle School (11-13)', color: 'bg-teal-100 text-teal-700' }
   ];
 
-  const challenges = [
-    { id: 'adhd-focus', label: 'ADHD/Focus Issues', color: 'bg-yellow-100 text-yellow-700' },
-    { id: 'dyslexia', label: 'Dyslexia', color: 'bg-rose-100 text-rose-700' },
-    { id: 'processing-delays', label: 'Processing Delays', color: 'bg-cyan-100 text-cyan-700' },
-    { id: 'math-anxiety', label: 'Math Anxiety', color: 'bg-amber-100 text-amber-700' },
-    { id: 'general-support', label: 'General Learning Support', color: 'bg-lime-100 text-lime-700' }
-  ];
-
-  const handleSubjectToggle = (subjectId: string) => {
-    setSelectedSubjects(prev => 
-      prev.includes(subjectId) 
-        ? prev.filter(id => id !== subjectId)
-        : [...prev, subjectId]
-    );
-  };
-
-  const handleChallengeToggle = (challengeId: string) => {
-    setSelectedChallenges(prev => 
-      prev.includes(challengeId) 
-        ? prev.filter(id => id !== challengeId)
-        : [...prev, challengeId]
-    );
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0) {
-      onSave({
-        name: name.trim(),
-        subjects: selectedSubjects,
-        ageGroup: selectedAgeGroup,
-        challenges: selectedChallenges
-      });
+    if (name.trim() && selectedAgeGroup && profile) {
+      try {
+        const { error } = await supabase
+          .from('children')
+          .insert({
+            parent_id: profile.id,
+            name: name.trim(),
+            age_group: selectedAgeGroup
+          });
+
+        if (error) throw error;
+        onSave();
+      } catch (error) {
+        console.error('Error adding child:', error);
+      }
     }
   };
 
-  const MultiSelectSection = ({ 
-    title, 
-    icon: Icon, 
-    items, 
-    selectedItems, 
-    onToggle 
-  }: {
-    title: string;
-    icon: React.ComponentType<any>;
-    items: Array<{ id: string; label: string; color: string }>;
-    selectedItems: string[];
-    onToggle: (id: string) => void;
-  }) => (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Icon className="text-gray-600" size={20} />
-        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {items.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onToggle(item.id)}
-            className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 border-2 ${
-              selectedItems.includes(item.id)
-                ? `${item.color} border-current shadow-md`
-                : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'
-            }`}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-800">
-            {editingChild ? 'Edit Child Profile' : 'Add New Child'}
-          </h2>
+          <h2 className="text-xl font-semibold text-gray-800">Add New Child</h2>
           <button
             onClick={onCancel}
             className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
@@ -160,22 +95,6 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
             </div>
           </div>
 
-          <MultiSelectSection
-            title="Subject Areas (Select all that apply)"
-            icon={BookOpen}
-            items={subjects}
-            selectedItems={selectedSubjects}
-            onToggle={handleSubjectToggle}
-          />
-
-          <MultiSelectSection
-            title="Learning Challenges (Select all that apply)"
-            icon={Brain}
-            items={challenges}
-            selectedItems={selectedChallenges}
-            onToggle={handleChallengeToggle}
-          />
-
           <div className="flex gap-4 pt-4">
             <button
               type="button"
@@ -186,10 +105,10 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || selectedSubjects.length === 0 || !selectedAgeGroup || selectedChallenges.length === 0}
+              disabled={!name.trim() || !selectedAgeGroup}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {editingChild ? 'Update Child' : 'Add Child'}
+              Add Child
             </button>
           </div>
         </form>
