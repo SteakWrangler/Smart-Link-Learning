@@ -95,7 +95,44 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                            userMessage.toLowerCase().includes('teach');
 
     if (mentionsAnalysis && documents.length > 0) {
-      // Find documents with extracted content and analysis
+      // Check if we have any documents that need processing
+      const unprocessedDocs = documents.filter(doc => 
+        doc.file_type === 'application/pdf' && 
+        (!doc.extracted_content || !doc.ai_analysis)
+      );
+      
+      if (unprocessedDocs.length > 0) {
+        // Process any unprocessed PDFs first
+        for (const doc of unprocessedDocs) {
+          try {
+            console.log('Processing unanalyzed document:', doc.file_name);
+            
+            // Get the file from storage
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('documents')
+              .download(doc.file_path);
+            
+            if (downloadError) {
+              console.error('Error downloading file for processing:', downloadError);
+              continue;
+            }
+            
+            const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
+            
+            // Import and use the processing service
+            const { processDocument } = await import('@/services/documentProcessingService');
+            await processDocument(doc.id, fileData as File, learnerName);
+            
+            // Refresh documents list
+            await fetchDocuments();
+            
+          } catch (error) {
+            console.error('Error processing document:', error);
+          }
+        }
+      }
+      
+      // Now find documents with extracted content and analysis
       const analyzedDocs = documents.filter(doc => doc.extracted_content && doc.ai_analysis);
       
       if (analyzedDocs.length > 0) {
@@ -114,15 +151,19 @@ I've analyzed ${learnerName}'s test "${doc.file_name}" and here's what I found:
 - Total Questions: ${analysis.totalQuestions}
 - Correct Answers: ${analysis.correctAnswers} ✅
 - Accuracy: ${analysis.accuracy}%
-- Areas needing reinforcement: ${problemAreas.join(', ')}
+- Areas needing reinforcement: ${problemAreas.join(', ') || 'General review'}
 
 🛸 **Problems that need our help:**`;
 
-          incorrectAnswers.forEach((answer: any, index: number) => {
-            response += `\n\n**Problem ${index + 1}:** ${answer.question}
+          if (incorrectAnswers.length > 0) {
+            incorrectAnswers.slice(0, 3).forEach((answer: any, index: number) => {
+              response += `\n\n**Problem ${index + 1}:** ${answer.question}
 - ${learnerName}'s Answer: ${answer.studentAnswer}
 - Correct Answer: ${answer.correctAnswer}`;
-          });
+            });
+          } else {
+            response += `\n\nGreat job! I can see the test content and will create activities based on the subject matter.`;
+          }
 
           response += `\n\n🌟 **SPACE-THEMED RESCUE MISSIONS:**\n`;
 
@@ -147,29 +188,30 @@ Help organize alien families into transport ships!
 - Story: "If each alien family has 7 members and there are 3 families, how many aliens need transport?"`;
           }
 
+          if (problemAreas.length === 0) {
+            response += `\n🚀 **SPACE EXPLORATION MISSION:**
+Based on the content I found, let's create some general math adventures to strengthen ${learnerName}'s skills!`;
+          }
+
           response += `\n\n🎮 Ready to start a space mission? Pick which adventure ${learnerName} wants to try first!`;
           
           return response;
         }
       }
       
-      // Fallback if document exists but no analysis
+      // If we have documents but no analysis yet
       const testDocument = documents.find(doc => doc.document_type === 'failed_test') || documents[0];
       
-      if (testDocument) {
-        return `I can see you've uploaded "${testDocument.file_name}" for ${learnerName}! I'm working on analyzing the content. 
+      if (testDocument && !testDocument.ai_analysis) {
+        return `I can see you've uploaded "${testDocument.file_name}" for ${learnerName}! 
 
-🚀 **SPACE MISSION: Help ${learnerName} Master Math!** 🛸
+🔄 **Processing the document now...** 
 
-The document is being processed for content analysis. In the meantime, could you tell me which specific math concepts from the test ${learnerName} found challenging? 
+I'm extracting the content and analyzing ${learnerName}'s responses. This may take a moment for larger files.
 
-For example:
-- **🛸 Addition/Subtraction problems**
-- **🌟 Multiplication tables** 
-- **🚀 Division facts**
-- **🌌 Word problems**
+Once I'm done analyzing, I'll be able to create personalized space-themed learning adventures based on exactly what ${learnerName} needs to work on! 🚀
 
-Once I know the specific areas, I can create amazing space adventures that make learning fun!`;
+Try asking me again in a moment to see the analysis results.`;
       }
     }
 
