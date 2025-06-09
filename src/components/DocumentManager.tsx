@@ -8,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import DocumentUpload from './DocumentUpload';
 import DocumentList from './DocumentList';
-import type { DocumentData, Child, StudentProfile, Subject } from '@/types/database';
+import type { Document, Child, StudentProfile, Subject } from '@/types/database';
 
 interface DocumentManagerProps {
   onClose: () => void;
@@ -16,7 +16,7 @@ interface DocumentManagerProps {
 
 const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
   const { profile } = useAuth();
-  const [documents, setDocuments] = useState<DocumentData[]>([]);
+  const [documents, setDocuments] = useState<Document[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -43,14 +43,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
         .order('created_at', { ascending: false });
 
       if (documentsError) throw documentsError;
-      
-      // Type assertion to ensure proper typing
-      const typedDocuments = documentsData?.map(doc => ({
-        ...doc,
-        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other'
-      })) || [];
-      
-      setDocuments(typedDocuments);
+      setDocuments(documentsData || []);
 
       // Fetch subjects
       const { data: subjectsData, error: subjectsError } = await supabase
@@ -69,7 +62,6 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
 
         if (childrenError) throw childrenError;
         setChildren(childrenData || []);
-        console.log('Fetched children for parent:', childrenData);
       }
 
       // If student, fetch student profile

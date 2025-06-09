@@ -64,7 +64,7 @@ export interface ConversationTag {
   tag: string;
 }
 
-export interface DocumentData {
+export interface Document {
   id: string;
   user_id: string;
   child_id?: string;
