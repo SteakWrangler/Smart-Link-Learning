@@ -1,3 +1,4 @@
+
 export interface Profile {
   id: string;
   email: string;
@@ -66,19 +67,19 @@ export interface ConversationTag {
 export interface DocumentData {
   id: string;
   user_id: string;
-  child_id?: string;
-  student_profile_id?: string;
+  child_id?: string | null;
+  student_profile_id?: string | null;
   file_name: string;
   file_path: string;
   file_size: number;
   file_type: string;
   document_type: 'failed_test' | 'study_guide' | 'homework' | 'other';
-  description?: string;
-  subject?: string;
-  extracted_content?: string;
+  description?: string | null;
+  subject?: string | null;
+  extracted_content?: string | null;
   ai_analysis?: any;
-  processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
-  processing_error?: string;
+  processing_status?: 'pending' | 'processing' | 'completed' | 'failed' | null;
+  processing_error?: string | null;
   created_at: string;
   updated_at: string;
 }

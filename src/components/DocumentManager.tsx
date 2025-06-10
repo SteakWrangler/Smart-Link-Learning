@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -44,11 +43,18 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
 
       if (documentsError) throw documentsError;
       
-      // Type assertion to ensure proper typing
-      const typedDocuments = documentsData?.map(doc => ({
+      // Type assertion to ensure proper typing with null safety
+      const typedDocuments: DocumentData[] = (documentsData || []).map(doc => ({
         ...doc,
-        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other'
-      })) || [];
+        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other',
+        processing_status: doc.processing_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
+        child_id: doc.child_id as string | null,
+        student_profile_id: doc.student_profile_id as string | null,
+        description: doc.description as string | null,
+        subject: doc.subject as string | null,
+        extracted_content: doc.extracted_content as string | null,
+        processing_error: doc.processing_error as string | null
+      }));
       
       setDocuments(typedDocuments);
 

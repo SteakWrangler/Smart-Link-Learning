@@ -49,7 +49,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
     }
   };
 
-  const getChildName = (childId: string | undefined) => {
+  const getChildName = (childId: string | undefined | null) => {
     if (!childId) return null;
     const child = children.find(c => c.id === childId);
     return child?.name;
@@ -138,7 +138,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
       if (downloadError) throw downloadError;
 
       // Create a File object from the downloaded data  
-      const file = new File([fileData as BlobPart], document.file_name, { type: document.file_type });
+      const file = new File([fileData], document.file_name, { type: document.file_type });
 
       // Get learner name
       const child = children?.find(c => c.id === document.child_id);

@@ -190,10 +190,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       console.log('Fetched documents for chat:', data);
       
-      // Type the documents properly to match DocumentData interface
+      // Type the documents properly to match DocumentData interface with null safety
       const typedDocuments: DocumentData[] = (data || []).map(doc => ({
         ...doc,
-        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other'
+        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other',
+        processing_status: doc.processing_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
+        child_id: doc.child_id as string | null,
+        student_profile_id: doc.student_profile_id as string | null,
+        description: doc.description as string | null,
+        subject: doc.subject as string | null,
+        extracted_content: doc.extracted_content as string | null,
+        processing_error: doc.processing_error as string | null
       }));
       
       setDocuments(typedDocuments);
@@ -247,9 +254,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     } else if (selectedStudentProfile) {
       const ageGroupLabel = getAgeGroupLabel(selectedStudentProfile.age_group);
       systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
-      
-      // Note: StudentProfile structure may not have subjects/challenges arrays like Child does
-      // This can be enhanced later when StudentProfile structure is expanded
     }
     
     // Add document context if available
