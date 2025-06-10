@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { File, Download, Trash2, Eye, Brain } from 'lucide-react';
+import { File, Download, Trash2, Eye, Brain, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -116,6 +116,57 @@ const DocumentList: React.FC<DocumentListProps> = ({
       toast({
         title: "Delete failed",
         description: error.message || "Failed to delete document",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReprocess = async (document: DocumentData) => {
+    if (document.file_type !== 'application/pdf') return;
+
+    try {
+      toast({
+        title: "Processing started",
+        description: "Attempting to re-process the PDF document...",
+      });
+
+      // Download the file from storage
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('documents')
+        .download(document.file_path);
+
+      if (downloadError) throw downloadError;
+
+      // Create a File object from the downloaded data  
+      const file = new File([fileData as BlobPart], document.file_name, { type: document.file_type });
+
+      // Get learner name
+      const child = children?.find(c => c.id === document.child_id);
+      const learnerName = child?.name || 'Student';
+
+      // Import and use the processing service
+      const { processDocument } = await import('@/services/documentProcessingService');
+      const result = await processDocument(document.id, file, learnerName);
+
+      if (result.error) {
+        toast({
+          title: "Processing failed",
+          description: result.error,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Processing successful",
+          description: "Document has been re-processed successfully",
+        });
+        onDocumentDeleted(); // Refresh the list
+      }
+
+    } catch (error: any) {
+      console.error('Reprocess error:', error);
+      toast({
+        title: "Processing failed",
+        description: error.message || "Failed to re-process document",
         variant: "destructive",
       });
     }

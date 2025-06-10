@@ -35,7 +35,9 @@ const StudentProfileForm: React.FC<StudentProfileFormProps> = ({
   const ageGroups = [
     { id: 'early-elementary', label: 'Early Elementary (5-7)' },
     { id: 'elementary', label: 'Elementary (8-10)' },
-    { id: 'middle-school', label: 'Middle School (11-13)' }
+    { id: 'middle-school', label: 'Middle School (11-13)' },
+    { id: 'high-school', label: 'High School (14-18)' },
+    { id: 'college', label: 'College (18+)' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {

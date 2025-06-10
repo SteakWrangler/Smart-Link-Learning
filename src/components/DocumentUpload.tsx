@@ -101,9 +101,18 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           
           // Import the processing service dynamically
           const { processDocument } = await import('@/services/documentProcessingService');
-          await processDocument(document.id, selectedFile, learnerName);
+          const result = await processDocument(document.id, selectedFile, learnerName);
           
-          console.log('PDF processing completed successfully');
+          if (result.error) {
+            console.log('PDF processing completed with issues:', result.error);
+            toast({
+              title: "Upload successful with note",
+              description: `File uploaded successfully, but analysis had issues: ${result.error}`,
+              variant: "default",
+            });
+          } else {
+            console.log('PDF processing completed successfully');
+          }
         } catch (processingError) {
           console.error('PDF processing failed:', processingError);
           // Don't fail the upload if processing fails

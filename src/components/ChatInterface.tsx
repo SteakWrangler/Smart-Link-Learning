@@ -4,6 +4,7 @@ import { Child } from '../types';
 import { StudentProfile, DocumentData } from '../types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { generateChatResponse, ChatMessage } from '@/utils/openaiClient';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -35,13 +36,133 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Conversation context tracking
+  const [conversationContext, setConversationContext] = useState({
+    mathTopics: [] as string[],
+    interests: [] as string[],
+    currentGoal: '' as string,
+    hasAnalyzedDocument: false,
+    documentAnalysis: null as any,
+    informationGathered: {
+      mathTopic: false,
+      interest: false,
+      goal: false
+    }
+  });
+
   const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
+
+  // Generate initial greeting with personalized examples
+  const generateInitialGreeting = (): string => {
+    const ageGroup = selectedChild?.ageGroup || selectedStudentProfile?.age_group || '';
+    const subjects = selectedChild?.subjects || [];
+    const challenges = selectedChild?.challenges || [];
+    const hasDocuments = documents.length > 0;
+    
+    let greeting = `👋 **Hi there! I'm ${learnerName}'s AI learning assistant.**\n\n`;
+    
+    // Add contextual information based on learner profile
+    if (ageGroup) {
+      const ageLabel = getAgeGroupLabel(ageGroup);
+      greeting += `I'm here to help with ${ageLabel.toLowerCase()} learning. `;
+    }
+    
+    if (subjects.length > 0) {
+      greeting += `I see we're focusing on ${subjects.join(', ').toLowerCase()}. `;
+    }
+    
+    if (challenges.some(c => c.toLowerCase().includes('dyslexia'))) {
+      greeting += `I'll make sure to provide clear, visual explanations that work well for dyslexic learners. `;
+    }
+    
+    if (challenges.some(c => c.toLowerCase().includes('adhd'))) {
+      greeting += `I'll keep things engaging and structured for ADHD-friendly learning. `;
+    }
+    
+    greeting += `\n\n**Here are some examples of the type of things I can help with:**\n\n`;
+    
+    // Add document-specific examples if documents are available
+    if (hasDocuments) {
+      greeting += `📄 **Analyze uploaded tests or documents**\n`;
+      greeting += `• "Look at the test I uploaded and tell me what ${learnerName} got wrong"\n`;
+      greeting += `• "Create practice problems based on the uploaded test"\n\n`;
+    }
+    
+    // Age-appropriate examples
+    if (ageGroup === 'early-elementary' || ageGroup === 'elementary') {
+      greeting += `🧮 **Math Practice & Games**\n`;
+      greeting += `• "Create a superhero-themed addition practice test"\n`;
+      greeting += `• "Help me practice subtraction with dinosaurs"\n`;
+      greeting += `• "Make a fun counting activity with pizza"\n\n`;
+      
+      greeting += `📚 **Learning Activities**\n`;
+      greeting += `• "What's a fun way to learn multiplication tables?"\n`;
+      greeting += `• "Create a 5-minute math game for rainy days"\n\n`;
+    } else if (ageGroup === 'middle-school') {
+      greeting += `📊 **Math & Science Help**\n`;
+      greeting += `• "Explain fractions using real-world examples"\n`;
+      greeting += `• "Create word problems about sports statistics"\n`;
+      greeting += `• "Help me understand pre-algebra concepts"\n\n`;
+      
+      greeting += `🎯 **Study Strategies**\n`;
+      greeting += `• "Make a practice test for my upcoming exam"\n`;
+      greeting += `• "What's the best way to study for math tests?"\n\n`;
+    } else if (ageGroup === 'high-school' || ageGroup === 'college') {
+      greeting += `📈 **Advanced Math & Concepts**\n`;
+      greeting += `• "Help me understand calculus derivatives"\n`;
+      greeting += `• "Create practice problems for algebra II"\n`;
+      greeting += `• "Explain statistics concepts with examples"\n\n`;
+      
+      greeting += `🎓 **Test Prep & Study Skills**\n`;
+      greeting += `• "Build a comprehensive practice test for finals"\n`;
+      greeting += `• "Help me break down complex problems step-by-step"\n\n`;
+    } else {
+      greeting += `🧮 **Math Practice**\n`;
+      greeting += `• "Create practice problems for any math topic"\n`;
+      greeting += `• "Help explain difficult concepts step-by-step"\n`;
+      greeting += `• "Make learning fun with themed activities"\n\n`;
+    }
+    
+    greeting += `💡 **Teaching Support**\n`;
+    greeting += `• "How should I explain division to ${learnerName}?"\n`;
+    greeting += `• "What are some hands-on activities for learning fractions?"\n\n`;
+    
+    greeting += `Just tell me what you'd like to work on, and I'll create personalized content that makes learning engaging and effective! 🌟`;
+    
+    return greeting;
+  };
+
+  // Helper function to get age group labels (moved up to be accessible)
+  const getAgeGroupLabel = (ageGroupId: string): string => {
+    const ageGroups = [
+      { id: 'early-elementary', label: 'Early Elementary (5-7)' },
+      { id: 'elementary', label: 'Elementary (8-10)' },
+      { id: 'middle-school', label: 'Middle School (11-13)' },
+      { id: 'high-school', label: 'High School (14-18)' },
+      { id: 'college', label: 'College (18+)' }
+    ];
+    return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
+  };
 
   useEffect(() => {
     if (profile) {
       fetchDocuments();
     }
   }, [profile, selectedChild]);
+
+  // Add initial AI greeting when chat loads
+  useEffect(() => {
+    if (messages.length === 0) {
+      const greeting = generateInitialGreeting();
+      const initialMessage = {
+        id: 'initial-greeting',
+        type: 'ai' as const,
+        content: greeting,
+        timestamp: new Date()
+      };
+      setMessages([initialMessage]);
+    }
+  }, [selectedChild, selectedStudentProfile, documents]);
 
   const fetchDocuments = async () => {
     if (!profile) return;
@@ -81,159 +202,181 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const processUnanalyzedDocuments = async () => {
-    const unprocessedDocs = documents.filter(doc => 
-      doc.file_type === 'application/pdf' && 
-      (!doc.extracted_content || !doc.ai_analysis)
-    );
+  // Intelligent response generation using context
+  const generateContextAwareResponse = async (userMessage: string): Promise<string> => {
+    // Build conversation context for the LLM
+    const conversationHistory = messages.map(msg => ({
+      role: msg.type === 'user' ? 'user' : 'assistant',
+      content: msg.content
+    }));
     
-    if (unprocessedDocs.length === 0) return;
+    // Add the current user message
+    conversationHistory.push({
+      role: 'user',
+      content: userMessage
+    });
     
-    console.log('Processing unanalyzed documents:', unprocessedDocs.length);
+    // Build comprehensive context about the learner
+    let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. `;
     
-    for (const doc of unprocessedDocs) {
-      try {
-        console.log('Processing document:', doc.file_name);
+    // Add child-specific context
+    if (selectedChild) {
+      const ageGroupLabel = getAgeGroupLabel(selectedChild.ageGroup);
+      systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
+      
+      if (selectedChild.subjects && selectedChild.subjects.length > 0) {
+        systemContext += `Their focus subjects are: ${selectedChild.subjects.join(', ')}. `;
+      }
+      
+      if (selectedChild.challenges && selectedChild.challenges.length > 0) {
+        systemContext += `Important learning considerations: ${selectedChild.challenges.join(', ')}. `;
         
-        // Get the file from storage
-        const { data: fileData, error: downloadError } = await supabase.storage
-          .from('documents')
-          .download(doc.file_path);
-        
-        if (downloadError) {
-          console.error('Error downloading file for processing:', downloadError);
-          continue;
+        // Provide specific guidance for learning differences
+        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('dyslexia'))) {
+          systemContext += `Since ${learnerName} has dyslexia, when relevant to the task, use clear fonts, avoid dense text, provide visual aids, and break down complex instructions into smaller steps. However, if the current task is purely mathematical and doesn't involve reading comprehension, the dyslexia may not be relevant to address. `;
         }
         
-        const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
+        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('adhd'))) {
+          systemContext += `Since ${learnerName} has ADHD, when relevant, keep activities shorter, provide clear structure, use engaging themes, and include movement or hands-on elements when possible. `;
+        }
         
-        // Import and use the processing service
-        const { processDocument } = await import('@/services/documentProcessingService');
-        await processDocument(doc.id, fileData as File, learnerName);
-        
-        console.log('Document processing completed for:', doc.file_name);
-        
-      } catch (error) {
-        console.error('Error processing document:', error);
+        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('autism'))) {
+          systemContext += `Since ${learnerName} has autism, when relevant, provide clear expectations, consistent structure, and consider sensory preferences. `;
+        }
       }
+    } else if (selectedStudentProfile) {
+      const ageGroupLabel = getAgeGroupLabel(selectedStudentProfile.age_group);
+      systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
+      
+      // Note: StudentProfile structure may not have subjects/challenges arrays like Child does
+      // This can be enhanced later when StudentProfile structure is expanded
     }
     
-    // Refresh documents list after processing
-    await fetchDocuments();
+    // Add document context if available
+    const pdfDocs = documents.filter(doc => doc.file_type === 'application/pdf');
+    if (pdfDocs.length > 0 && pdfDocs[0].ai_analysis) {
+      const analysis = pdfDocs[0].ai_analysis as any;
+      systemContext += `You have access to a test analysis showing ${learnerName} got ${analysis.accuracy}% accuracy with problem areas in: ${analysis.problemAreas?.join(', ')}. `;
+    }
+    
+    systemContext += `Generate helpful, engaging responses that incorporate any themes, time constraints, difficulty preferences, or other requirements the user mentions. Be natural and conversational while providing practical educational content. Only address learning differences when they are relevant to the current task.`;
+    
+    // Call the LLM API with full conversation context
+    return await callLLMAPI(systemContext, conversationHistory);
   };
 
-  const generateAIResponse = async (userMessage: string, context: string) => {
-    // Check if user is asking about uploaded documents or analysis
-    const mentionsAnalysis = userMessage.toLowerCase().includes('test') || 
-                           userMessage.toLowerCase().includes('upload') || 
-                           userMessage.toLowerCase().includes('document') ||
-                           userMessage.toLowerCase().includes('look at') ||
-                           userMessage.toLowerCase().includes('analyze') ||
-                           userMessage.toLowerCase().includes('check out') ||
-                           userMessage.toLowerCase().includes('see what') ||
-                           userMessage.toLowerCase().includes('got wrong') ||
-                           userMessage.toLowerCase().includes('help') ||
-                           userMessage.toLowerCase().includes('teach');
-
-    if (mentionsAnalysis && documents.length > 0) {
-      // First, process any unanalyzed documents and wait for completion
-      await processUnanalyzedDocuments();
+  // Call OpenAI API with conversation context
+  const callLLMAPI = async (systemPrompt: string, conversationHistory: any[]): Promise<string> => {
+    try {
+      // Prepare messages for OpenAI
+      const messages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        ...conversationHistory
+      ];
       
-      // Now find documents with extracted content and analysis
-      const analyzedDocs = documents.filter(doc => doc.extracted_content && doc.ai_analysis);
+      // Call OpenAI API
+      return await generateChatResponse(messages);
       
-      if (analyzedDocs.length > 0) {
-        const doc = analyzedDocs[0];
-        const analysis = doc.ai_analysis as any;
-        
-        if (analysis && analysis.detailedResults) {
-          const incorrectAnswers = analysis.detailedResults.incorrect || [];
-          const problemAreas = analysis.problemAreas || [];
-          
-          let response = `🚀 **SPACE MISSION ANALYSIS COMPLETE!** 🛸
-
-I've analyzed ${learnerName}'s test "${doc.file_name}" and here's what I found:
-
-📊 **Mission Stats:**
-- Total Questions: ${analysis.totalQuestions}
-- Correct Answers: ${analysis.correctAnswers} ✅
-- Accuracy: ${analysis.accuracy}%
-- Areas needing reinforcement: ${problemAreas.join(', ') || 'General review'}
-
-🛸 **Problems that need our help:**`;
-
-          if (incorrectAnswers.length > 0) {
-            incorrectAnswers.slice(0, 3).forEach((answer: any, index: number) => {
-              response += `\n\n**Problem ${index + 1}:** ${answer.question}
-- ${learnerName}'s Answer: ${answer.studentAnswer}
-- Correct Answer: ${answer.correctAnswer}`;
-            });
-          } else {
-            response += `\n\nGreat job! I can see the test content and will create activities based on the subject matter.`;
-          }
-
-          response += `\n\n🌟 **SPACE-THEMED RESCUE MISSIONS:**\n`;
-
-          if (problemAreas.includes('addition')) {
-            response += `\n🚀 **ASTEROID ADDITION MISSION:**
-Help alien miners collect space crystals! Each problem solved correctly adds crystals to power their spaceship home.
-- Practice: Two-digit addition with regrouping
-- Story: "The Zorblings need 42 crystals total. They found 25 on one asteroid and 17 on another..."`;
-          }
-
-          if (problemAreas.includes('subtraction')) {
-            response += `\n\n🛸 **ESCAPE POD SUBTRACTION:**
-Help aliens escape by calculating fuel remaining after each jump through space!
-- Practice: Two-digit subtraction with borrowing  
-- Story: "Commander Zorb started with 73 fuel units, but used 29 in the first jump..."`;
-          }
-
-          if (problemAreas.includes('multiplication')) {
-            response += `\n\n👽 **GALACTIC GROUPS MISSION:**
-Help organize alien families into transport ships!
-- Practice: Multiplication groups and times tables
-- Story: "If each alien family has 7 members and there are 3 families, how many aliens need transport?"`;
-          }
-
-          if (problemAreas.length === 0) {
-            response += `\n🚀 **SPACE EXPLORATION MISSION:**
-Based on the content I found, let's create some general math adventures to strengthen ${learnerName}'s skills!`;
-          }
-
-          response += `\n\n🎮 Ready to start a space mission? Pick which adventure ${learnerName} wants to try first!`;
-          
-          return response;
-        }
-      }
-      
-      // If still no analysis after processing, check if we have any PDFs at all
-      const pdfDocs = documents.filter(doc => doc.file_type === 'application/pdf');
-      if (pdfDocs.length > 0) {
-        return `I found your uploaded PDF "${pdfDocs[0].file_name}" but I'm having trouble extracting the content. This might be due to:
-
-- The PDF contains scanned images instead of text
-- The file is password protected
-- The PDF format is not compatible with our text extraction
-
-Could you try uploading a different version of the test, or let me know what specific math topics ${learnerName} is working on so I can create personalized activities?`;
-      }
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      return "I'm having trouble connecting to the AI service right now. Please check your API key configuration and try again.";
     }
+  };
 
-    // Original responses for other cases
-    const responses = [
-      `Hi ${learnerName}! I understand you're working on ${selectedCategories.subject}. Let me help you with that. Can you tell me more about what specific part you're struggling with?`,
-      `That's a great question about ${selectedCategories.subject}! For someone in the ${selectedCategories.ageGroup} age group, I'd suggest we break this down into smaller steps. What would you like to focus on first?`,
-      `I see you're dealing with ${selectedCategories.challenge}. Let's work together to make ${selectedCategories.subject} more manageable. What specific topic or problem would you like help with?`,
-      `Thanks for sharing that with me, ${learnerName}! Given that you're working on ${selectedCategories.subject} and considering ${selectedCategories.challenge}, let me suggest some strategies that might help.`
+  // Generate practice test with dynamic theming
+  const generateLLMStylePracticeTest = (message: string): string => {
+    const theme = extractThemeFromMessage(message);
+    const now = new Date();
+    const timeVariation = (now.getMinutes() * 60 + now.getSeconds()) % 100;
+    
+    const nums = {
+      a: 3 + (timeVariation % 8),
+      b: 2 + ((timeVariation * 3) % 7),
+      c: 12 + (timeVariation % 12),
+      d: 8 + ((timeVariation * 7) % 10)
+    };
+
+    let content = `🎯 **Practice Test for ${learnerName}**\n\n`;
+    
+    if (theme) {
+      content += `All problems are themed around ${theme}!\n\n`;
+      
+      content += `**Addition Problems:**\n\n`;
+      content += `1. You ordered ${nums.a} slices of ${theme} for lunch and ${nums.b} more slices for dinner. How many slices of ${theme} did you eat in total? ____\n\n`;
+      content += `2. There are ${nums.c} pieces of ${theme} on one plate and ${nums.d} pieces on another plate. How many pieces are there altogether? ____\n\n`;
+      
+      content += `**Subtraction Problems:**\n\n`;
+      const total1 = nums.c + nums.a;
+      content += `3. You started with ${total1} pieces of ${theme}, but ate ${nums.a} pieces. How many pieces of ${theme} do you have left? ____\n\n`;
+      const total2 = nums.d + nums.b;
+      content += `4. There were ${total2} ${theme} slices, and ${nums.b} were eaten. How many slices remain? ____\n\n`;
+    } else {
+      content += `**Math Practice:**\n\n`;
+      content += `1. ${nums.a} + ${nums.b} = ____\n\n`;
+      content += `2. ${nums.c} + ${nums.d} = ____\n\n`;
+      content += `3. ${nums.c + nums.a} - ${nums.a} = ____\n\n`;
+      content += `4. ${nums.d + nums.b} - ${nums.b} = ____\n\n`;
+    }
+    
+    content += `Great job working on these problems! 🌟`;
+    
+    return content;
+  };
+
+  // Extract theme from user message
+  const extractThemeFromMessage = (message: string): string | null => {
+    const text = message.toLowerCase();
+    
+    // Look for theme indicators
+    const themePatterns = [
+      /with (\w+)/,
+      /about (\w+)/,
+      /around (\w+)/,
+      /context.*?(\w+)/,
+      /theme.*?(\w+)/,
+      /based on (\w+)/
     ];
     
-    // Simple response selection based on message content
-    if (userMessage.toLowerCase().includes('homework')) {
-      return `Homework can be challenging, especially with ${selectedCategories.challenge}. For ${selectedCategories.subject}, let's make it more manageable. What specific homework assignment are you working on right now?`;
+    for (const pattern of themePatterns) {
+      const match = text.match(pattern);
+      if (match && match[1] && match[1].length > 2) {
+        return match[1];
+      }
     }
     
-    // Return a random contextual response
-    return responses[Math.floor(Math.random() * responses.length)];
+    // Look for standalone interesting words
+    const words = text.split(' ');
+    const interestingWords = words.filter(word => 
+      word.length > 3 && 
+      !['practice', 'test', 'build', 'create', 'make', 'help'].includes(word) &&
+      !['addition', 'subtraction', 'multiplication', 'division'].includes(word)
+    );
+    
+    return interestingWords[0] || null;
+  };
+
+  // Generate themed response based on context
+  const generateThemedResponse = (message: string, theme: string): string => {
+    if (message.includes('practice test')) {
+      return generateLLMStylePracticeTest(message);
+    }
+    
+    return `I'd love to help create ${theme}-themed learning activities for ${learnerName}! What specific math concepts would you like to work on? I can create word problems, activities, or explanations that incorporate ${theme} to make learning more engaging.`;
+  };
+
+  // Generate contextual response based on conversation
+  const generateContextualResponse = (message: string, conversationHistory: any[]): string => {
+    const prevMessages = conversationHistory.slice(0, -1); // Exclude current message
+    
+    if (message.includes('help') && message.includes('test')) {
+      return `I can help analyze test results and create practice materials for ${learnerName}. What specific areas would you like to focus on?`;
+    }
+    
+    if (message.includes('activity') || message.includes('activities')) {
+      return `I'd be happy to suggest learning activities for ${learnerName}! What math topics are you working on, and what makes learning fun for them?`;
+    }
+    
+    return `I'm here to help ${learnerName} with personalized learning! I can create practice tests, explain concepts, suggest activities, or analyze uploaded documents. What would be most helpful?`;
   };
 
   const handleSendMessage = async () => {
@@ -252,9 +395,10 @@ Could you try uploading a different version of the test, or let me know what spe
     setIsLoading(true);
 
     try {
-      // Generate AI response
-      const context = `Student: ${learnerName}, Subject: ${selectedCategories.subject}, Age Group: ${selectedCategories.ageGroup}, Challenge: ${selectedCategories.challenge}`;
-      const aiResponse = await generateAIResponse(currentMessage, context);
+      // Generate AI response using context
+      const aiResponse = await generateContextAwareResponse(currentMessage);
+      
+      // Note: Context updates can be handled by the LLM naturally through conversation history
       
       const aiMessage = {
         id: (Date.now() + 1).toString(),

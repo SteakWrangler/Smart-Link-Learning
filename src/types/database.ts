@@ -1,4 +1,3 @@
-
 export interface Profile {
   id: string;
   email: string;
@@ -78,6 +77,8 @@ export interface DocumentData {
   subject?: string;
   extracted_content?: string;
   ai_analysis?: any;
+  processing_status?: 'pending' | 'processing' | 'completed' | 'failed';
+  processing_error?: string;
   created_at: string;
   updated_at: string;
 }

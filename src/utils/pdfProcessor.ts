@@ -1,46 +1,143 @@
-
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure the worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+// Configure the worker with fallback options for better compatibility
+if (typeof window !== 'undefined') {
+  // Try to use the bundled worker first, fall back to CDN
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+      'pdfjs-dist/build/pdf.worker.min.js',
+      import.meta.url
+    ).toString();
+  } catch {
+    // Fallback to CDN if bundled worker fails
+    pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+  }
+}
 
 interface PDFProcessingResult {
   extractedText: string;
   analysis: any;
 }
 
+// Fallback PDF processing using pdf-parse (server-side compatible)
+const extractTextWithPdfParse = async (file: File): Promise<string> => {
+  try {
+    console.log('Trying fallback PDF extraction method...');
+    
+    // Dynamic import of pdf-parse for client-side compatibility
+    const pdfParse = await import('pdf-parse');
+    const buffer = await file.arrayBuffer();
+    const data = await pdfParse.default(buffer);
+    
+    console.log('PDF-parse extraction successful, text length:', data.text.length);
+    return data.text;
+  } catch (error) {
+    console.error('PDF-parse fallback failed:', error);
+    throw error;
+  }
+};
+
 export const extractTextFromPDF = async (file: File): Promise<string> => {
   try {
-    console.log('Starting PDF text extraction for:', file.name);
+    console.log('Starting PDF text extraction for:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
+    // Validate file type
+    if (file.type !== 'application/pdf') {
+      throw new Error('File is not a PDF document');
+    }
+    
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error('PDF file is too large (max 10MB)');
+    }
     
     // Convert file to array buffer
     const arrayBuffer = await file.arrayBuffer();
+    console.log('File converted to array buffer, size:', arrayBuffer.byteLength);
     
-    // Load the PDF document
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    // Load the PDF document with additional options
+    const loadingTask = pdfjsLib.getDocument({
+      data: arrayBuffer,
+      useSystemFonts: true,
+      disableFontFace: false,
+      verbosity: 0, // Reduce console noise
+    });
+    
+    const pdf = await loadingTask.promise;
+    console.log('PDF loaded successfully, pages:', pdf.numPages);
     
     let fullText = '';
+    let processedPages = 0;
     
     // Extract text from each page
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-      const page = await pdf.getPage(pageNum);
-      const textContent = await page.getTextContent();
-      
-      // Combine all text items from the page
-      const pageText = textContent.items
-        .map((item: any) => item.str)
-        .join(' ');
-      
-      fullText += pageText + '\n';
+      try {
+        const page = await pdf.getPage(pageNum);
+        const textContent = await page.getTextContent();
+        
+        // Combine all text items from the page with better spacing
+        const pageText = textContent.items
+          .map((item: any) => {
+            // Add spacing based on transform matrix if available
+            if (item.hasEOL) return item.str + '\n';
+            return item.str + ' ';
+          })
+          .join('');
+        
+        fullText += pageText + '\n\n';
+        processedPages++;
+        
+        console.log(`Page ${pageNum} processed, text length: ${pageText.length}`);
+      } catch (pageError) {
+        console.error(`Error processing page ${pageNum}:`, pageError);
+        // Continue with other pages even if one fails
+      }
     }
     
-    console.log('Extracted text length:', fullText.length);
+    console.log(`Extraction complete. Processed ${processedPages}/${pdf.numPages} pages`);
+    console.log('Total extracted text length:', fullText.length);
     console.log('First 200 characters:', fullText.substring(0, 200));
     
-    return fullText.trim();
+    // Check if we actually extracted any meaningful text
+    const cleanText = fullText.trim();
+    if (cleanText.length < 10) {
+      throw new Error('PDF appears to contain no readable text. It may be a scanned image or an empty document.');
+    }
+    
+    return cleanText;
   } catch (error) {
-    console.error('Error extracting PDF text:', error);
-    throw new Error('Failed to extract text from PDF');
+    console.error('PDF.js extraction failed:', error);
+    
+    // Try fallback method with pdf-parse
+    try {
+      console.log('Attempting fallback extraction method...');
+      const fallbackText = await extractTextWithPdfParse(file);
+      
+      if (fallbackText.trim().length < 10) {
+        throw new Error('PDF appears to contain no readable text. It may be a scanned image or an empty document.');
+      }
+      
+      console.log('Fallback extraction successful!');
+      return fallbackText.trim();
+    } catch (fallbackError) {
+      console.error('Fallback extraction also failed:', fallbackError);
+    }
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Invalid PDF')) {
+        throw new Error('The uploaded file is not a valid PDF document');
+      } else if (error.message.includes('Password')) {
+        throw new Error('PDF is password protected. Please upload an unprotected version');
+      } else if (error.message.includes('network')) {
+        throw new Error('Network error while processing PDF. Please check your connection and try again');
+      } else if (error.message.includes('no readable text')) {
+        throw new Error('PDF contains no readable text. It may be a scanned image - try uploading a text-based PDF instead');
+      }
+      throw error;
+    }
+    
+    throw new Error('Failed to extract text from PDF. Please ensure the file is a valid, text-based PDF document');
   }
 };
 

@@ -30,7 +30,9 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   const ageGroups = [
     { id: 'early-elementary', label: 'Early Elementary (5-7)', color: 'bg-pink-100 text-pink-700' },
     { id: 'elementary', label: 'Elementary (8-10)', color: 'bg-indigo-100 text-indigo-700' },
-    { id: 'middle-school', label: 'Middle School (11-13)', color: 'bg-teal-100 text-teal-700' }
+    { id: 'middle-school', label: 'Middle School (11-13)', color: 'bg-teal-100 text-teal-700' },
+    { id: 'high-school', label: 'High School (14-18)', color: 'bg-purple-100 text-purple-700' },
+    { id: 'college', label: 'College (18+)', color: 'bg-amber-100 text-amber-700' }
   ];
 
   const challenges = [
@@ -60,11 +62,19 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0) {
+      // Convert IDs to labels for database storage
+      const subjectLabels = selectedSubjects.map(subjectId => 
+        subjects.find(s => s.id === subjectId)?.label || subjectId
+      );
+      const challengeLabels = selectedChallenges.map(challengeId => 
+        challenges.find(c => c.id === challengeId)?.label || challengeId
+      );
+
       onSave({
         name: name.trim(),
-        subjects: selectedSubjects,
+        subjects: subjectLabels,
         ageGroup: selectedAgeGroup,
-        challenges: selectedChallenges
+        challenges: challengeLabels
       });
     }
   };
