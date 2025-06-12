@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Student, Subject, Challenge } from '../types/database';
 import { AddStudentForm } from './AddStudentForm';
 import { StudentProfile } from './StudentProfile';
+import StudentManager from './StudentManager';
 
 interface DashboardProps {
   onBack: () => void;
@@ -29,7 +30,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
+  const [activeTab, setActiveTab] = useState<'students' | 'conversations' | 'documents' | 'support'>('students');
   const [showConversationHistory, setShowConversationHistory] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<Student | null>(null);
@@ -40,8 +41,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   useEffect(() => {
     if (profile) {
       fetchStudents();
-      fetchSubjects();
-      fetchChallenges();
+      fetchSubjectsAndChallenges();
     }
   }, [profile]);
 
@@ -111,32 +111,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     }
   };
 
-  const fetchSubjects = async () => {
-    const { data, error } = await supabase
-      .from('subjects')
-      .select('*')
-      .order('name');
+  const fetchSubjectsAndChallenges = async () => {
+    try {
+      const [subjectsResult, challengesResult] = await Promise.all([
+        supabase.from('subjects').select('*'),
+        supabase.from('challenges').select('*')
+      ]);
 
-    if (error) {
-      console.error('Error fetching subjects:', error);
-      return;
+      if (subjectsResult.data) setSubjects(subjectsResult.data);
+      if (challengesResult.data) setChallenges(challengesResult.data);
+    } catch (error) {
+      console.error('Error fetching subjects and challenges:', error);
     }
-
-    setSubjects(data || []);
-  };
-
-  const fetchChallenges = async () => {
-    const { data, error } = await supabase
-      .from('challenges')
-      .select('*')
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching challenges:', error);
-      return;
-    }
-
-    setChallenges(data || []);
   };
 
   const handleAddStudent = async (studentData: Partial<Student>) => {
@@ -625,9 +611,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           
           <div className="flex gap-2">
             <button
-              onClick={() => setActiveTab('children')}
+              onClick={() => setActiveTab('students')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'children'
+                activeTab === 'students'
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
@@ -673,7 +659,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto p-6">
-        {activeTab === 'children' && (
+        {activeTab === 'students' && (
           <div>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-gray-800">Your Students</h2>
@@ -968,15 +954,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           ) : (
             <ChatInterface
               selectedCategories={{
-                subject: selectedStudent.subjects?.join(', ') || '',
-                ageGroup: selectedStudent.age_group || '',
-                challenge: selectedStudent.challenges?.join(', ') || ''
+                subject: subjects
+                  .filter(s => selectedStudent.subjects?.includes(s.id))
+                  .map(s => s.name)
+                  .join(', '),
+                ageGroup: selectedStudent.age_group,
+                challenge: challenges
+                  .filter(c => selectedStudent.challenges?.includes(c.id))
+                  .map(c => c.name)
+                  .join(', ')
               }}
               onBack={() => setSelectedStudent(null)}
               selectedStudent={selectedStudent}
-              selectedStudentProfile={null}
-              onSaveConversation={(conversation) => {
-                // TODO: Implement conversation saving
+              selectedStudentProfile={selectedStudent}
+              onSaveConversation={async (conversation) => {
+                // Handle saving conversation
                 console.log('Saving conversation:', conversation);
               }}
             />

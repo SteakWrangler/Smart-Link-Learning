@@ -431,7 +431,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 )}
                 <div className="mt-4 text-sm text-gray-400">
                   <p>Try saying something like:</p>
-                  <p>"Check out the failed test I uploaded" or "Look at the test and see what he got wrong"</p>
+                  <p>"Check out the failed test I uploaded" or "Look at the test and see what they got wrong"</p>
                 </div>
               </div>
             ) : (

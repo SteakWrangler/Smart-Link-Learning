@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { File, Download, Trash2, Eye, Brain, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -229,7 +228,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
                     <span>{formatFileSize(doc.file_size)}</span>
                     {doc.subject && <span>Subject: {doc.subject}</span>}
                     {profile?.user_type === 'parent' && doc.child_id && (
-                      <span>Child: {getChildName(doc.child_id)}</span>
+                      <span>Student: {getChildName(doc.child_id)}</span>
                     )}
                     <span>{new Date(doc.created_at).toLocaleDateString()}</span>
                   </div>
