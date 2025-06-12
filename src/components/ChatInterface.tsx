@@ -1,10 +1,28 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Send, Star, Save, FileText } from 'lucide-react';
-import { Child } from '../types';
-import { StudentProfile, DocumentData } from '../types/database';
+import { Student } from '../types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { generateChatResponse, ChatMessage } from '@/utils/openaiClient';
+
+interface DocumentData {
+  id: string;
+  user_id: string;
+  student_id: string | null;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  file_type: string;
+  document_type: 'failed_test' | 'study_guide' | 'homework' | 'other';
+  processing_status: 'pending' | 'processing' | 'completed' | 'failed' | null;
+  description: string | null;
+  subject: string | null;
+  extracted_content: string | null;
+  processing_error: string | null;
+  ai_analysis: any;
+  created_at: string;
+  updated_at: string;
+}
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -13,15 +31,15 @@ interface ChatInterfaceProps {
     challenge: string;
   };
   onBack: () => void;
-  selectedChild: Child | null;
-  selectedStudentProfile?: StudentProfile | null;
+  selectedStudent: Student;
+  selectedStudentProfile?: Student | null;
   onSaveConversation: (conversation: any) => void;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   selectedCategories,
   onBack,
-  selectedChild,
+  selectedStudent,
   selectedStudentProfile,
   onSaveConversation
 }) => {
@@ -50,13 +68,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   });
 
-  const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
+  const learnerName = selectedStudent?.name || selectedStudentProfile?.name || 'Student';
 
   // Generate initial greeting with personalized examples
   const generateInitialGreeting = (): string => {
-    const ageGroup = selectedChild?.ageGroup || selectedStudentProfile?.age_group || '';
-    const subjects = selectedChild?.subjects || [];
-    const challenges = selectedChild?.challenges || [];
+    const ageGroup = selectedStudent?.age_group || selectedStudentProfile?.age_group || '';
+    const subjects = selectedStudent?.subjects || [];
+    const challenges = selectedStudent?.challenges || [];
     const hasDocuments = documents.length > 0;
     
     let greeting = `👋 **Hi there! I'm ${learnerName}'s AI learning assistant.**\n\n`;
@@ -132,7 +150,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return greeting;
   };
 
-  // Helper function to get age group labels (moved up to be accessible)
+  // Helper function to get age group labels
   const getAgeGroupLabel = (ageGroupId: string): string => {
     const ageGroups = [
       { id: 'early-elementary', label: 'Early Elementary (5-7)' },
@@ -148,7 +166,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (profile) {
       fetchDocuments();
     }
-  }, [profile, selectedChild]);
+  }, [profile, selectedStudent]);
 
   // Add initial AI greeting when chat loads
   useEffect(() => {
@@ -162,7 +180,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
       setMessages([initialMessage]);
     }
-  }, [selectedChild, selectedStudentProfile, documents]);
+  }, [selectedStudent, selectedStudentProfile, documents]);
 
   const fetchDocuments = async () => {
     if (!profile) return;
@@ -174,14 +192,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         .eq('user_id', profile.id)
         .order('created_at', { ascending: false });
 
-      // Filter by child if parent user
-      if (profile.user_type === 'parent' && selectedChild?.id) {
-        query = query.eq('child_id', selectedChild.id);
-      }
-
-      // Filter by student profile if student user
-      if (profile.user_type === 'student' && selectedStudentProfile?.id) {
-        query = query.eq('student_profile_id', selectedStudentProfile.id);
+      // Filter by student if student user
+      if (selectedStudent?.id) {
+        query = query.eq('student_id', selectedStudent.id);
       }
 
       const { data, error } = await query;
@@ -192,15 +205,22 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       
       // Type the documents properly to match DocumentData interface with null safety
       const typedDocuments: DocumentData[] = (data || []).map(doc => ({
-        ...doc,
+        id: doc.id,
+        user_id: doc.user_id,
+        student_id: doc.student_id,
+        file_name: doc.file_name,
+        file_path: doc.file_path,
+        file_size: doc.file_size,
+        file_type: doc.file_type,
         document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other',
         processing_status: doc.processing_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
-        child_id: doc.child_id as string | null,
-        student_profile_id: doc.student_profile_id as string | null,
-        description: doc.description as string | null,
-        subject: doc.subject as string | null,
-        extracted_content: doc.extracted_content as string | null,
-        processing_error: doc.processing_error as string | null
+        description: doc.description,
+        subject: doc.subject,
+        extracted_content: doc.extracted_content,
+        processing_error: doc.processing_error,
+        ai_analysis: doc.ai_analysis,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at
       }));
       
       setDocuments(typedDocuments);
@@ -226,28 +246,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     // Build comprehensive context about the learner
     let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. `;
     
-    // Add child-specific context
-    if (selectedChild) {
-      const ageGroupLabel = getAgeGroupLabel(selectedChild.ageGroup);
+    // Add student-specific context
+    if (selectedStudent) {
+      const ageGroupLabel = getAgeGroupLabel(selectedStudent.age_group);
       systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
       
-      if (selectedChild.subjects && selectedChild.subjects.length > 0) {
-        systemContext += `Their focus subjects are: ${selectedChild.subjects.join(', ')}. `;
+      if (selectedStudent.subjects && selectedStudent.subjects.length > 0) {
+        systemContext += `Their focus subjects are: ${selectedStudent.subjects.join(', ')}. `;
       }
       
-      if (selectedChild.challenges && selectedChild.challenges.length > 0) {
-        systemContext += `Important learning considerations: ${selectedChild.challenges.join(', ')}. `;
+      if (selectedStudent.challenges && selectedStudent.challenges.length > 0) {
+        systemContext += `Important learning considerations: ${selectedStudent.challenges.join(', ')}. `;
         
-        // Provide specific guidance for learning differences
-        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('dyslexia'))) {
+        if (selectedStudent.challenges.some(challenge => challenge.toLowerCase().includes('dyslexia'))) {
           systemContext += `Since ${learnerName} has dyslexia, when relevant to the task, use clear fonts, avoid dense text, provide visual aids, and break down complex instructions into smaller steps. However, if the current task is purely mathematical and doesn't involve reading comprehension, the dyslexia may not be relevant to address. `;
         }
         
-        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('adhd'))) {
+        if (selectedStudent.challenges.some(challenge => challenge.toLowerCase().includes('adhd'))) {
           systemContext += `Since ${learnerName} has ADHD, when relevant, keep activities shorter, provide clear structure, use engaging themes, and include movement or hands-on elements when possible. `;
         }
         
-        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('autism'))) {
+        if (selectedStudent.challenges.some(challenge => challenge.toLowerCase().includes('autism'))) {
           systemContext += `Since ${learnerName} has autism, when relevant, provide clear expectations, consistent structure, and consider sensory preferences. `;
         }
       }
@@ -287,102 +306,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  // Generate practice test with dynamic theming
-  const generateLLMStylePracticeTest = (message: string): string => {
-    const theme = extractThemeFromMessage(message);
-    const now = new Date();
-    const timeVariation = (now.getMinutes() * 60 + now.getSeconds()) % 100;
-    
-    const nums = {
-      a: 3 + (timeVariation % 8),
-      b: 2 + ((timeVariation * 3) % 7),
-      c: 12 + (timeVariation % 12),
-      d: 8 + ((timeVariation * 7) % 10)
-    };
-
-    let content = `🎯 **Practice Test for ${learnerName}**\n\n`;
-    
-    if (theme) {
-      content += `All problems are themed around ${theme}!\n\n`;
-      
-      content += `**Addition Problems:**\n\n`;
-      content += `1. You ordered ${nums.a} slices of ${theme} for lunch and ${nums.b} more slices for dinner. How many slices of ${theme} did you eat in total? ____\n\n`;
-      content += `2. There are ${nums.c} pieces of ${theme} on one plate and ${nums.d} pieces on another plate. How many pieces are there altogether? ____\n\n`;
-      
-      content += `**Subtraction Problems:**\n\n`;
-      const total1 = nums.c + nums.a;
-      content += `3. You started with ${total1} pieces of ${theme}, but ate ${nums.a} pieces. How many pieces of ${theme} do you have left? ____\n\n`;
-      const total2 = nums.d + nums.b;
-      content += `4. There were ${total2} ${theme} slices, and ${nums.b} were eaten. How many slices remain? ____\n\n`;
-    } else {
-      content += `**Math Practice:**\n\n`;
-      content += `1. ${nums.a} + ${nums.b} = ____\n\n`;
-      content += `2. ${nums.c} + ${nums.d} = ____\n\n`;
-      content += `3. ${nums.c + nums.a} - ${nums.a} = ____\n\n`;
-      content += `4. ${nums.d + nums.b} - ${nums.b} = ____\n\n`;
-    }
-    
-    content += `Great job working on these problems! 🌟`;
-    
-    return content;
-  };
-
-  // Extract theme from user message
-  const extractThemeFromMessage = (message: string): string | null => {
-    const text = message.toLowerCase();
-    
-    // Look for theme indicators
-    const themePatterns = [
-      /with (\w+)/,
-      /about (\w+)/,
-      /around (\w+)/,
-      /context.*?(\w+)/,
-      /theme.*?(\w+)/,
-      /based on (\w+)/
-    ];
-    
-    for (const pattern of themePatterns) {
-      const match = text.match(pattern);
-      if (match && match[1] && match[1].length > 2) {
-        return match[1];
-      }
-    }
-    
-    // Look for standalone interesting words
-    const words = text.split(' ');
-    const interestingWords = words.filter(word => 
-      word.length > 3 && 
-      !['practice', 'test', 'build', 'create', 'make', 'help'].includes(word) &&
-      !['addition', 'subtraction', 'multiplication', 'division'].includes(word)
-    );
-    
-    return interestingWords[0] || null;
-  };
-
-  // Generate themed response based on context
-  const generateThemedResponse = (message: string, theme: string): string => {
-    if (message.includes('practice test')) {
-      return generateLLMStylePracticeTest(message);
-    }
-    
-    return `I'd love to help create ${theme}-themed learning activities for ${learnerName}! What specific math concepts would you like to work on? I can create word problems, activities, or explanations that incorporate ${theme} to make learning more engaging.`;
-  };
-
-  // Generate contextual response based on conversation
-  const generateContextualResponse = (message: string, conversationHistory: any[]): string => {
-    const prevMessages = conversationHistory.slice(0, -1); // Exclude current message
-    
-    if (message.includes('help') && message.includes('test')) {
-      return `I can help analyze test results and create practice materials for ${learnerName}. What specific areas would you like to focus on?`;
-    }
-    
-    if (message.includes('activity') || message.includes('activities')) {
-      return `I'd be happy to suggest learning activities for ${learnerName}! What math topics are you working on, and what makes learning fun for them?`;
-    }
-    
-    return `I'm here to help ${learnerName} with personalized learning! I can create practice tests, explain concepts, suggest activities, or analyze uploaded documents. What would be most helpful?`;
-  };
-
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     
@@ -401,8 +324,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     try {
       // Generate AI response using context
       const aiResponse = await generateContextAwareResponse(currentMessage);
-      
-      // Note: Context updates can be handled by the LLM naturally through conversation history
       
       const aiMessage = {
         id: (Date.now() + 1).toString(),
@@ -430,8 +351,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (!conversationTitle.trim()) return;
 
     const conversation = {
-      childId: selectedChild?.id || null,
-      studentProfileId: selectedStudentProfile?.id || null,
+      studentId: selectedStudent?.id || null,
       title: conversationTitle.trim(),
       messages,
       isFavorite,
@@ -452,7 +372,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
@@ -610,7 +530,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <div className="flex gap-3">
                 <button
                   onClick={() => setShowSaveDialog(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>

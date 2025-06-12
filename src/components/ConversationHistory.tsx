@@ -1,40 +1,27 @@
-
 import React, { useState } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User } from 'lucide-react';
-import { SavedConversation, Child } from '../types';
+import { SavedConversation } from '../types';
+import { Student } from '../types/database';
 
 interface ConversationHistoryProps {
-  conversations: SavedConversation[];
-  children: Child[];
-  onLoadConversation: (conversation: SavedConversation) => void;
+  students: Student[];
+  selectedStudent: Student;
+  onSelectStudent: (student: Student) => void;
 }
 
 const ConversationHistory: React.FC<ConversationHistoryProps> = ({
-  conversations,
-  children,
-  onLoadConversation
+  students,
+  selectedStudent,
+  onSelectStudent
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterChild, setFilterChild] = useState<string>('all');
+  const [filterStudent, setFilterStudent] = useState<string>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
 
-  const getChildName = (childId: string) => {
-    const child = children.find(c => c.id === childId);
-    return child?.name || 'Unknown Child';
+  const getStudentName = (studentId: string) => {
+    const student = students.find(s => s.id === studentId);
+    return student?.name || 'Unknown Student';
   };
-
-  const filteredConversations = conversations.filter(conversation => {
-    if (searchTerm && !conversation.title.toLowerCase().includes(searchTerm.toLowerCase())) {
-      return false;
-    }
-    if (filterChild !== 'all' && conversation.childId !== filterChild) {
-      return false;
-    }
-    if (showFavoritesOnly && !conversation.isFavorite) {
-      return false;
-    }
-    return true;
-  });
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -82,13 +69,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           </div>
           <div className="md:w-48">
             <select
-              value={filterChild}
-              onChange={(e) => setFilterChild(e.target.value)}
+              value={filterStudent}
+              onChange={(e) => setFilterStudent(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="all">All Children</option>
-              {children.map(child => (
-                <option key={child.id} value={child.id}>{child.name}</option>
+              <option value="all">All Students</option>
+              {students.map(student => (
+                <option key={student.id} value={student.id}>{student.name}</option>
               ))}
             </select>
           </div>
@@ -96,72 +83,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       </div>
 
       {/* Conversations List */}
-      {filteredConversations.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <MessageSquare size={32} className="text-gray-400" />
-          </div>
-          <h3 className="text-lg font-medium text-gray-800 mb-2">No conversations found</h3>
-          <p className="text-gray-600">
-            {conversations.length === 0 
-              ? "Start a learning session to see your conversation history here"
-              : "Try adjusting your search or filters"
-            }
-          </p>
+      <div className="text-center py-12">
+        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <MessageSquare size={32} className="text-gray-400" />
         </div>
-      ) : (
-        <div className="space-y-4">
-          {filteredConversations.map(conversation => (
-            <div
-              key={conversation.id}
-              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
-              onClick={() => onLoadConversation(conversation)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-800">{conversation.title}</h3>
-                    {conversation.isFavorite && (
-                      <Star size={16} className="text-yellow-500 fill-current" />
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <User size={14} />
-                      {getChildName(conversation.childId)}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Clock size={14} />
-                      {formatDate(conversation.createdAt)}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <MessageSquare size={14} />
-                      {conversation.messages.length} messages
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {conversation.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {conversation.tags.map(tag => (
-                    <span
-                      key={tag}
-                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              <p className="text-gray-600 text-sm line-clamp-2">
-                {conversation.messages[0]?.content || 'No content'}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
+        <h3 className="text-lg font-medium text-gray-800 mb-2">No conversations found</h3>
+        <p className="text-gray-600">
+          Start a learning session to see your conversation history here
+        </p>
+      </div>
     </div>
   );
 };

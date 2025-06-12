@@ -1,19 +1,17 @@
-
--- Create profiles table for users (parents and students)
+-- Create profiles table for users
 CREATE TABLE public.profiles (
   id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   email TEXT NOT NULL,
   first_name TEXT,
   last_name TEXT,
-  user_type TEXT NOT NULL CHECK (user_type IN ('parent', 'student')),
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Create children table (linked to parent profiles)
-CREATE TABLE public.children (
+-- Create students table
+CREATE TABLE public.students (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  parent_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   age_group TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
@@ -27,12 +25,12 @@ CREATE TABLE public.subjects (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Create child_subjects junction table
-CREATE TABLE public.child_subjects (
+-- Create student_subjects junction table
+CREATE TABLE public.student_subjects (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  child_id UUID NOT NULL REFERENCES public.children(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
   subject_id UUID NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
-  UNIQUE(child_id, subject_id)
+  UNIQUE(student_id, subject_id)
 );
 
 -- Create challenges table
@@ -43,50 +41,22 @@ CREATE TABLE public.challenges (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
--- Create child_challenges junction table
-CREATE TABLE public.child_challenges (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  child_id UUID NOT NULL REFERENCES public.children(id) ON DELETE CASCADE,
-  challenge_id UUID NOT NULL REFERENCES public.challenges(id) ON DELETE CASCADE,
-  UNIQUE(child_id, challenge_id)
-);
-
--- Create student_profiles table for students who log in themselves
-CREATE TABLE public.student_profiles (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  age_group TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
--- Create student_subjects junction table
-CREATE TABLE public.student_subjects (
-  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  student_profile_id UUID NOT NULL REFERENCES public.student_profiles(id) ON DELETE CASCADE,
-  subject_id UUID NOT NULL REFERENCES public.subjects(id) ON DELETE CASCADE,
-  UNIQUE(student_profile_id, subject_id)
-);
-
 -- Create student_challenges junction table
 CREATE TABLE public.student_challenges (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  student_profile_id UUID NOT NULL REFERENCES public.student_profiles(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
   challenge_id UUID NOT NULL REFERENCES public.challenges(id) ON DELETE CASCADE,
-  UNIQUE(student_profile_id, challenge_id)
+  UNIQUE(student_id, challenge_id)
 );
 
 -- Create conversations table
 CREATE TABLE public.conversations (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  child_id UUID REFERENCES public.children(id) ON DELETE CASCADE,
-  student_profile_id UUID REFERENCES public.student_profiles(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES public.students(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   is_favorite BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
-  CHECK ((child_id IS NOT NULL AND student_profile_id IS NULL) OR (child_id IS NULL AND student_profile_id IS NOT NULL))
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 -- Create messages table
@@ -123,13 +93,10 @@ INSERT INTO public.challenges (name, description) VALUES
 
 -- Enable Row Level Security
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.children ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.child_subjects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.child_challenges ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.student_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_subjects ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.student_challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
@@ -138,259 +105,127 @@ ALTER TABLE public.conversation_tags ENABLE ROW LEVEL SECURITY;
 -- Create RLS policies for profiles
 CREATE POLICY "Users can view their own profile" ON public.profiles
   FOR SELECT USING (auth.uid() = id);
+
 CREATE POLICY "Users can update their own profile" ON public.profiles
   FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Users can insert their own profile" ON public.profiles
-  FOR INSERT WITH CHECK (auth.uid() = id);
 
--- Create RLS policies for children (only parents can manage)
-CREATE POLICY "Parents can view their children" ON public.children
+-- Create RLS policies for students
+CREATE POLICY "Users can view their own students" ON public.students
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own students" ON public.students
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own students" ON public.students
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own students" ON public.students
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- Create RLS policies for subjects
+CREATE POLICY "Anyone can view subjects" ON public.subjects
+  FOR SELECT USING (true);
+
+-- Create RLS policies for student_subjects
+CREATE POLICY "Users can view their own student subjects" ON public.student_subjects
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'parent' 
-      AND profiles.id = children.parent_id
-    )
-  );
-CREATE POLICY "Parents can insert children" ON public.children
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'parent' 
-      AND profiles.id = parent_id
-    )
-  );
-CREATE POLICY "Parents can update their children" ON public.children
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'parent' 
-      AND profiles.id = children.parent_id
-    )
-  );
-CREATE POLICY "Parents can delete their children" ON public.children
-  FOR DELETE USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'parent' 
-      AND profiles.id = children.parent_id
+      SELECT 1 FROM public.students
+      WHERE students.id = student_subjects.student_id
+      AND students.user_id = auth.uid()
     )
   );
 
--- Create RLS policies for student profiles (only students can manage their own)
-CREATE POLICY "Students can view their own profile" ON public.student_profiles
+CREATE POLICY "Users can manage their own student subjects" ON public.student_subjects
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.students
+      WHERE students.id = student_subjects.student_id
+      AND students.user_id = auth.uid()
+    )
+  );
+
+-- Create RLS policies for challenges
+CREATE POLICY "Anyone can view challenges" ON public.challenges
+  FOR SELECT USING (true);
+
+-- Create RLS policies for student_challenges
+CREATE POLICY "Users can view their own student challenges" ON public.student_challenges
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'student' 
-      AND profiles.id = student_profiles.user_id
-    )
-  );
-CREATE POLICY "Students can insert their profile" ON public.student_profiles
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'student' 
-      AND profiles.id = user_id
-    )
-  );
-CREATE POLICY "Students can update their profile" ON public.student_profiles
-  FOR UPDATE USING (
-    EXISTS (
-      SELECT 1 FROM public.profiles 
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'student' 
-      AND profiles.id = student_profiles.user_id
+      SELECT 1 FROM public.students
+      WHERE students.id = student_challenges.student_id
+      AND students.user_id = auth.uid()
     )
   );
 
--- RLS policies for subjects and challenges (read-only for all authenticated users)
-CREATE POLICY "Authenticated users can view subjects" ON public.subjects
-  FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Authenticated users can view challenges" ON public.challenges
-  FOR SELECT TO authenticated USING (true);
-
--- RLS policies for junction tables
-CREATE POLICY "Parents can manage child subjects" ON public.child_subjects
+CREATE POLICY "Users can manage their own student challenges" ON public.student_challenges
   FOR ALL USING (
     EXISTS (
-      SELECT 1 FROM public.children 
-      JOIN public.profiles ON profiles.id = children.parent_id
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'parent' 
-      AND children.id = child_subjects.child_id
+      SELECT 1 FROM public.students
+      WHERE students.id = student_challenges.student_id
+      AND students.user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Parents can manage child challenges" ON public.child_challenges
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.children 
-      JOIN public.profiles ON profiles.id = children.parent_id
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'parent' 
-      AND children.id = child_challenges.child_id
-    )
-  );
-
-CREATE POLICY "Students can manage their subjects" ON public.student_subjects
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.student_profiles 
-      JOIN public.profiles ON profiles.id = student_profiles.user_id
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'student' 
-      AND student_profiles.id = student_subjects.student_profile_id
-    )
-  );
-
-CREATE POLICY "Students can manage their challenges" ON public.student_challenges
-  FOR ALL USING (
-    EXISTS (
-      SELECT 1 FROM public.student_profiles 
-      JOIN public.profiles ON profiles.id = student_profiles.user_id
-      WHERE profiles.id = auth.uid() 
-      AND profiles.user_type = 'student' 
-      AND student_profiles.id = student_challenges.student_profile_id
-    )
-  );
-
--- RLS policies for conversations
-CREATE POLICY "Users can view their conversations" ON public.conversations
+-- Create RLS policies for conversations
+CREATE POLICY "Users can view their own conversations" ON public.conversations
   FOR SELECT USING (
-    (child_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.children 
-      JOIN public.profiles ON profiles.id = children.parent_id
-      WHERE profiles.id = auth.uid() 
-      AND children.id = conversations.child_id
-    )) OR
-    (student_profile_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.student_profiles 
-      JOIN public.profiles ON profiles.id = student_profiles.user_id
-      WHERE profiles.id = auth.uid() 
-      AND student_profiles.id = conversations.student_profile_id
-    ))
+    EXISTS (
+      SELECT 1 FROM public.students
+      WHERE students.id = conversations.student_id
+      AND students.user_id = auth.uid()
+    )
   );
 
-CREATE POLICY "Users can insert their conversations" ON public.conversations
-  FOR INSERT WITH CHECK (
-    (child_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.children 
-      JOIN public.profiles ON profiles.id = children.parent_id
-      WHERE profiles.id = auth.uid() 
-      AND children.id = child_id
-    )) OR
-    (student_profile_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.student_profiles 
-      JOIN public.profiles ON profiles.id = student_profiles.user_id
-      WHERE profiles.id = auth.uid() 
-      AND student_profiles.id = student_profile_id
-    ))
+CREATE POLICY "Users can manage their own conversations" ON public.conversations
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.students
+      WHERE students.id = conversations.student_id
+      AND students.user_id = auth.uid()
+    )
   );
 
-CREATE POLICY "Users can update their conversations" ON public.conversations
-  FOR UPDATE USING (
-    (child_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.children 
-      JOIN public.profiles ON profiles.id = children.parent_id
-      WHERE profiles.id = auth.uid() 
-      AND children.id = conversations.child_id
-    )) OR
-    (student_profile_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.student_profiles 
-      JOIN public.profiles ON profiles.id = student_profiles.user_id
-      WHERE profiles.id = auth.uid() 
-      AND student_profiles.id = conversations.student_profile_id
-    ))
-  );
-
-CREATE POLICY "Users can delete their conversations" ON public.conversations
-  FOR DELETE USING (
-    (child_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.children 
-      JOIN public.profiles ON profiles.id = children.parent_id
-      WHERE profiles.id = auth.uid() 
-      AND children.id = conversations.child_id
-    )) OR
-    (student_profile_id IS NOT NULL AND EXISTS (
-      SELECT 1 FROM public.student_profiles 
-      JOIN public.profiles ON profiles.id = student_profiles.user_id
-      WHERE profiles.id = auth.uid() 
-      AND student_profiles.id = conversations.student_profile_id
-    ))
-  );
-
--- RLS policies for messages
-CREATE POLICY "Users can view messages from their conversations" ON public.messages
+-- Create RLS policies for messages
+CREATE POLICY "Users can view their own messages" ON public.messages
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.conversations
+      JOIN public.students ON students.id = conversations.student_id
       WHERE conversations.id = messages.conversation_id
-      AND (
-        (conversations.child_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM public.children 
-          JOIN public.profiles ON profiles.id = children.parent_id
-          WHERE profiles.id = auth.uid() 
-          AND children.id = conversations.child_id
-        )) OR
-        (conversations.student_profile_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM public.student_profiles 
-          JOIN public.profiles ON profiles.id = student_profiles.user_id
-          WHERE profiles.id = auth.uid() 
-          AND student_profiles.id = conversations.student_profile_id
-        ))
-      )
+      AND students.user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Users can insert messages to their conversations" ON public.messages
-  FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.conversations
-      WHERE conversations.id = conversation_id
-      AND (
-        (conversations.child_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM public.children 
-          JOIN public.profiles ON profiles.id = children.parent_id
-          WHERE profiles.id = auth.uid() 
-          AND children.id = conversations.child_id
-        )) OR
-        (conversations.student_profile_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM public.student_profiles 
-          JOIN public.profiles ON profiles.id = student_profiles.user_id
-          WHERE profiles.id = auth.uid() 
-          AND student_profiles.id = conversations.student_profile_id
-        ))
-      )
-    )
-  );
-
--- RLS policies for conversation tags
-CREATE POLICY "Users can manage tags for their conversations" ON public.conversation_tags
+CREATE POLICY "Users can manage their own messages" ON public.messages
   FOR ALL USING (
     EXISTS (
       SELECT 1 FROM public.conversations
+      JOIN public.students ON students.id = conversations.student_id
+      WHERE conversations.id = messages.conversation_id
+      AND students.user_id = auth.uid()
+    )
+  );
+
+-- Create RLS policies for conversation_tags
+CREATE POLICY "Users can view their own conversation tags" ON public.conversation_tags
+  FOR SELECT USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations
+      JOIN public.students ON students.id = conversations.student_id
       WHERE conversations.id = conversation_tags.conversation_id
-      AND (
-        (conversations.child_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM public.children 
-          JOIN public.profiles ON profiles.id = children.parent_id
-          WHERE profiles.id = auth.uid() 
-          AND children.id = conversations.child_id
-        )) OR
-        (conversations.student_profile_id IS NOT NULL AND EXISTS (
-          SELECT 1 FROM public.student_profiles 
-          JOIN public.profiles ON profiles.id = student_profiles.user_id
-          WHERE profiles.id = auth.uid() 
-          AND student_profiles.id = conversations.student_profile_id
-        ))
-      )
+      AND students.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can manage their own conversation tags" ON public.conversation_tags
+  FOR ALL USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations
+      JOIN public.students ON students.id = conversations.student_id
+      WHERE conversations.id = conversation_tags.conversation_id
+      AND students.user_id = auth.uid()
     )
   );
 
@@ -398,13 +233,12 @@ CREATE POLICY "Users can manage tags for their conversations" ON public.conversa
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, first_name, last_name, user_type)
+  INSERT INTO public.profiles (id, email, first_name, last_name)
   VALUES (
     new.id,
     new.email,
     COALESCE(new.raw_user_meta_data->>'first_name', ''),
-    COALESCE(new.raw_user_meta_data->>'last_name', ''),
-    COALESCE(new.raw_user_meta_data->>'user_type', 'parent')
+    COALESCE(new.raw_user_meta_data->>'last_name', '')
   );
   RETURN new;
 END;

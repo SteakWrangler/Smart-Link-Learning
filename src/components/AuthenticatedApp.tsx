@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Auth from './Auth';
@@ -9,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { LogOut, User } from 'lucide-react';
 
 const AuthenticatedApp = () => {
-  const { user, profile, loading, signOut, isParent, isStudent } = useAuth();
+  const { user, profile, loading, signOut } = useAuth();
   const [showDashboard, setShowDashboard] = useState(false);
 
   if (loading) {
@@ -28,11 +27,7 @@ const AuthenticatedApp = () => {
   }
 
   if (showDashboard) {
-    if (isParent) {
-      return <Dashboard onBack={() => setShowDashboard(false)} />;
-    } else if (isStudent) {
-      return <StudentDashboard onBack={() => setShowDashboard(false)} />;
-    }
+    return <Dashboard onBack={() => setShowDashboard(false)} />;
   }
 
   return (

@@ -1,19 +1,19 @@
-
 export interface Profile {
   id: string;
   email: string;
   first_name?: string;
   last_name?: string;
-  user_type: 'parent' | 'student';
   created_at: string;
   updated_at: string;
 }
 
-export interface Child {
+export interface Student {
   id: string;
-  parent_id: string;
+  user_id: string;
   name: string;
   age_group: string;
+  subjects: string[];
+  challenges: string[];
   created_at: string;
   updated_at: string;
 }
@@ -31,19 +31,9 @@ export interface Challenge {
   created_at: string;
 }
 
-export interface StudentProfile {
-  id: string;
-  user_id: string;
-  name: string;
-  age_group: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Conversation {
   id: string;
-  child_id?: string;
-  student_profile_id?: string;
+  student_id: string;
   title: string;
   is_favorite: boolean;
   created_at: string;
@@ -67,8 +57,7 @@ export interface ConversationTag {
 export interface DocumentData {
   id: string;
   user_id: string;
-  child_id?: string | null;
-  student_profile_id?: string | null;
+  student_id: string;
   file_name: string;
   file_path: string;
   file_size: number;

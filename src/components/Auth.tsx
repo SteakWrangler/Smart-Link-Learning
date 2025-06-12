@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthProps {
@@ -19,7 +17,6 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [userType, setUserType] = useState<'parent' | 'student'>('parent');
   const { toast } = useToast();
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -34,7 +31,6 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
           data: {
             first_name: firstName,
             last_name: lastName,
-            user_type: userType,
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -181,24 +177,6 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess }) => {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                   />
-                </div>
-                
-                <div className="space-y-3">
-                  <Label>I am a:</Label>
-                  <RadioGroup
-                    value={userType}
-                    onValueChange={(value: 'parent' | 'student') => setUserType(value)}
-                    className="flex flex-col space-y-2"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="parent" id="parent" />
-                      <Label htmlFor="parent">Parent</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="student" id="student" />
-                      <Label htmlFor="student">Student</Label>
-                    </div>
-                  </RadioGroup>
                 </div>
                 
                 <Button type="submit" className="w-full" disabled={isLoading}>

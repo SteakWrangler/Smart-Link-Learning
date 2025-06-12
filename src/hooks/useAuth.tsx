@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -70,7 +69,5 @@ export const useAuth = () => {
     profile,
     loading,
     signOut,
-    isParent: profile?.user_type === 'parent',
-    isStudent: profile?.user_type === 'student',
   };
 };

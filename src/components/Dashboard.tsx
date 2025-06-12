@@ -11,6 +11,9 @@ import CommunityForum from './CommunityForum';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { Student, Subject, Challenge } from '../types/database';
+import { AddStudentForm } from './AddStudentForm';
+import { StudentProfile } from './StudentProfile';
 
 interface DashboardProps {
   onBack: () => void;
@@ -19,79 +22,88 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const { profile } = useAuth();
   const { toast } = useToast();
-  const [children, setChildren] = useState<Child[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
-  const [showAddChild, setShowAddChild] = useState(false);
-  const [editingChild, setEditingChild] = useState<Child | undefined>();
-  const [selectedChild, setSelectedChild] = useState<Child | undefined>();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
-  const [showChat, setShowChat] = useState(false);
-  const [showDocuments, setShowDocuments] = useState(false);
+  const [showConversationHistory, setShowConversationHistory] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
+  const [deleteConfirmStudent, setDeleteConfirmStudent] = useState<Student | null>(null);
   const [showResourceModal, setShowResourceModal] = useState<string | null>(null);
   const [showCommunityForum, setShowCommunityForum] = useState(false);
   const [forumInitialCategory, setForumInitialCategory] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     if (profile) {
-      fetchChildren();
+      fetchStudents();
+      fetchSubjects();
+      fetchChallenges();
     }
   }, [profile]);
 
-  const fetchChildren = async () => {
+  const fetchStudents = async () => {
     if (!profile) return;
 
     try {
       setLoading(true);
-      console.log('Fetching children for profile:', profile.id);
+      console.log('Fetching students for profile:', profile.id);
       
-      // Fetch children from database with their subjects and challenges
-      const { data: childrenData, error: childrenError } = await supabase
-        .from('children')
-        .select(`
-          *,
-          child_subjects(
-            subjects(name)
-          ),
-          child_challenges(
-            challenges(name)
-          )
-        `)
-        .eq('parent_id', profile.id)
+      const { data: studentsData, error: studentsError } = await supabase
+        .from('students')
+        .select('*')
+        .eq('user_id', profile.id)
         .order('created_at', { ascending: false });
 
-      if (childrenError) {
-        console.error('Error fetching children:', childrenError);
-        throw childrenError;
+      if (studentsError) {
+        console.error('Error fetching students:', studentsError);
+        throw studentsError;
       }
 
-      console.log('Raw children data from database:', childrenData);
+      console.log('Raw students data from database:', studentsData);
 
-      // Transform database children to frontend format
-      const transformedChildren: Child[] = (childrenData || []).map((dbChild: any) => {
-        console.log('Transforming child:', dbChild);
-        
-        const subjects = dbChild.child_subjects?.map((cs: any) => cs.subjects?.name).filter(Boolean) || [];
-        const challenges = dbChild.child_challenges?.map((cc: any) => cc.challenges?.name).filter(Boolean) || [];
-        
-        return {
-          id: dbChild.id,
-          name: dbChild.name,
-          ageGroup: dbChild.age_group,
-          subjects,
-          challenges,
-          createdAt: new Date(dbChild.created_at)
-        };
-      });
+      // Fetch subjects and challenges for each student
+      const studentsWithDetails = await Promise.all(
+        (studentsData || []).map(async (student) => {
+          // Fetch subjects
+          const { data: subjectsData, error: subjectsError } = await supabase
+            .from('student_subjects')
+            .select('subjects(name)')
+            .eq('student_id', student.id);
 
-      console.log('Transformed children:', transformedChildren);
-      setChildren(transformedChildren);
+          if (subjectsError) {
+            console.error('Error fetching subjects:', subjectsError);
+            return student;
+          }
+
+          // Fetch challenges
+          const { data: challengesData, error: challengesError } = await supabase
+            .from('student_challenges')
+            .select('challenges(name)')
+            .eq('student_id', student.id);
+
+          if (challengesError) {
+            console.error('Error fetching challenges:', challengesError);
+            return student;
+          }
+
+          return {
+            ...student,
+            subjects: subjectsData?.map(s => s.subjects.name) || [],
+            challenges: challengesData?.map(c => c.challenges.name) || []
+          };
+        })
+      );
+
+      setStudents(studentsWithDetails);
     } catch (error) {
-      console.error('Error fetching children:', error);
+      console.error('Error fetching students:', error);
       toast({
         title: "Error",
-        description: "Failed to load children",
+        description: "Failed to load students",
         variant: "destructive",
       });
     } finally {
@@ -99,182 +111,147 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     }
   };
 
-  const handleAddChild = async (childData: Omit<Child, 'id' | 'createdAt'>) => {
+  const fetchSubjects = async () => {
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching subjects:', error);
+      return;
+    }
+
+    setSubjects(data || []);
+  };
+
+  const fetchChallenges = async () => {
+    const { data, error } = await supabase
+      .from('challenges')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching challenges:', error);
+      return;
+    }
+
+    setChallenges(data || []);
+  };
+
+  const handleAddStudent = async (studentData: Partial<Student>) => {
     if (!profile) return;
 
     try {
-      console.log('Adding/updating child:', childData);
+      console.log('Adding/updating student:', studentData);
 
-      if (editingChild) {
-        // Update existing child
-        const { error: updateError } = await supabase
-          .from('children')
-          .update({
-            name: childData.name,
-            age_group: childData.ageGroup,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', editingChild.id);
+      if (editingStudent) {
+        // Update existing student
+        const { data: updatedStudent, error: updateError } = await supabase
+          .from('students')
+          .update(studentData)
+          .eq('id', editingStudent.id)
+          .select()
+          .single();
 
         if (updateError) throw updateError;
 
-        // Update subjects and challenges
-        await updateChildSubjectsAndChallenges(editingChild.id, childData.subjects, childData.challenges);
+        setStudents(students.map(s => (s.id === updatedStudent.id ? updatedStudent : s)));
         
         toast({
           title: "Success",
-          description: "Child updated successfully",
+          description: "Student updated successfully",
         });
       } else {
-        // Create new child
-        const { data: newChild, error: insertError } = await supabase
-          .from('children')
-          .insert({
-            name: childData.name,
-            age_group: childData.ageGroup,
-            parent_id: profile.id
-          })
+        // Create new student
+        const { data: newStudent, error: insertError } = await supabase
+          .from('students')
+          .insert([
+            {
+              ...studentData,
+              user_id: profile.id,
+            },
+          ])
           .select()
           .single();
 
         if (insertError) throw insertError;
-        console.log('Created new child:', newChild);
+        console.log('Created new student:', newStudent);
 
-        // Add subjects and challenges
-        await updateChildSubjectsAndChallenges(newChild.id, childData.subjects, childData.challenges);
+        setStudents([newStudent, ...students]);
 
         toast({
           title: "Success",
-          description: "Child added successfully",
+          description: "Student added successfully",
         });
       }
 
-      // Refresh children list
-      await fetchChildren();
-      setEditingChild(undefined);
-      setShowAddChild(false);
+      // Refresh students list
+      await fetchStudents();
+      setEditingStudent(null);
+      setShowAddForm(false);
     } catch (error) {
-      console.error('Error saving child:', error);
+      console.error('Error saving student:', error);
       toast({
         title: "Error",
-        description: "Failed to save child",
+        description: "Failed to save student",
         variant: "destructive",
       });
     }
   };
 
-  const updateChildSubjectsAndChallenges = async (childId: string, subjects: string[], challenges: string[]) => {
-    try {
-      console.log('Updating subjects and challenges for child:', childId, { subjects, challenges });
-
-      // Remove existing subjects and challenges
-      await supabase.from('child_subjects').delete().eq('child_id', childId);
-      await supabase.from('child_challenges').delete().eq('child_id', childId);
-
-      // Get subject and challenge IDs (lookup by name)
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('id, name')
-        .in('name', subjects);
-
-      const { data: challengesData } = await supabase
-        .from('challenges')
-        .select('id, name')
-        .in('name', challenges);
-
-      console.log('Found subjects:', subjectsData);
-      console.log('Found challenges:', challengesData);
-
-      // Add new subject associations
-      if (subjectsData && subjectsData.length > 0) {
-        const subjectInserts = subjectsData.map(subject => ({
-          child_id: childId,
-          subject_id: subject.id
-        }));
-        const { error: subjectError } = await supabase.from('child_subjects').insert(subjectInserts);
-        if (subjectError) throw subjectError;
-      }
-
-      // Add new challenge associations
-      if (challengesData && challengesData.length > 0) {
-        const challengeInserts = challengesData.map(challenge => ({
-          child_id: childId,
-          challenge_id: challenge.id
-        }));
-        const { error: challengeError } = await supabase.from('child_challenges').insert(challengeInserts);
-        if (challengeError) throw challengeError;
-      }
-    } catch (error) {
-      console.error('Error updating child subjects and challenges:', error);
-      throw error;
-    }
+  const handleEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    setShowAddForm(true);
   };
 
-  const handleEditChild = (child: Child) => {
-    setEditingChild(child);
-    setShowAddChild(true);
+  const handleDeleteStudent = async (student: Student) => {
+    console.log('Delete clicked for student:', student.id);
+    setDeleteConfirmStudent(student);
   };
 
-  const handleDeleteChild = (childId: string) => {
-    console.log('Delete clicked for child:', childId);
-    setDeleteConfirmChild(childId);
-  };
-
-  const confirmDeleteChild = async () => {
-    if (!deleteConfirmChild) return;
+  const confirmDeleteStudent = async () => {
+    if (!deleteConfirmStudent) return;
 
     try {
-      console.log('Starting delete process for child:', deleteConfirmChild);
+      console.log('Starting delete process for student:', deleteConfirmStudent.id);
       
-      // Delete child associations first
-      const { error: subjectsError } = await supabase.from('child_subjects').delete().eq('child_id', deleteConfirmChild);
-      if (subjectsError) {
-        console.error('Error deleting child subjects:', subjectsError);
-        throw subjectsError;
-      }
-      
-      const { error: challengesError } = await supabase.from('child_challenges').delete().eq('child_id', deleteConfirmChild);
-      if (challengesError) {
-        console.error('Error deleting child challenges:', challengesError);
-        throw challengesError;
-      }
-      
-      // Delete child
+      // Delete student
       const { error } = await supabase
-        .from('children')
+        .from('students')
         .delete()
-        .eq('id', deleteConfirmChild);
+        .eq('id', deleteConfirmStudent.id);
 
       if (error) {
-        console.error('Error deleting child:', error);
+        console.error('Error deleting student:', error);
         throw error;
       }
 
-      console.log('Child deleted successfully');
+      console.log('Student deleted successfully');
 
-      // Refresh children list
-      await fetchChildren();
-      setSavedConversations(prev => prev.filter(conv => conv.childId !== deleteConfirmChild));
+      // Refresh students list
+      await fetchStudents();
+      setSavedConversations(prev => prev.filter(conv => conv.childId !== deleteConfirmStudent.id));
       
       toast({
         title: "Success",
-        description: "Child deleted successfully",
+        description: "Student deleted successfully",
       });
     } catch (error) {
-      console.error('Error deleting child:', error);
+      console.error('Error deleting student:', error);
       toast({
         title: "Error",
-        description: "Failed to delete child",
+        description: "Failed to delete student",
         variant: "destructive",
       });
     } finally {
-      setDeleteConfirmChild(null);
+      setDeleteConfirmStudent(null);
     }
   };
 
-  const handleSelectChild = (child: Child) => {
-    setSelectedChild(child);
-    setShowChat(true);
+  const handleSelectStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setShowConversationHistory(false);
   };
 
   const handleSaveConversation = (conversation: Omit<SavedConversation, 'id' | 'createdAt'>) => {
@@ -301,9 +278,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     }
   };
 
-  // Get unique challenges from all children
-  const getChildrenChallenges = (): string[] => {
-    const allChallenges = children.flatMap(child => child.challenges || []);
+  // Get unique challenges from all students
+  const getStudentsChallenges = (): string[] => {
+    const allChallenges = students.flatMap(student => student.challenges || []);
     return [...new Set(allChallenges)]; // Remove duplicates
   };
 
@@ -352,26 +329,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         resources: [
           {
             title: '70+ Mental Health Coping Skills for Kids',
-            description: 'Practical tools to help your child stay strong in any situation',
+            description: 'Practical tools to help your student stay strong in any situation',
             url: 'https://www.verywellmind.com/mental-health-coping-skills-for-kids-8724073',
             organization: 'Verywell Mind'
           },
           {
-            title: 'How to Help a Child With Anxiety',
-            description: 'Supporting children through learning-related stress and worry',
-            url: 'https://www.understood.org/articles/anxiety-in-children-with-learning-differences',
+            title: 'How to Help a Student With Anxiety',
+            description: 'Supporting students through learning-related stress and worry',
+            url: 'https://www.understood.org/articles/anxiety-in-students-with-learning-differences',
             organization: 'Understood.org'
           },
           {
-            title: 'Building Resilience in Children',
+            title: 'Building Resilience in Students',
             description: 'Helping kids bounce back from learning challenges',
-            url: 'https://childmind.org/guide/building-resilience-in-children/',
+            url: 'https://childmind.org/guide/building-resilience-in-students/',
             organization: 'Child Mind Institute'
           },
           {
-            title: 'Teaching Coping Skills to Children',
+            title: 'Teaching Coping Skills to Students',
             description: 'Evidence-based strategies for emotional regulation',
-            url: 'https://www.internet4classrooms.com/blog/2022/04/teaching_coping_skills_to_children.htm',
+            url: 'https://www.internet4classrooms.com/blog/2022/04/teaching_coping_skills_to_students.htm',
             organization: 'Internet4Classrooms'
           }
         ]
@@ -416,20 +393,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           },
           {
             title: 'What Is Dyslexia?',
-            description: 'Signs, causes, and how to help children with dyslexia',
+            description: 'Signs, causes, and how to help students with dyslexia',
             url: 'https://www.understood.org/articles/what-is-dyslexia',
             organization: 'Understood.org'
           },
           {
             title: 'Dyslexia Reading Programs That Work',
             description: 'Evidence-based interventions and teaching methods',
-            url: 'https://www.verywellmind.com/teaching-reading-to-children-with-dyslexia-20530',
+            url: 'https://www.verywellmind.com/teaching-reading-to-students-with-dyslexia-20530',
             organization: 'Verywell Mind'
           },
           {
-            title: 'Dyslexia and Your Child',
+            title: 'Dyslexia and Your Student',
             description: 'What parents need to know about supporting reading development',
-            url: 'https://childmind.org/guide/dyslexia-and-your-child/',
+            url: 'https://childmind.org/guide/dyslexia-and-your-student/',
             organization: 'Child Mind Institute'
           }
         ]
@@ -445,7 +422,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           },
           {
             title: 'Slow Processing Speed: What You Need to Know',
-            description: 'Signs, causes, and ways to help children with slow processing speed',
+            description: 'Signs, causes, and ways to help students with slow processing speed',
             url: 'https://www.verywellmind.com/what-is-slow-processing-speed-20546',
             organization: 'Verywell Mind'
           },
@@ -467,9 +444,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         title: 'Math Anxiety Support',
         resources: [
           {
-            title: 'How to Help Your Child Overcome Math Anxiety',
+            title: 'How to Help Your Student Overcome Math Anxiety',
             description: 'Practical strategies to reduce math stress and build confidence',
-            url: 'https://www.verywellmind.com/math-anxiety-in-children-20558',
+            url: 'https://www.verywellmind.com/math-anxiety-in-students-20558',
             organization: 'Verywell Mind'
           },
           {
@@ -498,7 +475,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           {
             title: 'Learning and Thinking Differences',
             description: 'Comprehensive guide to various learning differences',
-            url: 'https://www.understood.org/articles/learning-and-thinking-differences-your-child-may-have',
+            url: 'https://www.understood.org/articles/learning-and-thinking-differences-your-student-may-have',
             organization: 'Understood.org'
           },
           {
@@ -514,9 +491,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
             organization: 'LDA'
           },
           {
-            title: 'How to Support a Child With Learning Differences',
+            title: 'How to Support a Student With Learning Differences',
             description: 'Evidence-based strategies for parents and caregivers',
-            url: 'https://www.verywellmind.com/supporting-children-with-learning-differences-20590',
+            url: 'https://www.verywellmind.com/supporting-students-with-learning-differences-20590',
             organization: 'Verywell Mind'
           }
         ]
@@ -528,7 +505,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
   // Render challenge-specific support sections
   const renderChallengeSupport = () => {
-    const challenges = getChildrenChallenges();
+    const challenges = getStudentsChallenges();
     const supportConfigs: Record<string, { 
       bgClass: string;
       titleClass: string;
@@ -543,7 +520,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         textClass: 'text-purple-700',
         buttonClass: 'text-purple-600',
         buttonHoverClass: 'hover:text-purple-800',
-        description: 'Specialized techniques for high-energy children and focus challenges.'
+        description: 'Specialized techniques for high-energy students and focus challenges.'
       },
       'Dyslexia': {
         bgClass: 'bg-rose-50',
@@ -559,7 +536,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         textClass: 'text-cyan-700',
         buttonClass: 'text-cyan-600',
         buttonHoverClass: 'hover:text-cyan-800',
-        description: 'Techniques for children with information processing challenges.'
+        description: 'Techniques for students with information processing challenges.'
       },
       'Math Anxiety': {
         bgClass: 'bg-amber-50',
@@ -612,24 +589,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     }).filter(Boolean);
   };
 
-  if (showChat && selectedChild) {
+  if (showConversationHistory && selectedStudent) {
     return (
-      <ChatInterface
-        selectedCategories={{
-          subject: selectedChild.subjects.join(', '),
-          ageGroup: selectedChild.ageGroup,
-          challenge: selectedChild.challenges.join(', ')
-        }}
-        onBack={() => setShowChat(false)}
-        selectedChild={selectedChild}
-        onSaveConversation={handleSaveConversation}
+      <ConversationHistory
+        students={students}
+        selectedStudent={selectedStudent}
+        onSelectStudent={handleSelectStudent}
       />
-    );
-  }
-
-  if (showDocuments) {
-    return (
-      <DocumentManager onClose={() => setShowDocuments(false)} />
     );
   }
 
@@ -666,7 +632,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              Children
+              Students
             </button>
             <button
               onClick={() => setActiveTab('conversations')}
@@ -710,41 +676,42 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         {activeTab === 'children' && (
           <div>
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Your Children</h2>
+              <h2 className="text-xl font-semibold text-gray-800">Your Students</h2>
               <button
-                onClick={() => setShowAddChild(true)}
+                onClick={() => setShowAddForm(true)}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
               >
                 <Plus size={20} />
-                Add Child
+                Add Student
               </button>
             </div>
 
-            {children.length === 0 ? (
+            {students.length === 0 ? (
               <div className="text-center py-12">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Plus size={32} className="text-gray-400" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-800 mb-2">No children added yet</h3>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">No students added yet</h3>
                 <p className="text-gray-600 mb-4">
-                  Add your first child to start creating personalized lesson plans
+                  Add your first student to start creating personalized lesson plans
                 </p>
                 <button
-                  onClick={() => setShowAddChild(true)}
+                  onClick={() => setShowAddForm(true)}
                   className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
                 >
-                  Add Your First Child
+                  Add Your First Student
                 </button>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {children.map(child => (
-                  <ChildProfile
-                    key={child.id}
-                    child={child}
-                    onEdit={handleEditChild}
-                    onDelete={handleDeleteChild}
-                    onSelect={handleSelectChild}
+                {students.map(student => (
+                  <StudentProfile
+                    key={student.id}
+                    student={student}
+                    onEdit={() => setEditingStudent(student)}
+                    onDelete={() => setDeleteConfirmStudent(student)}
+                    onSelect={() => handleSelectStudent(student)}
+                    isSelected={selectedStudent?.id === student.id}
                   />
                 ))}
               </div>
@@ -755,12 +722,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         {activeTab === 'conversations' && (
           <ConversationHistory
             conversations={savedConversations}
-            children={children}
+            students={students}
             onLoadConversation={(conversation) => {
-              const child = children.find(c => c.id === conversation.childId);
-              if (child) {
-                setSelectedChild(child);
-                setShowChat(true);
+              const student = students.find(s => s.id === conversation.childId);
+              if (student) {
+                setSelectedStudent(student);
+                setShowConversationHistory(true);
               }
             }}
           />
@@ -771,7 +738,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-gray-800">Document Manager</h2>
               <button
-                onClick={() => setShowDocuments(true)}
+                onClick={() => setShowConversationHistory(true)}
                 className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
               >
                 <FileText size={20} />
@@ -786,7 +753,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
                   Upload documents like failed tests, study guides, and homework to help create personalized learning plans.
                 </p>
                 <button
-                  onClick={() => setShowDocuments(true)}
+                  onClick={() => setShowConversationHistory(true)}
                   className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
                 >
                   Open Document Manager
@@ -805,7 +772,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               <div className="bg-blue-50 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-blue-800 mb-3">Getting Started Guide</h3>
                 <p className="text-blue-700 mb-4">
-                  Learn how to create effective lesson plans and work with your child's learning style.
+                  Learn how to create effective lesson plans and work with your student's learning style.
                 </p>
                 <div className="space-y-2">
                   <button 
@@ -858,37 +825,35 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         )}
       </div>
 
-      {/* Add/Edit Child Modal */}
-      {showAddChild && (
-        <AddChildForm
-          onSave={handleAddChild}
-          onCancel={() => {
-            setShowAddChild(false);
-            setEditingChild(undefined);
-          }}
-          editingChild={editingChild}
+      {/* Add/Edit Student Modal */}
+      {showAddForm && (
+        <AddStudentForm
+          subjects={subjects}
+          challenges={challenges}
+          onSubmit={handleAddStudent}
+          onCancel={() => setShowAddForm(false)}
         />
       )}
 
       {/* Delete Confirmation Modal */}
-      {deleteConfirmChild && (
+      {deleteConfirmStudent && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Delete Child Profile
+              Delete Student Profile
             </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this child profile? This action cannot be undone.
+              Are you sure you want to delete this student profile? This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteConfirmChild(null)}
+                onClick={() => setDeleteConfirmStudent(null)}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
               <button
-                onClick={confirmDeleteChild}
+                onClick={confirmDeleteStudent}
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
               >
                 Delete
@@ -980,6 +945,43 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           }}
           initialCategory={forumInitialCategory}
         />
+      )}
+
+      {selectedStudent && (
+        <div className="mt-8">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-2xl font-bold">Chat with {selectedStudent.name}</h2>
+            <button
+              onClick={() => setShowConversationHistory(!showConversationHistory)}
+              className="text-blue-500 hover:text-blue-600"
+            >
+              {showConversationHistory ? 'Hide History' : 'Show History'}
+            </button>
+          </div>
+
+          {showConversationHistory ? (
+            <ConversationHistory
+              students={students}
+              selectedStudent={selectedStudent}
+              onSelectStudent={handleSelectStudent}
+            />
+          ) : (
+            <ChatInterface
+              selectedCategories={{
+                subject: selectedStudent.subjects?.join(', ') || '',
+                ageGroup: selectedStudent.age_group || '',
+                challenge: selectedStudent.challenges?.join(', ') || ''
+              }}
+              onBack={() => setSelectedStudent(null)}
+              selectedStudent={selectedStudent}
+              selectedStudentProfile={null}
+              onSaveConversation={(conversation) => {
+                // TODO: Implement conversation saving
+                console.log('Saving conversation:', conversation);
+              }}
+            />
+          )}
+        </div>
       )}
     </div>
   );
