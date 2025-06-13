@@ -77,7 +77,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         ageGroup: child.age_group,
         subjects: child.child_subjects.map((cs: any) => cs.subjects.name),
         challenges: child.child_challenges.map((cc: any) => cc.challenges.name),
-        createdAt: new Date(child.created_at)
+        createdAt: new Date(child.created_at),
+        parent_id: child.parent_id
       })));
     } catch (error) {
       console.error('Error loading children:', error);
