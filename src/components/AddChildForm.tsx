@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
@@ -15,6 +16,8 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   editingChild
 }) => {
   const { user } = useAuth();
+  console.log('AddChildForm - user:', user);
+  
   const [name, setName] = useState(editingChild?.name || '');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
@@ -62,6 +65,15 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Form submit triggered');
+    console.log('Form validation state:', {
+      name: name.trim(),
+      selectedSubjects: selectedSubjects.length,
+      selectedAgeGroup,
+      selectedChallenges: selectedChallenges.length,
+      userId: user?.id
+    });
+
     if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0 && user?.id) {
       console.log('Submitting child with parent_id:', user.id);
       
@@ -73,15 +85,25 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
         challenges.find(c => c.id === challengeId)?.label || challengeId
       );
 
-      onSave({
+      const childData = {
         name: name.trim(),
         subjects: subjectLabels,
         ageGroup: selectedAgeGroup,
         challenges: challengeLabels,
         parent_id: user.id
-      });
+      };
+
+      console.log('Adding/updating child:', childData);
+      onSave(childData);
     } else {
       console.error('Missing required fields or user not authenticated');
+      console.error('Validation details:', {
+        nameValid: !!name.trim(),
+        subjectsValid: selectedSubjects.length > 0,
+        ageGroupValid: !!selectedAgeGroup,
+        challengesValid: selectedChallenges.length > 0,
+        userValid: !!user?.id
+      });
     }
   };
 
