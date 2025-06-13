@@ -429,19 +429,45 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleSaveConversation = async () => {
     try {
-      if (!selectedChild && !selectedStudentProfile) return;
+      if (!selectedChild && !selectedStudentProfile) {
+        console.error('No child or student profile selected');
+        toast({
+          title: 'Error',
+          description: 'Please select a student before saving.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (!profile?.id) {
+        console.error('No profile ID found');
+        toast({
+          title: 'Error',
+          description: 'User profile not found. Please try logging in again.',
+          variant: 'destructive'
+        });
+        return;
+      }
 
       // Create a title from the first user message
       const firstUserMessage = messages.find(m => m.type === 'user');
       const title = firstUserMessage?.content.slice(0, 50) + '...' || 'New Conversation';
 
+      console.log('Saving conversation with data:', {
+        child_id: selectedChild?.id || null,
+        student_profile_id: selectedStudentProfile?.id || null,
+        parent_id: profile.id,
+        title,
+        is_favorite: true
+      });
+
       // Save conversation to database
       const { data: conversation, error: conversationError } = await supabase
         .from('conversations')
         .insert({
-          child_id: selectedChild?.id,
-          student_profile_id: selectedStudentProfile?.id,
-          parent_id: profile?.id,
+          child_id: selectedChild?.id || null,
+          student_profile_id: selectedStudentProfile?.id || null,
+          parent_id: profile.id,
           title,
           is_favorite: true
         })
@@ -453,6 +479,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw conversationError;
       }
 
+      console.log('Conversation saved successfully:', conversation);
+
       // Save messages
       const messageInserts = messages.map(msg => ({
         conversation_id: conversation.id,
@@ -460,6 +488,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         type: msg.type,
         created_at: msg.timestamp.toISOString()
       }));
+
+      console.log('Saving messages:', messageInserts);
 
       const { error: messagesError } = await supabase
         .from('messages')
@@ -469,6 +499,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         console.error('Error saving messages:', messagesError);
         throw messagesError;
       }
+
+      console.log('Messages saved successfully');
 
       toast({
         title: 'Success',
