@@ -486,7 +486,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const messageInserts = messages.map(msg => ({
         conversation_id: conversation.id,
         content: msg.content,
-        role: msg.type === 'user' ? 'user' : 'ai',
+        type: msg.type,
         created_at: msg.timestamp.toISOString()
       }));
 
