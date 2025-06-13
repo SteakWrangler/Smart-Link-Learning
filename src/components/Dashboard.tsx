@@ -11,11 +11,6 @@ import CommunityForum from './CommunityForum';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Pencil, Trash2 } from 'lucide-react';
 
 interface DashboardProps {
   onBack: () => void;
@@ -799,113 +794,59 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
       {/* Content */}
       <div className="max-w-6xl mx-auto p-6">
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as typeof activeTab)}
-          className="w-full"
-        >
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="children">Students</TabsTrigger>
-            <TabsTrigger value="conversations">Saved Conversations</TabsTrigger>
-          </TabsList>
-          <TabsContent value="children" className="mt-6">
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {children.map((child) => (
-                <Card key={child.id} className="relative">
-                  <CardHeader>
-                    <CardTitle>{child.name}</CardTitle>
-                    <CardDescription>Age Group: {child.ageGroup}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Subjects</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {child.subjects?.map((subject, index) => (
-                            <Badge key={index} variant="secondary">
-                              {subject}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">Learning Challenges</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {child.challenges?.map((challenge, index) => (
-                            <Badge key={index} variant="secondary">
-                              {challenge}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                  <CardFooter className="flex justify-between">
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setSelectedChild(child);
-                        setShowChat(true);
-                      }}
-                    >
-                      Start Chat
-                    </Button>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          setEditingChild(child);
-                          setShowAddChild(true);
-                        }}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleDeleteChild(child.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              ))}
-              <Card className="relative border-dashed">
-                <CardHeader>
-                  <CardTitle>Add New Child</CardTitle>
-                  <CardDescription>Create a new child profile</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    Add a new child to start tracking their learning progress and challenges.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button
-                    className="w-full"
-                    onClick={() => {
-                      setEditingChild(undefined);
-                      setShowAddChild(true);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Child
-                  </Button>
-                </CardFooter>
-              </Card>
+        {activeTab === 'children' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-gray-800">Your Students</h2>
+              <button
+                onClick={() => setShowAddChild(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+              >
+                <Plus size={20} />
+                Add Student
+              </button>
             </div>
-          </TabsContent>
-          <TabsContent value="conversations" className="mt-6">
-            <ConversationHistory
-              children={children}
-              onLoadConversation={handleLoadConversation}
-              onBack={() => setActiveTab('children')}
-              profile={profile}
-            />
-          </TabsContent>
-        </Tabs>
+
+            {children.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plus size={32} className="text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-800 mb-2">No students added yet</h3>
+                <p className="text-gray-600 mb-4">
+                  Add your first student to start creating personalized lesson plans
+                </p>
+                <button
+                  onClick={() => setShowAddChild(true)}
+                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                >
+                  Add Your First Student
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {children.map(child => (
+                  <ChildProfile
+                    key={child.id}
+                    child={child}
+                    onEdit={handleEditChild}
+                    onDelete={handleDeleteChild}
+                    onSelect={handleSelectChild}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'conversations' && (
+          <ConversationHistory
+            children={children}
+            onLoadConversation={handleLoadConversation}
+            onBack={() => setActiveTab('children')}
+            profile={profile}
+          />
+        )}
 
         {activeTab === 'documents' && (
           <div className="space-y-6">
