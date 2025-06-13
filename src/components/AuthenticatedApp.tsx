@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import Auth from './Auth';
@@ -28,7 +27,7 @@ const AuthenticatedApp = () => {
   }
 
   if (showDashboard) {
-    return <Dashboard />;
+    return <Dashboard onBack={() => setShowDashboard(false)} />;
   }
 
   return (

@@ -162,9 +162,7 @@ export type Database = {
           child_id: string | null
           created_at: string
           id: string
-          is_favorite: boolean | null
-          is_saved: boolean | null
-          parent_id: string | null
+          is_favorite: boolean
           student_profile_id: string | null
           title: string
           updated_at: string
@@ -173,9 +171,7 @@ export type Database = {
           child_id?: string | null
           created_at?: string
           id?: string
-          is_favorite?: boolean | null
-          is_saved?: boolean | null
-          parent_id?: string | null
+          is_favorite?: boolean
           student_profile_id?: string | null
           title: string
           updated_at?: string
@@ -184,9 +180,7 @@ export type Database = {
           child_id?: string | null
           created_at?: string
           id?: string
-          is_favorite?: boolean | null
-          is_saved?: boolean | null
-          parent_id?: string | null
+          is_favorite?: boolean
           student_profile_id?: string | null
           title?: string
           updated_at?: string
@@ -197,13 +191,6 @@ export type Database = {
             columns: ["child_id"]
             isOneToOne: false
             referencedRelation: "children"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversations_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {

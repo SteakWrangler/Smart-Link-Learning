@@ -1,12 +1,3 @@
-
-export interface User {
-  id: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  user_type: string;
-}
-
 export interface Child {
   id: string;
   name: string;
@@ -14,7 +5,6 @@ export interface Child {
   ageGroup: string;
   challenges: string[];
   createdAt: Date;
-  parent_id: string;
 }
 
 export interface SavedConversation {
@@ -32,14 +22,4 @@ export interface Message {
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
-}
-
-export interface Profile {
-  id: string;
-  email: string;
-  first_name?: string;
-  last_name?: string;
-  user_type: string;
-  created_at: string;
-  updated_at: string;
 }

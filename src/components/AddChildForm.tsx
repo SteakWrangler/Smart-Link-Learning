@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
-import { useAuth } from '../hooks/useAuth';
 
 interface AddChildFormProps {
   onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
@@ -15,9 +13,6 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   onCancel,
   editingChild
 }) => {
-  const { user } = useAuth();
-  console.log('AddChildForm - user:', user);
-  
   const [name, setName] = useState(editingChild?.name || '');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
@@ -65,18 +60,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submit triggered');
-    console.log('Form validation state:', {
-      name: name.trim(),
-      selectedSubjects: selectedSubjects.length,
-      selectedAgeGroup,
-      selectedChallenges: selectedChallenges.length,
-      userId: user?.id
-    });
-
-    if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0 && user?.id) {
-      console.log('Submitting child with parent_id:', user.id);
-      
+    if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0) {
       // Convert IDs to labels for database storage
       const subjectLabels = selectedSubjects.map(subjectId => 
         subjects.find(s => s.id === subjectId)?.label || subjectId
@@ -85,24 +69,11 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
         challenges.find(c => c.id === challengeId)?.label || challengeId
       );
 
-      const childData = {
+      onSave({
         name: name.trim(),
         subjects: subjectLabels,
         ageGroup: selectedAgeGroup,
-        challenges: challengeLabels,
-        parent_id: user.id
-      };
-
-      console.log('Adding/updating child:', childData);
-      onSave(childData);
-    } else {
-      console.error('Missing required fields or user not authenticated');
-      console.error('Validation details:', {
-        nameValid: !!name.trim(),
-        subjectsValid: selectedSubjects.length > 0,
-        ageGroupValid: !!selectedAgeGroup,
-        challengesValid: selectedChallenges.length > 0,
-        userValid: !!user?.id
+        challenges: challengeLabels
       });
     }
   };
@@ -224,7 +195,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || selectedSubjects.length === 0 || !selectedAgeGroup || selectedChallenges.length === 0 || !user?.id}
+              disabled={!name.trim() || selectedSubjects.length === 0 || !selectedAgeGroup || selectedChallenges.length === 0}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {editingChild ? 'Update Student' : 'Add Student'}
