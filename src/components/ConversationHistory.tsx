@@ -34,40 +34,64 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      // Get the current user's profile
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No user found');
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (!profile) throw new Error('No profile found');
+
+      // Get conversations for the current user's children
+      const { data: conversations, error } = await supabase
         .from('conversations')
         .select(`
           *,
-          children (
+          child:child_id (
+            id,
+            name
+          ),
+          student:student_profile_id (
+            id,
             name
           ),
           messages (
+            id,
             content,
-            role,
+            type,
             created_at
           )
         `)
-        .eq('parent_id', profile?.id)
+        .eq('parent_id', profile.id)
+        .eq('is_saved', true)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      const formattedConversations = data.map(conv => ({
+      // Transform the data to match our SavedConversation type
+      const formattedConversations = conversations.map(conv => ({
         id: conv.id,
-        childId: conv.child_id,
-        childName: conv.children?.name || 'Unknown',
         title: conv.title,
+        childId: conv.child_id || conv.student_profile_id,
+        childName: conv.child ? conv.child.name : 
+                   conv.student ? conv.student.name : 'Unknown',
         messages: conv.messages.map((msg: any) => ({
+          id: msg.id,
           content: msg.content,
-          role: msg.role,
+          type: msg.type,
           timestamp: new Date(msg.created_at)
         })),
-        createdAt: new Date(conv.created_at)
+        createdAt: new Date(conv.created_at),
+        isFavorite: conv.is_favorite
       }));
 
       setConversations(formattedConversations);
-    } catch (error) {
-      console.error('Error loading conversations:', error);
+    } catch (err) {
+      console.error('Error loading conversations:', err);
       setError('Failed to load conversations');
     } finally {
       setLoading(false);
@@ -115,13 +139,52 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               <ArrowLeft size={20} />
               Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">Conversation History</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Saved Conversations</h1>
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto p-4">
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+              <input
+                type="text"
+                placeholder="Search conversations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={filterChild}
+              onChange={(e) => setFilterChild(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">All Students</option>
+              {children.map(child => (
+                <option key={child.id} value={child.id}>{child.name}</option>
+              ))}
+            </select>
+            <button
+              onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
+                showFavoritesOnly
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+            >
+              <Star size={16} />
+              Favorites Only
+            </button>
+          </div>
+        </div>
+
         {/* Tabs */}
         <div className="flex gap-4 mb-6">
           <button
@@ -161,24 +224,26 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {conversations.map(conversation => (
+            {filteredConversations.map(conversation => (
               <div
                 key={conversation.id}
-                className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer"
                 onClick={() => onLoadConversation(conversation)}
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer"
               >
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-medium text-gray-800">{conversation.title}</h3>
-                  <span className="text-sm text-gray-500">
-                    {conversation.createdAt.toLocaleDateString()}
-                  </span>
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-medium text-gray-800 line-clamp-1">{conversation.title}</h3>
+                  {conversation.isFavorite && (
+                    <Star size={16} className="text-yellow-500 flex-shrink-0" />
+                  )}
                 </div>
-                <p className="text-sm text-gray-600 mb-2">
-                  with {conversation.childName}
+                <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {conversation.messages[conversation.messages.length - 1]?.content || 'No messages'}
                 </p>
-                <p className="text-sm text-gray-500 line-clamp-2">
-                  {conversation.messages[0]?.content || 'No messages'}
-                </p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                  <Clock size={14} />
+                  <span>{formatDate(conversation.createdAt)}</span>
+                </div>
               </div>
             ))}
           </div>

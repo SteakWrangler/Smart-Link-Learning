@@ -448,20 +448,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         .select()
         .single();
 
-      if (conversationError) throw conversationError;
+      if (conversationError) {
+        console.error('Error saving conversation:', conversationError);
+        throw conversationError;
+      }
 
       // Save messages
       const messageInserts = messages.map(msg => ({
         conversation_id: conversation.id,
         content: msg.content,
-        role: msg.role
+        type: msg.type,
+        created_at: msg.timestamp.toISOString()
       }));
 
       const { error: messagesError } = await supabase
         .from('messages')
         .insert(messageInserts);
 
-      if (messagesError) throw messagesError;
+      if (messagesError) {
+        console.error('Error saving messages:', messagesError);
+        throw messagesError;
+      }
 
       toast({
         title: 'Success',

@@ -9,20 +9,17 @@ export interface Child {
 
 export interface SavedConversation {
   id: string;
+  title: string;
   childId: string;
   childName: string;
-  title: string;
-  messages: {
-    content: string;
-    role: string;
-    timestamp: Date;
-  }[];
+  messages: Message[];
   createdAt: Date;
+  isFavorite: boolean;
 }
 
 export interface Message {
   id: string;
-  role: 'user' | 'ai';
+  type: 'user' | 'ai';
   content: string;
   timestamp: Date;
 }
