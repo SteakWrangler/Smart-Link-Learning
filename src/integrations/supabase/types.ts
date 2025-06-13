@@ -589,6 +589,47 @@ export type Database = {
           },
         ]
       }
+      students: {
+        Row: {
+          age_group: string
+          challenges: string[]
+          created_at: string
+          id: string
+          name: string
+          subjects: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_group: string
+          challenges?: string[]
+          created_at?: string
+          id?: string
+          name: string
+          subjects?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_group?: string
+          challenges?: string[]
+          created_at?: string
+          id?: string
+          name?: string
+          subjects?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subjects: {
         Row: {
           created_at: string
