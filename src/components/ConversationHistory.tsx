@@ -34,18 +34,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setLoading(true);
       setError(null);
 
-      // Get the current user's profile
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!profile) throw new Error('No profile found');
-
       // Get conversations for the current user's children
       const { data: conversations, error } = await supabase
         .from('conversations')
@@ -67,10 +55,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           )
         `)
         .eq('parent_id', profile.id)
-        .eq('is_saved', true)
+        .eq('is_favorite', true)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading conversations:', error);
+        throw error;
+      }
 
       // Transform the data to match our SavedConversation type
       const formattedConversations = conversations.map(conv => ({

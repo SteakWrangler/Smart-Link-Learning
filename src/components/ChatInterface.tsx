@@ -432,7 +432,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       if (!selectedChild && !selectedStudentProfile) return;
 
       // Create a title from the first user message
-      const firstUserMessage = messages.find(m => m.role === 'user');
+      const firstUserMessage = messages.find(m => m.type === 'user');
       const title = firstUserMessage?.content.slice(0, 50) + '...' || 'New Conversation';
 
       // Save conversation to database
@@ -443,7 +443,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           student_profile_id: selectedStudentProfile?.id,
           parent_id: profile?.id,
           title,
-          is_saved: true
+          is_favorite: true
         })
         .select()
         .single();

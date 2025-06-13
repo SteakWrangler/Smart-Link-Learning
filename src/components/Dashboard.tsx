@@ -764,7 +764,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               }`}
             >
               <MessageSquare size={16} className="inline mr-2" />
-              History
+              Saved Conversations
             </button>
             <button
               onClick={() => setActiveTab('documents')}
@@ -843,6 +843,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           <ConversationHistory
             children={children}
             onLoadConversation={handleLoadConversation}
+            onBack={() => setActiveTab('children')}
+            profile={profile}
           />
         )}
 
