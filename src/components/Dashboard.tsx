@@ -9,7 +9,7 @@ import DocumentManager from './DocumentManager';
 import { useAuth } from '@/hooks/useAuth';
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -159,6 +159,15 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  const handleLoadConversation = (conversation: SavedConversation) => {
+    // TODO: Implement conversation loading logic
+    console.log('Loading conversation:', conversation);
+  };
+
+  const handleBackToProfiles = () => {
+    setActiveTab('profiles');
+  };
+
   const Header = () => (
     <header className="bg-white shadow">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -288,7 +297,12 @@ const Dashboard: React.FC = () => {
         )}
 
         {activeTab === 'conversations' && (
-          <ConversationHistory />
+          <ConversationHistory 
+            children={children}
+            onLoadConversation={handleLoadConversation}
+            onBack={handleBackToProfiles}
+            profile={profile}
+          />
         )}
 
         {activeTab === 'documents' && showDocumentManager && (
