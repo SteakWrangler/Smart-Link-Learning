@@ -30,65 +30,65 @@ export type Database = {
         }
         Relationships: []
       }
-      student_challenges: {
+      child_challenges: {
         Row: {
           challenge_id: string
-          student_id: string
+          child_id: string
           id: string
         }
         Insert: {
           challenge_id: string
-          student_id: string
+          child_id: string
           id?: string
         }
         Update: {
           challenge_id?: string
-          student_id?: string
+          child_id?: string
           id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "student_challenges_challenge_id_fkey"
+            foreignKeyName: "child_challenges_challenge_id_fkey"
             columns: ["challenge_id"]
             isOneToOne: false
             referencedRelation: "challenges"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "student_challenges_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "child_challenges_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "students"
+            referencedRelation: "children"
             referencedColumns: ["id"]
           },
         ]
       }
-      student_subjects: {
+      child_subjects: {
         Row: {
-          student_id: string
+          child_id: string
           id: string
           subject_id: string
         }
         Insert: {
-          student_id: string
+          child_id: string
           id?: string
           subject_id: string
         }
         Update: {
-          student_id?: string
+          child_id?: string
           id?: string
           subject_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "student_subjects_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "child_subjects_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "students"
+            referencedRelation: "children"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "student_subjects_subject_id_fkey"
+            foreignKeyName: "child_subjects_subject_id_fkey"
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
@@ -96,13 +96,13 @@ export type Database = {
           },
         ]
       }
-      students: {
+      children: {
         Row: {
           age_group: string
           created_at: string
           id: string
           name: string
-          user_id: string
+          parent_id: string
           updated_at: string
         }
         Insert: {
@@ -110,7 +110,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
-          user_id: string
+          parent_id: string
           updated_at?: string
         }
         Update: {
@@ -118,13 +118,13 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
-          user_id?: string
+          parent_id?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "students_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: "children_parent_id_fkey"
+            columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -159,35 +159,45 @@ export type Database = {
       }
       conversations: {
         Row: {
-          student_id: string
+          child_id: string | null
           created_at: string
           id: string
           is_favorite: boolean
+          student_profile_id: string | null
           title: string
           updated_at: string
         }
         Insert: {
-          student_id: string
+          child_id?: string | null
           created_at?: string
           id?: string
           is_favorite?: boolean
+          student_profile_id?: string | null
           title: string
           updated_at?: string
         }
         Update: {
-          student_id?: string
+          child_id?: string | null
           created_at?: string
           id?: string
           is_favorite?: boolean
+          student_profile_id?: string | null
           title?: string
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "conversations_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "conversations_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "students"
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -195,7 +205,7 @@ export type Database = {
       documents: {
         Row: {
           ai_analysis: Json | null
-          student_id: string
+          child_id: string | null
           created_at: string
           description: string | null
           document_type: string
@@ -207,13 +217,14 @@ export type Database = {
           id: string
           processing_error: string | null
           processing_status: string | null
+          student_profile_id: string | null
           subject: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
           ai_analysis?: Json | null
-          student_id: string
+          child_id?: string | null
           created_at?: string
           description?: string | null
           document_type: string
@@ -225,13 +236,14 @@ export type Database = {
           id?: string
           processing_error?: string | null
           processing_status?: string | null
+          student_profile_id?: string | null
           subject?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
           ai_analysis?: Json | null
-          student_id?: string
+          child_id?: string | null
           created_at?: string
           description?: string | null
           document_type?: string
@@ -243,16 +255,24 @@ export type Database = {
           id?: string
           processing_error?: string | null
           processing_status?: string | null
+          student_profile_id?: string | null
           subject?: string | null
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "documents_student_id_fkey"
-            columns: ["student_id"]
+            foreignKeyName: "documents_child_id_fkey"
+            columns: ["child_id"]
             isOneToOne: false
-            referencedRelation: "students"
+            referencedRelation: "children"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -290,6 +310,61 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      forum_posts: {
+        Row: {
+          author_id: string | null
+          content: string
+          created_at: string | null
+          id: string
+          is_edited: boolean | null
+          parent_post_id: string | null
+          topic_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          author_id?: string | null
+          content: string
+          created_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          parent_post_id?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          author_id?: string | null
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_edited?: boolean | null
+          parent_post_id?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "forum_posts_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_parent_post_id_fkey"
+            columns: ["parent_post_id"]
+            isOneToOne: false
+            referencedRelation: "forum_posts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "forum_posts_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "forum_topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       forum_topics: {
         Row: {
@@ -391,6 +466,7 @@ export type Database = {
           id: string
           last_name: string | null
           updated_at: string
+          user_type: string
         }
         Insert: {
           created_at?: string
@@ -399,6 +475,7 @@ export type Database = {
           id: string
           last_name?: string | null
           updated_at?: string
+          user_type: string
         }
         Update: {
           created_at?: string
@@ -407,8 +484,110 @@ export type Database = {
           id?: string
           last_name?: string | null
           updated_at?: string
+          user_type?: string
         }
         Relationships: []
+      }
+      student_challenges: {
+        Row: {
+          challenge_id: string
+          id: string
+          student_profile_id: string
+        }
+        Insert: {
+          challenge_id: string
+          id?: string
+          student_profile_id: string
+        }
+        Update: {
+          challenge_id?: string
+          id?: string
+          student_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenges_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_profiles: {
+        Row: {
+          age_group: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          age_group: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          age_group?: string
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_profiles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_subjects: {
+        Row: {
+          id: string
+          student_profile_id: string
+          subject_id: string
+        }
+        Insert: {
+          id?: string
+          student_profile_id: string
+          subject_id: string
+        }
+        Update: {
+          id?: string
+          student_profile_id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_subjects_student_profile_id_fkey"
+            columns: ["student_profile_id"]
+            isOneToOne: false
+            referencedRelation: "student_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {

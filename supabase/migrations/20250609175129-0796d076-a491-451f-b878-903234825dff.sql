@@ -1,3 +1,4 @@
+
 -- Create a storage bucket for documents
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('documents', 'documents', true);
@@ -25,7 +26,8 @@ FOR DELETE USING (
 CREATE TABLE public.documents (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  student_id UUID REFERENCES students(id) ON DELETE CASCADE,
+  child_id UUID REFERENCES children(id) ON DELETE CASCADE,
+  student_profile_id UUID REFERENCES student_profiles(id) ON DELETE CASCADE,
   file_name TEXT NOT NULL,
   file_path TEXT NOT NULL,
   file_size INTEGER NOT NULL,

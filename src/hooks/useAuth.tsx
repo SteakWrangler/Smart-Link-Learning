@@ -46,13 +46,7 @@ export const useAuth = () => {
 
       if (error) throw error;
       
-      // Ensure user_type is properly typed
-      const typedProfile: Profile = {
-        ...data,
-        user_type: data.user_type as 'parent' | 'student'
-      };
-      
-      setProfile(typedProfile);
+      setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {

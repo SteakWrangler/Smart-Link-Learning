@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Target, MessageCircle } from 'lucide-react';
@@ -15,7 +16,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onGetStarted }) => {
           Welcome to Joyful Learner
         </h1>
         <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Empowering every student to learn with joy through personalized AI assistance
+          Empowering every child to learn with joy through personalized AI assistance
           that adapts to their unique needs and learning style.
         </p>
         <Button 
@@ -37,7 +38,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onGetStarted }) => {
             Personalized Learning
           </h3>
           <p className="text-gray-600 text-sm">
-            AI adapts to each student's learning style and pace
+            AI adapts to each child's learning style and pace
           </p>
         </div>
 

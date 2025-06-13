@@ -178,10 +178,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
       {profile?.user_type === 'parent' && children && children.length > 0 && (
         <div>
-          <Label htmlFor="child">Student</Label>
+          <Label htmlFor="child">Child</Label>
           <Select onValueChange={setSelectedChild}>
             <SelectTrigger>
-              <SelectValue placeholder="Select student" />
+              <SelectValue placeholder="Select child" />
             </SelectTrigger>
             <SelectContent>
               {children.map((child) => (

@@ -3,20 +3,20 @@ import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
 
 interface AddChildFormProps {
-  onSave: (student: Omit<Child, 'id' | 'createdAt'>) => void;
+  onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
-  editingStudent?: Child;
+  editingChild?: Child;
 }
 
 const AddChildForm: React.FC<AddChildFormProps> = ({
   onSave,
   onCancel,
-  editingStudent
+  editingChild
 }) => {
-  const [name, setName] = useState(editingStudent?.name || '');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingStudent?.subjects || []);
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingStudent?.ageGroup || '');
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(editingStudent?.challenges || []);
+  const [name, setName] = useState(editingChild?.name || '');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(editingChild?.challenges || []);
 
   const subjects = [
     { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
@@ -120,7 +120,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
       <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <h2 className="text-xl font-semibold text-gray-800">
-            {editingStudent ? 'Edit Student Profile' : 'Add New Student'}
+            {editingChild ? 'Edit Child Profile' : 'Add Student'}
           </h2>
           <button
             onClick={onCancel}
@@ -132,15 +132,15 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           <div>
-            <label htmlFor="studentName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="childName" className="block text-sm font-medium text-gray-700 mb-2">
               Student's Name
             </label>
             <input
-              id="studentName"
+              id="childName"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter student's name"
+              placeholder="Enter your student's name"
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
@@ -198,7 +198,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
               disabled={!name.trim() || selectedSubjects.length === 0 || !selectedAgeGroup || selectedChallenges.length === 0}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
-              {editingStudent ? 'Update Student' : 'Add Student'}
+              {editingChild ? 'Update Student' : 'Add Student'}
             </button>
           </div>
         </form>

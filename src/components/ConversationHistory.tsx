@@ -1,27 +1,85 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User } from 'lucide-react';
-import { SavedConversation } from '../types';
-import { Student } from '../types/database';
+import { SavedConversation, Child } from '../types';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ConversationHistoryProps {
-  students: Student[];
-  selectedStudent: Student;
-  onSelectStudent: (student: Student) => void;
+  children: Child[];
+  onLoadConversation: (conversation: SavedConversation) => void;
 }
 
 const ConversationHistory: React.FC<ConversationHistoryProps> = ({
-  students,
-  selectedStudent,
-  onSelectStudent
+  children,
+  onLoadConversation
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStudent, setFilterStudent] = useState<string>('all');
+  const [filterChild, setFilterChild] = useState<string>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [conversations, setConversations] = useState<SavedConversation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const getStudentName = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student?.name || 'Unknown Student';
+  useEffect(() => {
+    loadConversations();
+  }, []);
+
+  const loadConversations = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Get all conversations for the current user's children
+      const { data: conversationsData, error: conversationsError } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          messages:messages(*)
+        `)
+        .in('child_id', children.map(child => child.id))
+        .order('created_at', { ascending: false });
+
+      if (conversationsError) throw conversationsError;
+
+      // Transform the data to match our SavedConversation type
+      const transformedConversations: SavedConversation[] = conversationsData.map(conv => ({
+        id: conv.id,
+        childId: conv.child_id,
+        studentProfileId: conv.student_profile_id,
+        title: conv.title,
+        isFavorite: conv.is_favorite,
+        createdAt: new Date(conv.created_at),
+        tags: [], // We can add tags later if needed
+        messages: conv.messages.map((msg: any) => ({
+          id: msg.id,
+          type: msg.type,
+          content: msg.content,
+          timestamp: new Date(msg.created_at)
+        }))
+      }));
+
+      setConversations(transformedConversations);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const getStudentName = (childId: string) => {
+    const child = children.find(c => c.id === childId);
+    return child?.name || 'Unknown Student';
+  };
+
+  const filteredConversations = conversations.filter(conversation => {
+    if (searchTerm && !conversation.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    if (filterChild !== 'all' && conversation.childId !== filterChild) {
+      return false;
+    }
+    if (showFavoritesOnly && !conversation.isFavorite) {
+      return false;
+    }
+    return true;
+  });
 
   const formatDate = (date: Date) => {
     const now = new Date();
@@ -32,6 +90,14 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     if (diffInDays < 7) return `${diffInDays} days ago`;
     return date.toLocaleDateString();
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -69,13 +135,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           </div>
           <div className="md:w-48">
             <select
-              value={filterStudent}
-              onChange={(e) => setFilterStudent(e.target.value)}
+              value={filterChild}
+              onChange={(e) => setFilterChild(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Students</option>
-              {students.map(student => (
-                <option key={student.id} value={student.id}>{student.name}</option>
+              {children.map(child => (
+                <option key={child.id} value={child.id}>{child.name}</option>
               ))}
             </select>
           </div>
@@ -83,15 +149,72 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       </div>
 
       {/* Conversations List */}
-      <div className="text-center py-12">
-        <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-          <MessageSquare size={32} className="text-gray-400" />
+      {filteredConversations.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare size={32} className="text-gray-400" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-800 mb-2">No conversations found</h3>
+          <p className="text-gray-600">
+            {conversations.length === 0 
+              ? "Start a learning session to see your conversation history here"
+              : "Try adjusting your search or filters"
+            }
+          </p>
         </div>
-        <h3 className="text-lg font-medium text-gray-800 mb-2">No conversations found</h3>
-        <p className="text-gray-600">
-          Start a learning session to see your conversation history here
-        </p>
-      </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredConversations.map(conversation => (
+            <div
+              key={conversation.id}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer"
+              onClick={() => onLoadConversation(conversation)}
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-800">{conversation.title}</h3>
+                    {conversation.isFavorite && (
+                      <Star size={16} className="text-yellow-500 fill-current" />
+                    )}
+                  </div>
+                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                    <div className="flex items-center gap-1">
+                      <User size={14} />
+                      {getStudentName(conversation.childId!)}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock size={14} />
+                      {formatDate(conversation.createdAt)}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <MessageSquare size={14} />
+                      {conversation.messages.length} messages
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {conversation.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {conversation.tags.map(tag => (
+                    <span
+                      key={tag}
+                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              <p className="text-gray-600 text-sm line-clamp-2">
+                {conversation.messages[0]?.content || 'No content'}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

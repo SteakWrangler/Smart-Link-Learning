@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { User, Edit2, Trash2, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
+import { Button } from '@/components/ui/button';
 
 interface ChildProfileProps {
-  student: Child;
-  onEdit: (student: Child) => void;
-  onDelete: (studentId: string) => void;
-  onSelect: (student: Child) => void;
+  child: Child;
+  onEdit: (child: Child) => void;
+  onDelete: (childId: string) => void;
+  onSelect: (child: Child) => void;
 }
 
 const ChildProfile: React.FC<ChildProfileProps> = ({
-  student,
+  child,
   onEdit,
   onDelete,
   onSelect
@@ -56,25 +57,19 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <User className="text-white" size={20} />
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-800">{student.name}</h3>
+            <h3 className="text-lg font-semibold text-gray-800">{child.name}</h3>
             <p className="text-sm text-gray-500">
-              Created {student.createdAt.toLocaleDateString()}
+              Created {child.createdAt.toLocaleDateString()}
             </p>
           </div>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => onEdit(student)}
-            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-          >
-            <Edit2 size={16} />
-          </button>
-          <button
-            onClick={() => onDelete(student.id)}
-            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          >
-            <Trash2 size={16} />
-          </button>
+          <Button onClick={() => onEdit(child)} variant="outline" className="flex-1">
+            Edit Student
+          </Button>
+          <Button onClick={() => onDelete(child.id)} variant="destructive" className="flex-1">
+            Delete Student
+          </Button>
         </div>
       </div>
 
@@ -84,7 +79,7 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <Users size={16} className="text-gray-600" />
             <span className="text-sm font-medium text-gray-700">Age Group</span>
           </div>
-          <span className="text-sm text-gray-600">{getAgeGroupLabel(student.ageGroup)}</span>
+          <span className="text-sm text-gray-600">{getAgeGroupLabel(child.ageGroup)}</span>
         </div>
 
         <div>
@@ -93,7 +88,7 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <span className="text-sm font-medium text-gray-700">Subjects</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {student.subjects.map(subject => (
+            {child.subjects.map(subject => (
               <span
                 key={subject}
                 className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
@@ -110,7 +105,7 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <span className="text-sm font-medium text-gray-700">Learning Challenges</span>
           </div>
           <div className="flex flex-wrap gap-1">
-            {student.challenges.map(challenge => (
+            {child.challenges.map(challenge => (
               <span
                 key={challenge}
                 className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
@@ -123,7 +118,7 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
       </div>
 
       <button
-        onClick={() => onSelect(student)}
+        onClick={() => onSelect(child)}
         className="w-full bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white py-2 px-4 rounded-lg font-medium transition-all duration-200"
       >
         Start Learning Session

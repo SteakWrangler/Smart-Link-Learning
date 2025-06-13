@@ -1,4 +1,3 @@
-
 export interface Child {
   id: string;
   name: string;
@@ -10,7 +9,8 @@ export interface Child {
 
 export interface SavedConversation {
   id: string;
-  childId: string;
+  childId?: string;
+  studentProfileId?: string;
   title: string;
   messages: Message[];
   isFavorite: boolean;
