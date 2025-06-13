@@ -16,6 +16,7 @@ const Dashboard: React.FC = () => {
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [conversations, setConversations] = useState<SavedConversation[]>([]);
   const [activeTab, setActiveTab] = useState<'profiles' | 'conversations' | 'documents'>('profiles');
+  const [showDocumentManager, setShowDocumentManager] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -178,7 +179,12 @@ const Dashboard: React.FC = () => {
     activeTab: 'profiles' | 'conversations' | 'documents';
   }) => (
     <button
-      onClick={() => setActiveTab(tab)}
+      onClick={() => {
+        setActiveTab(tab);
+        if (tab === 'documents') {
+          setShowDocumentManager(true);
+        }
+      }}
       className={`px-6 py-3 rounded-lg ${currentTab === tab
         ? 'bg-blue-600 text-white'
         : 'bg-gray-200 text-gray-700 hover:bg-blue-500 hover:text-white'
@@ -206,7 +212,13 @@ const Dashboard: React.FC = () => {
             name="tabs"
             className="block w-full rounded-md border-gray-300 focus:border-blue-500 focus:ring-blue-500"
             defaultValue={activeTab}
-            onChange={(e) => setActiveTab(e.target.value as 'profiles' | 'conversations' | 'documents')}
+            onChange={(e) => {
+              const newTab = e.target.value as 'profiles' | 'conversations' | 'documents';
+              setActiveTab(newTab);
+              if (newTab === 'documents') {
+                setShowDocumentManager(true);
+              }
+            }}
           >
             <option value="profiles">Student Profiles</option>
             <option value="conversations">Conversations</option>
@@ -276,14 +288,11 @@ const Dashboard: React.FC = () => {
         )}
 
         {activeTab === 'conversations' && (
-          <ConversationHistory
-            conversations={conversations}
-            selectedChild={selectedChild}
-          />
+          <ConversationHistory />
         )}
 
-        {activeTab === 'documents' && (
-          <DocumentManager selectedChild={selectedChild} />
+        {activeTab === 'documents' && showDocumentManager && (
+          <DocumentManager onClose={() => setShowDocumentManager(false)} />
         )}
       </div>
 
