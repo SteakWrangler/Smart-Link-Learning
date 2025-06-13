@@ -427,186 +427,48 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  const ensureConversationTables = async () => {
+  const handleSaveConversation = async () => {
     try {
-      // Try to execute raw SQL to create tables
-      const { error } = await (supabase as any).rpc('exec_sql', {
-        sql: `
-          -- Create conversations table if it doesn't exist
-          CREATE TABLE IF NOT EXISTS conversations (
-            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-            child_id UUID REFERENCES children(id) ON DELETE CASCADE,
-            student_profile_id UUID REFERENCES student_profiles(id) ON DELETE CASCADE,
-            title TEXT NOT NULL,
-            is_favorite BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            CHECK ((child_id IS NOT NULL AND student_profile_id IS NULL) OR (child_id IS NULL AND student_profile_id IS NOT NULL))
-          );
+      if (!selectedChild && !selectedStudentProfile) return;
 
-          -- Create messages table if it doesn't exist
-          CREATE TABLE IF NOT EXISTS messages (
-            id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-            conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
-            type TEXT NOT NULL,
-            content TEXT NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-          );
+      // Create a title from the first user message
+      const firstUserMessage = messages.find(m => m.role === 'user');
+      const title = firstUserMessage?.content.slice(0, 50) + '...' || 'New Conversation';
 
-          -- Enable RLS
-          ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
-          ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
-
-          -- Create RLS policies if they don't exist
-          DO $$ 
-          BEGIN
-            -- Conversations policies
-            IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'conversations' AND policyname = 'Users can view their conversations') THEN
-              CREATE POLICY "Users can view their conversations" ON conversations
-                FOR SELECT USING (
-                  (child_id IS NOT NULL AND EXISTS (
-                    SELECT 1 FROM children 
-                    JOIN profiles ON profiles.id = children.parent_id
-                    WHERE profiles.id = auth.uid() 
-                    AND children.id = conversations.child_id
-                  )) OR
-                  (student_profile_id IS NOT NULL AND EXISTS (
-                    SELECT 1 FROM student_profiles 
-                    JOIN profiles ON profiles.id = student_profiles.user_id
-                    WHERE profiles.id = auth.uid() 
-                    AND student_profiles.id = conversations.student_profile_id
-                  ))
-                );
-            END IF;
-
-            IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'conversations' AND policyname = 'Users can insert their conversations') THEN
-              CREATE POLICY "Users can insert their conversations" ON conversations
-                FOR INSERT WITH CHECK (
-                  (child_id IS NOT NULL AND EXISTS (
-                    SELECT 1 FROM children 
-                    JOIN profiles ON profiles.id = children.parent_id
-                    WHERE profiles.id = auth.uid() 
-                    AND children.id = child_id
-                  )) OR
-                  (student_profile_id IS NOT NULL AND EXISTS (
-                    SELECT 1 FROM student_profiles 
-                    JOIN profiles ON profiles.id = student_profiles.user_id
-                    WHERE profiles.id = auth.uid() 
-                    AND student_profiles.id = student_profile_id
-                  ))
-                );
-            END IF;
-
-            -- Messages policies
-            IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'messages' AND policyname = 'Users can view messages from their conversations') THEN
-              CREATE POLICY "Users can view messages from their conversations" ON messages
-                FOR SELECT USING (
-                  EXISTS (
-                    SELECT 1 FROM conversations
-                    WHERE conversations.id = messages.conversation_id
-                    AND (
-                      (conversations.child_id IS NOT NULL AND EXISTS (
-                        SELECT 1 FROM children 
-                        JOIN profiles ON profiles.id = children.parent_id
-                        WHERE profiles.id = auth.uid() 
-                        AND children.id = conversations.child_id
-                      )) OR
-                      (conversations.student_profile_id IS NOT NULL AND EXISTS (
-                        SELECT 1 FROM student_profiles 
-                        JOIN profiles ON profiles.id = student_profiles.user_id
-                        WHERE profiles.id = auth.uid() 
-                        AND student_profiles.id = conversations.student_profile_id
-                      ))
-                    )
-                  )
-                );
-            END IF;
-
-            IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'messages' AND policyname = 'Users can insert messages to their conversations') THEN
-              CREATE POLICY "Users can insert messages to their conversations" ON messages
-                FOR INSERT WITH CHECK (
-                  EXISTS (
-                    SELECT 1 FROM conversations
-                    WHERE conversations.id = conversation_id
-                    AND (
-                      (conversations.child_id IS NOT NULL AND EXISTS (
-                        SELECT 1 FROM children 
-                        JOIN profiles ON profiles.id = children.parent_id
-                        WHERE profiles.id = auth.uid() 
-                        AND children.id = conversations.child_id
-                      )) OR
-                      (conversations.student_profile_id IS NOT NULL AND EXISTS (
-                        SELECT 1 FROM student_profiles 
-                        JOIN profiles ON profiles.id = student_profiles.user_id
-                        WHERE profiles.id = auth.uid() 
-                        AND student_profiles.id = conversations.student_profile_id
-                      ))
-                    )
-                  )
-                );
-            END IF;
-          END $$;
-        `
-      });
-      if (error) {
-        console.log('SQL execution not available, tables may need manual creation');
-      }
-    } catch (error) {
-      console.log('Tables setup error (may already exist):', error);
-    }
-  };
-
-  async function handleSaveConversation() {
-    if (!conversationTitle.trim()) return;
-
-    try {
-      // Ensure tables exist
-      await ensureConversationTables();
-
-      // First, create the conversation
+      // Save conversation to database
       const { data: conversation, error: conversationError } = await supabase
         .from('conversations')
         .insert({
           child_id: selectedChild?.id,
           student_profile_id: selectedStudentProfile?.id,
-          title: conversationTitle.trim(),
-          is_favorite: isFavorite
+          parent_id: profile?.id,
+          title,
+          is_saved: true
         })
         .select()
         .single();
 
       if (conversationError) throw conversationError;
 
-      // Then, create all messages for this conversation
-      const messagesToInsert = messages.map(msg => ({
+      // Save messages
+      const messageInserts = messages.map(msg => ({
         conversation_id: conversation.id,
-        type: msg.type,
         content: msg.content,
-        created_at: msg.timestamp.toISOString()
+        role: msg.role
       }));
 
       const { error: messagesError } = await supabase
         .from('messages')
-        .insert(messagesToInsert);
+        .insert(messageInserts);
 
       if (messagesError) throw messagesError;
 
-      // Call the parent's onSaveConversation with the saved data
-      onSaveConversation({
-        id: conversation.id,
-        childId: selectedChild?.id,
-        studentProfileId: selectedStudentProfile?.id,
-        title: conversationTitle.trim(),
-        messages,
-        isFavorite,
-        tags,
-        createdAt: new Date(conversation.created_at)
+      toast({
+        title: 'Success',
+        description: 'Conversation saved successfully!',
       });
 
-      setShowSaveDialog(false);
-      setConversationTitle('');
-      setIsFavorite(false);
-      setTags([]);
+      onSaveConversation(conversation);
     } catch (error) {
       console.error('Error saving conversation:', error);
       toast({
@@ -615,7 +477,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         variant: 'destructive'
       });
     }
-  }
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

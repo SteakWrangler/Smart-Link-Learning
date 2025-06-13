@@ -51,7 +51,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
       setLoading(true);
       const { data, error } = await supabase
         .from('children')
-        .select('*')
+        .select(`
+          *,
+          child_challenges (
+            challenge_id,
+            challenges (
+              name
+            )
+          ),
+          child_subjects (
+            subject_id,
+            subjects (
+              name
+            )
+          )
+        `)
         .eq('parent_id', profile?.id)
         .order('created_at', { ascending: false });
 
@@ -61,8 +75,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         id: child.id,
         name: child.name,
         ageGroup: child.age_group,
-        subjects: [],
-        challenges: [],
+        subjects: child.child_subjects.map((cs: any) => cs.subjects.name),
+        challenges: child.child_challenges.map((cc: any) => cc.challenges.name),
         createdAt: new Date(child.created_at)
       })));
     } catch (error) {

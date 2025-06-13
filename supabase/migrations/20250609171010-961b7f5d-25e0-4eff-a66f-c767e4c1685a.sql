@@ -1,4 +1,3 @@
-
 -- Create profiles table for users (parents and students)
 CREATE TABLE public.profiles (
   id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -82,8 +81,9 @@ CREATE TABLE public.conversations (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   child_id UUID REFERENCES public.children(id) ON DELETE CASCADE,
   student_profile_id UUID REFERENCES public.student_profiles(id) ON DELETE CASCADE,
+  parent_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
-  is_favorite BOOLEAN NOT NULL DEFAULT false,
+  is_saved BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   CHECK ((child_id IS NOT NULL AND student_profile_id IS NULL) OR (child_id IS NULL AND student_profile_id IS NOT NULL))
@@ -93,7 +93,7 @@ CREATE TABLE public.conversations (
 CREATE TABLE public.messages (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
-  type TEXT NOT NULL CHECK (type IN ('user', 'ai')),
+  role TEXT NOT NULL CHECK (role IN ('user', 'ai')),
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );

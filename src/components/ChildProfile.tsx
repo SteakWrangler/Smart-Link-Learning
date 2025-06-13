@@ -66,15 +66,17 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onEdit(child)}
-            className="px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+            title="Edit Profile"
           >
-            Edit Profile
+            <Edit2 size={18} />
           </button>
           <button
             onClick={() => onDelete(child.id)}
-            className="px-3 py-1.5 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+            className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            title="Delete Profile"
           >
-            Delete Profile
+            <Trash2 size={18} />
           </button>
         </div>
       </div>
