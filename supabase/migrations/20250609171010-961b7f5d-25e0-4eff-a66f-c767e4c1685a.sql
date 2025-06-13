@@ -93,7 +93,7 @@ CREATE TABLE public.conversations (
 CREATE TABLE public.messages (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
   conversation_id UUID NOT NULL REFERENCES public.conversations(id) ON DELETE CASCADE,
-  role TEXT NOT NULL CHECK (role IN ('user', 'ai')),
+  type TEXT NOT NULL CHECK (type IN ('user', 'ai')),
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -327,17 +327,17 @@ CREATE POLICY "Users can delete their conversations" ON public.conversations
   );
 
 -- RLS policies for messages
-CREATE POLICY "Users can view messages from their conversations" ON public.messages
+CREATE POLICY "Users can view messages for their conversations" ON public.messages
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.conversations
       WHERE conversations.id = messages.conversation_id
       AND (
+        conversations.parent_id = auth.uid() OR
         (conversations.child_id IS NOT NULL AND EXISTS (
           SELECT 1 FROM public.children 
-          JOIN public.profiles ON profiles.id = children.parent_id
-          WHERE profiles.id = auth.uid() 
-          AND children.id = conversations.child_id
+          WHERE children.id = conversations.child_id
+          AND children.parent_id = auth.uid()
         )) OR
         (conversations.student_profile_id IS NOT NULL AND EXISTS (
           SELECT 1 FROM public.student_profiles 
@@ -349,17 +349,61 @@ CREATE POLICY "Users can view messages from their conversations" ON public.messa
     )
   );
 
-CREATE POLICY "Users can insert messages to their conversations" ON public.messages
+CREATE POLICY "Users can insert messages for their conversations" ON public.messages
   FOR INSERT WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.conversations
       WHERE conversations.id = conversation_id
       AND (
+        conversations.parent_id = auth.uid() OR
         (conversations.child_id IS NOT NULL AND EXISTS (
           SELECT 1 FROM public.children 
-          JOIN public.profiles ON profiles.id = children.parent_id
+          WHERE children.id = conversations.child_id
+          AND children.parent_id = auth.uid()
+        )) OR
+        (conversations.student_profile_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM public.student_profiles 
+          JOIN public.profiles ON profiles.id = student_profiles.user_id
           WHERE profiles.id = auth.uid() 
-          AND children.id = conversations.child_id
+          AND student_profiles.id = conversations.student_profile_id
+        ))
+      )
+    )
+  );
+
+CREATE POLICY "Users can update messages for their conversations" ON public.messages
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations
+      WHERE conversations.id = messages.conversation_id
+      AND (
+        conversations.parent_id = auth.uid() OR
+        (conversations.child_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM public.children 
+          WHERE children.id = conversations.child_id
+          AND children.parent_id = auth.uid()
+        )) OR
+        (conversations.student_profile_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM public.student_profiles 
+          JOIN public.profiles ON profiles.id = student_profiles.user_id
+          WHERE profiles.id = auth.uid() 
+          AND student_profiles.id = conversations.student_profile_id
+        ))
+      )
+    )
+  );
+
+CREATE POLICY "Users can delete messages for their conversations" ON public.messages
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM public.conversations
+      WHERE conversations.id = messages.conversation_id
+      AND (
+        conversations.parent_id = auth.uid() OR
+        (conversations.child_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM public.children 
+          WHERE children.id = conversations.child_id
+          AND children.parent_id = auth.uid()
         )) OR
         (conversations.student_profile_id IS NOT NULL AND EXISTS (
           SELECT 1 FROM public.student_profiles 

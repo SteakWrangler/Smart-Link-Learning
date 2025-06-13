@@ -453,24 +453,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const firstUserMessage = messages.find(m => m.type === 'user');
       const title = firstUserMessage?.content.slice(0, 50) + '...' || 'New Conversation';
 
-      console.log('Saving conversation with data:', {
+      const conversationData = {
         child_id: selectedChild?.id || null,
         student_profile_id: selectedStudentProfile?.id || null,
         parent_id: profile.id,
         title,
         is_favorite: true
-      });
+      };
+
+      console.log('Saving conversation with data:', conversationData);
 
       // Save conversation to database
       const { data: conversation, error: conversationError } = await supabase
         .from('conversations')
-        .insert({
-          child_id: selectedChild?.id || null,
-          student_profile_id: selectedStudentProfile?.id || null,
-          parent_id: profile.id,
-          title,
-          is_favorite: true
-        })
+        .insert(conversationData)
         .select()
         .single();
 
@@ -479,13 +475,18 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         throw conversationError;
       }
 
+      if (!conversation) {
+        console.error('No conversation data returned after insert');
+        throw new Error('No conversation data returned after insert');
+      }
+
       console.log('Conversation saved successfully:', conversation);
 
       // Save messages
       const messageInserts = messages.map(msg => ({
         conversation_id: conversation.id,
         content: msg.content,
-        type: msg.type,
+        role: msg.type === 'user' ? 'user' : 'ai',
         created_at: msg.timestamp.toISOString()
       }));
 
@@ -512,7 +513,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       console.error('Error saving conversation:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save conversation. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to save conversation. Please try again.',
         variant: 'destructive'
       });
     }
