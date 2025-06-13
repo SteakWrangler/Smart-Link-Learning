@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User } from 'lucide-react';
 import { SavedConversation, Child } from '../types';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 interface ConversationHistoryProps {
   children: Child[];
@@ -36,7 +37,20 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         .in('child_id', children.map(child => child.id))
         .order('created_at', { ascending: false });
 
-      if (conversationsError) throw conversationsError;
+      if (conversationsError) {
+        console.error('Error loading conversations:', conversationsError);
+        toast({
+          title: 'Error',
+          description: 'Failed to load conversations. Please try again.',
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      if (!conversationsData) {
+        setConversations([]);
+        return;
+      }
 
       // Transform the data to match our SavedConversation type
       const transformedConversations: SavedConversation[] = conversationsData.map(conv => ({
@@ -47,17 +61,22 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         isFavorite: conv.is_favorite,
         createdAt: new Date(conv.created_at),
         tags: [], // We can add tags later if needed
-        messages: conv.messages.map((msg: any) => ({
+        messages: conv.messages?.map((msg: any) => ({
           id: msg.id,
           type: msg.type,
           content: msg.content,
           timestamp: new Date(msg.created_at)
-        }))
+        })) || []
       }));
 
       setConversations(transformedConversations);
     } catch (error) {
       console.error('Error loading conversations:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load conversations. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +132,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             }`}
           >
             <Star size={16} />
-            Favorites Only
+            Saved Only
           </button>
         </div>
       </div>

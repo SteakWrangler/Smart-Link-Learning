@@ -40,9 +40,6 @@ const AuthenticatedApp = () => {
             <div className="flex items-center gap-2 text-gray-600">
               <User size={20} />
               <span>Welcome, {profile.first_name || profile.email}</span>
-              <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs">
-                {profile.user_type}
-              </span>
             </div>
             <Button
               onClick={signOut}

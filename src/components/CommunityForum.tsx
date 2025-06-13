@@ -301,44 +301,33 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
   const fetchPosts = async (topicId: string) => {
     try {
       setLoading(true);
-      
-      // Fetch posts from database
-      const { data: posts, error } = await (supabase as any)
+      const { data: posts, error } = await supabase
         .from('forum_posts')
         .select(`
           *,
-          profiles!forum_posts_author_id_fkey(first_name, last_name)
+          profiles:author_id (
+            first_name,
+            last_name
+          )
         `)
         .eq('topic_id', topicId)
         .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching posts:', error);
-        // Fallback to empty array if tables don't exist yet
-        setPosts([]);
-        return;
-      }
+      if (error) throw error;
 
-      // Format the posts data
-      const formattedPosts: ForumPost[] = posts?.map((post: any) => ({
-        id: post.id,
-        content: post.content,
-        author_id: post.author_id,
-        author_name: `${post.profiles?.first_name || ''} ${post.profiles?.last_name || ''}`.trim() || 'Anonymous',
-        created_at: post.created_at,
-        updated_at: post.updated_at,
-        is_edited: post.is_edited
-      })) || [];
+      const formattedPosts = posts.map(post => ({
+        ...post,
+        author_name: post.profiles ? `${post.profiles.first_name || ''} ${post.profiles.last_name || ''}`.trim() || 'Anonymous' : 'Anonymous'
+      }));
 
       setPosts(formattedPosts);
     } catch (error) {
       console.error('Error fetching posts:', error);
       toast({
-        title: "Error",
-        description: "Failed to load forum posts",
-        variant: "destructive",
+        title: 'Error',
+        description: 'Failed to load posts. Please try again.',
+        variant: 'destructive'
       });
-      setPosts([]); // Fallback to empty array
     } finally {
       setLoading(false);
     }

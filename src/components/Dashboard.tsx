@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X } from 'lucide-react';
+import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import { Child as DatabaseChild } from '../types/database';
 import ChildProfile from './ChildProfile';
@@ -274,14 +274,43 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     }
   };
 
-  const handleLoadConversation = (conversation: SavedConversation) => {
-    setSelectedChild(children.find(child => child.id === conversation.childId) || null);
-    setSelectedCategories({
-      subject: 'Previous Conversation',
-      ageGroup: 'Previous Conversation',
-      challenge: 'Previous Conversation'
-    });
-    setShowChatInterface(true);
+  const handleLoadConversation = async (conversation: SavedConversation) => {
+    try {
+      // Find the child
+      const child = children.find(child => child.id === conversation.childId);
+      if (!child) {
+        throw new Error('Child not found');
+      }
+
+      // Set the selected child
+      setSelectedChild(child);
+
+      // Load the conversation messages
+      const { data: messages, error } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('conversation_id', conversation.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+
+      // Set the selected categories based on the conversation context
+      setSelectedCategories({
+        subject: 'Previous Conversation',
+        ageGroup: child.ageGroup,
+        challenge: child.challenges?.[0] || 'General'
+      });
+
+      // Show the chat interface
+      setShowChatInterface(true);
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load conversation. Please try again.',
+        variant: 'destructive'
+      });
+    }
   };
 
   // Handle support action clicks
@@ -608,6 +637,52 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         </div>
       );
     }).filter(Boolean);
+  };
+
+  const getParentSupportResources = () => {
+    const studentChallenges = getChildrenChallenges();
+    
+    return [
+      // Student-specific resources based on their challenges
+      ...studentChallenges.map(challenge => ({
+        title: `${challenge} Support Resources`,
+        description: `Resources and strategies for supporting ${challenge}`,
+        icon: <LifeBuoy className="w-6 h-6" />,
+        actions: [
+          {
+            label: 'View Resources',
+            onClick: () => handleSupportAction(challenge, 'resources')
+          },
+          {
+            label: 'Join Discussion',
+            onClick: () => handleSupportAction(challenge, 'community')
+          }
+        ]
+      })),
+      // General resources
+      {
+        title: 'Learning Support Guide',
+        description: 'Comprehensive guide for supporting your student\'s learning journey',
+        icon: <FileText className="w-6 h-6" />,
+        actions: [
+          {
+            label: 'View Guide',
+            onClick: () => handleSupportAction('guide', 'resources')
+          }
+        ]
+      },
+      {
+        title: 'Community Support',
+        description: 'Connect with other parents and share experiences',
+        icon: <Users className="w-6 h-6" />,
+        actions: [
+          {
+            label: 'Join Community',
+            onClick: () => handleSupportAction('community', 'community')
+          }
+        ]
+      }
+    ];
   };
 
   if (showChat && selectedChild) {
