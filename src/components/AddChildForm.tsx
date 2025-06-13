@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
+import { useAuth } from '../hooks/useAuth';
 
 interface AddChildFormProps {
-  onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
+  onSave: (child: Omit<Child, 'id' | 'createdAt'> & { parent_id: string }) => void;
   onCancel: () => void;
   editingChild?: Child;
 }
@@ -13,6 +14,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   onCancel,
   editingChild
 }) => {
+  const { user } = useAuth();
   const [name, setName] = useState(editingChild?.name || '');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
@@ -60,7 +62,9 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0) {
+    if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0 && user?.id) {
+      console.log('Submitting child with parent_id:', user.id);
+      
       // Convert IDs to labels for database storage
       const subjectLabels = selectedSubjects.map(subjectId => 
         subjects.find(s => s.id === subjectId)?.label || subjectId
@@ -73,8 +77,11 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
         name: name.trim(),
         subjects: subjectLabels,
         ageGroup: selectedAgeGroup,
-        challenges: challengeLabels
+        challenges: challengeLabels,
+        parent_id: user.id
       });
+    } else {
+      console.error('Missing required fields or user not authenticated');
     }
   };
 
@@ -195,7 +202,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
             </button>
             <button
               type="submit"
-              disabled={!name.trim() || selectedSubjects.length === 0 || !selectedAgeGroup || selectedChallenges.length === 0}
+              disabled={!name.trim() || selectedSubjects.length === 0 || !selectedAgeGroup || selectedChallenges.length === 0 || !user?.id}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:to-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               {editingChild ? 'Update Student' : 'Add Student'}
