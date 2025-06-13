@@ -4,7 +4,7 @@ import { Child } from '../types';
 import { useAuth } from '../hooks/useAuth';
 
 interface AddChildFormProps {
-  onSave: (child: Omit<Child, 'id' | 'createdAt'> & { parent_id: string }) => void;
+  onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
   editingChild?: Child;
 }
