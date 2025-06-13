@@ -29,7 +29,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | undefined>();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [activeTab, setActiveTab] = useState<'students' | 'conversations' | 'documents' | 'support'>('students');
+  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
   const [showChat, setShowChat] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -751,9 +751,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           
           <div className="flex gap-2">
             <button
-              onClick={() => setActiveTab('students')}
+              onClick={() => setActiveTab('children')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'students'
+                activeTab === 'children'
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
@@ -805,10 +805,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           className="w-full"
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="students">Students</TabsTrigger>
+            <TabsTrigger value="children">Students</TabsTrigger>
             <TabsTrigger value="conversations">Saved Conversations</TabsTrigger>
           </TabsList>
-          <TabsContent value="students" className="mt-6">
+          <TabsContent value="children" className="mt-6">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {children.map((child) => (
                 <Card key={child.id} className="relative">
@@ -874,12 +874,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               ))}
               <Card className="relative border-dashed">
                 <CardHeader>
-                  <CardTitle>Add New Student</CardTitle>
-                  <CardDescription>Create a new student profile</CardDescription>
+                  <CardTitle>Add New Child</CardTitle>
+                  <CardDescription>Create a new child profile</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">
-                    Add a new student to start tracking their learning progress and challenges.
+                    Add a new child to start tracking their learning progress and challenges.
                   </p>
                 </CardContent>
                 <CardFooter>
@@ -891,7 +891,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Add Student
+                    Add Child
                   </Button>
                 </CardFooter>
               </Card>
@@ -901,7 +901,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
             <ConversationHistory
               children={children}
               onLoadConversation={handleLoadConversation}
-              onBack={() => setActiveTab('students')}
+              onBack={() => setActiveTab('children')}
               profile={profile}
             />
           </TabsContent>
