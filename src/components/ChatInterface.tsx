@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Send, Star, Save, FileText } from 'lucide-react';
 import { Child } from '../types';
-import { StudentProfile, DocumentData } from '../types/database';
+import { DocumentData } from '../types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { generateChatResponse, ChatMessage } from '@/utils/openaiClient';
@@ -15,7 +15,6 @@ interface ChatInterfaceProps {
   };
   onBack: () => void;
   selectedChild: Child | null;
-  selectedStudentProfile?: StudentProfile | null;
   onSaveConversation: (conversation: any) => void;
 }
 
@@ -23,7 +22,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   selectedCategories,
   onBack,
   selectedChild,
-  selectedStudentProfile,
   onSaveConversation
 }) => {
   const { profile } = useAuth();
@@ -51,11 +49,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   });
 
-  const learnerName = selectedChild?.name || selectedStudentProfile?.name || 'Student';
+  const learnerName = selectedChild?.name || 'Student';
 
   // Generate initial greeting with personalized examples
   const generateInitialGreeting = (): string => {
-    const ageGroup = selectedChild?.ageGroup || selectedStudentProfile?.age_group || '';
+    const ageGroup = selectedChild?.ageGroup || '';
     const subjects = selectedChild?.subjects || [];
     const challenges = selectedChild?.challenges || [];
     const hasDocuments = documents.length > 0;
@@ -133,7 +131,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return greeting;
   };
 
-  // Helper function to get age group labels (moved up to be accessible)
+  // Helper function to get age group labels
   const getAgeGroupLabel = (ageGroupId: string): string => {
     const ageGroups = [
       { id: 'early-elementary', label: 'Early Elementary (5-7)' },
@@ -163,7 +161,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
       setMessages([initialMessage]);
     }
-  }, [selectedChild, selectedStudentProfile, documents]);
+  }, [selectedChild, documents]);
 
   const fetchDocuments = async () => {
     if (!profile) return;
@@ -180,24 +178,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         query = query.eq('child_id', selectedChild.id);
       }
 
-      // Filter by student profile if student user
-      if (profile.user_type === 'student' && selectedStudentProfile?.id) {
-        query = query.eq('student_profile_id', selectedStudentProfile.id);
-      }
-
       const { data, error } = await query;
 
       if (error) throw error;
 
       console.log('Fetched documents for chat:', data);
       
-      // Type the documents properly to match DocumentData interface with null safety
       const typedDocuments: DocumentData[] = (data || []).map(doc => ({
         ...doc,
         document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other',
         processing_status: doc.processing_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
         child_id: doc.child_id as string | null,
-        student_profile_id: doc.student_profile_id as string | null,
         description: doc.description as string | null,
         subject: doc.subject as string | null,
         extracted_content: doc.extracted_content as string | null,
@@ -252,9 +243,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           systemContext += `Since ${learnerName} has autism, when relevant, provide clear expectations, consistent structure, and consider sensory preferences. `;
         }
       }
-    } else if (selectedStudentProfile) {
-      const ageGroupLabel = getAgeGroupLabel(selectedStudentProfile.age_group);
-      systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
     }
     
     // Add document context if available
@@ -429,8 +417,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   const handleSaveConversation = async () => {
     try {
-      if (!selectedChild && !selectedStudentProfile) {
-        console.error('No child or student profile selected');
+      if (!selectedChild) {
+        console.error('No child selected');
         toast({
           title: 'Error',
           description: 'Please select a student before saving.',
@@ -454,8 +442,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
 
       const conversationData = {
-        child_id: selectedChild?.id || null,
-        student_profile_id: selectedStudentProfile?.id || null,
+        child_id: selectedChild.id,
         parent_id: profile.id,
         title,
         is_favorite: isFavorite,

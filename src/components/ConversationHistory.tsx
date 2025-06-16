@@ -43,10 +43,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             id,
             name
           ),
-          student:student_profile_id (
-            id,
-            name
-          ),
           messages (
             id,
             content,
@@ -61,7 +57,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       if (activeTab === 'saved') {
         query = query.eq('is_saved', true);
       }
-      // For recent, we could add additional logic here if needed
 
       const { data: conversations, error } = await query;
 
@@ -74,9 +69,8 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       const formattedConversations = conversations.map(conv => ({
         id: conv.id,
         title: conv.title,
-        childId: conv.child_id || conv.student_profile_id,
-        childName: conv.child ? conv.child.name : 
-                   conv.student ? conv.student.name : 'Unknown',
+        childId: conv.child_id,
+        childName: conv.child ? conv.child.name : 'Unknown',
         messages: conv.messages.map((msg: any) => ({
           id: msg.id,
           content: msg.content,
