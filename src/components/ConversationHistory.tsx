@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
 import { SavedConversation, Child } from '../types';
@@ -34,8 +35,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setLoading(true);
       setError(null);
 
-      // Get conversations for the current user's children
-      const { data: conversations, error } = await supabase
+      let query = supabase
         .from('conversations')
         .select(`
           *,
@@ -55,8 +55,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           )
         `)
         .eq('parent_id', profile.id)
-        .eq('is_favorite', true)
         .order('created_at', { ascending: false });
+
+      // Filter based on tab
+      if (activeTab === 'saved') {
+        query = query.eq('is_saved', true);
+      }
+      // For recent, we could add additional logic here if needed
+
+      const { data: conversations, error } = await query;
 
       if (error) {
         console.error('Error loading conversations:', error);
@@ -77,7 +84,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           timestamp: new Date(msg.created_at)
         })),
         createdAt: new Date(conv.created_at),
-        isFavorite: conv.is_favorite
+        isFavorite: conv.is_favorite || false
       }));
 
       setConversations(formattedConversations);
@@ -86,6 +93,43 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setError('Failed to load conversations');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const toggleFavorite = async (conversationId: string) => {
+    try {
+      const conversation = conversations.find(c => c.id === conversationId);
+      if (!conversation) return;
+
+      const newFavoriteStatus = !conversation.isFavorite;
+
+      const { error } = await supabase
+        .from('conversations')
+        .update({ is_favorite: newFavoriteStatus })
+        .eq('id', conversationId);
+
+      if (error) throw error;
+
+      // Update local state
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, isFavorite: newFavoriteStatus }
+            : conv
+        )
+      );
+
+      toast({
+        title: 'Success',
+        description: `Conversation ${newFavoriteStatus ? 'added to' : 'removed from'} favorites`,
+      });
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update favorite status',
+        variant: 'destructive'
+      });
     }
   };
 
@@ -130,7 +174,9 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               <ArrowLeft size={20} />
               Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">Saved Conversations</h1>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {activeTab === 'saved' ? 'Saved Conversations' : 'Recent Conversations'}
+            </h1>
           </div>
         </div>
       </div>
@@ -218,22 +264,37 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             {filteredConversations.map(conversation => (
               <div
                 key={conversation.id}
-                onClick={() => onLoadConversation(conversation)}
                 className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-medium text-gray-800 line-clamp-1">{conversation.title}</h3>
-                  {conversation.isFavorite && (
-                    <Star size={16} className="text-yellow-500 flex-shrink-0" />
-                  )}
+                  <h3 
+                    className="font-medium text-gray-800 line-clamp-1 flex-1 mr-2"
+                    onClick={() => onLoadConversation(conversation)}
+                  >
+                    {conversation.title}
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(conversation.id);
+                    }}
+                    className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    <Star 
+                      size={16} 
+                      className={conversation.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} 
+                    />
+                  </button>
                 </div>
-                <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
-                <p className="text-sm text-gray-600 line-clamp-2">
-                  {conversation.messages[conversation.messages.length - 1]?.content || 'No messages'}
-                </p>
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                  <Clock size={14} />
-                  <span>{formatDate(conversation.createdAt)}</span>
+                <div onClick={() => onLoadConversation(conversation)}>
+                  <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {conversation.messages[conversation.messages.length - 1]?.content || 'No messages'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                    <Clock size={14} />
+                    <span>{formatDate(conversation.createdAt)}</span>
+                  </div>
                 </div>
               </div>
             ))}
