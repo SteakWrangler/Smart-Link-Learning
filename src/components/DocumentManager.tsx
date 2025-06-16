@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -34,7 +33,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
     try {
       setLoading(true);
 
-      // Fetch documents
+      // Fetch documents with proper type safety
       const { data: documentsData, error: documentsError } = await supabase
         .from('documents')
         .select('*')
@@ -43,11 +42,11 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
 
       if (documentsError) throw documentsError;
       
-      // Type assertion to ensure proper typing with null safety
+      // Type assertion with proper null safety
       const typedDocuments: DocumentData[] = (documentsData || []).map(doc => ({
         ...doc,
-        document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other',
-        processing_status: doc.processing_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
+        document_type: doc.document_type as DocumentData['document_type'],
+        processing_status: doc.processing_status as DocumentData['processing_status'],
         child_id: doc.child_id as string | null,
         description: doc.description as string | null,
         subject: doc.subject as string | null,
@@ -65,7 +64,7 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
       if (subjectsError) throw subjectsError;
       setSubjects(subjectsData || []);
 
-      // Fetch children for both parent and student users
+      // Fetch children
       const { data: childrenData, error: childrenError } = await supabase
         .from('children')
         .select('*')
