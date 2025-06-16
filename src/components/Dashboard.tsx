@@ -73,11 +73,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
       setChildren(data.map(child => ({
         id: child.id,
+        parent_id: child.parent_id,
         name: child.name,
-        ageGroup: child.age_group,
+        age_group: child.age_group,
         subjects: child.child_subjects.map((cs: any) => cs.subjects.name),
         challenges: child.child_challenges.map((cc: any) => cc.challenges.name),
-        createdAt: new Date(child.created_at)
+        created_at: child.created_at,
+        updated_at: child.updated_at
       })));
     } catch (error) {
       console.error('Error loading children:', error);
@@ -91,7 +93,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     }
   };
 
-  const handleAddChild = async (childData: Omit<Child, 'id' | 'createdAt'>) => {
+  const handleAddChild = async (childData: Omit<Child, 'id' | 'created_at' | 'updated_at'>) => {
     if (!profile) return;
 
     try {
@@ -103,7 +105,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           .from('children')
           .update({
             name: childData.name,
-            age_group: childData.ageGroup,
+            age_group: childData.age_group,
             updated_at: new Date().toISOString()
           })
           .eq('id', editingChild.id);
@@ -123,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           .from('children')
           .insert({
             name: childData.name,
-            age_group: childData.ageGroup,
+            age_group: childData.age_group,
             parent_id: profile.id
           })
           .select()
@@ -246,7 +248,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
       // Refresh children list
       await loadChildren();
-      setSavedConversations(prev => prev.filter(conv => conv.childId !== deleteConfirmChild));
+      setSavedConversations(prev => prev.filter(conv => conv.child_id !== deleteConfirmChild));
       
       toast({
         title: "Success",
@@ -291,7 +293,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const handleLoadConversation = async (conversation: SavedConversation) => {
     try {
       // Find the child
-      const child = children.find(child => child.id === conversation.childId);
+      const child = children.find(child => child.id === conversation.child_id);
       if (!child) {
         throw new Error('Child not found');
       }
@@ -311,7 +313,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
       // Set the selected categories based on the conversation context
       setSelectedCategories({
         subject: 'Previous Conversation',
-        ageGroup: child.ageGroup,
+        ageGroup: child.age_group,
         challenge: child.challenges?.[0] || 'General'
       });
 
