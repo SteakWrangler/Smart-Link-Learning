@@ -263,26 +263,31 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
 
       if (error) {
         console.error('Error fetching topics:', error);
-        // Fallback to empty array if tables don't exist yet
         setTopics([]);
         return;
       }
 
-      // Format the topics data
-      const formattedTopics: ForumTopic[] = topics?.map((topic: any) => ({
-        id: topic.id,
-        title: topic.title,
-        description: topic.description,
-        author_id: topic.author_id,
-        author_name: `${topic.profiles?.first_name || ''} ${topic.profiles?.last_name || ''}`.trim() || 'Anonymous',
-        is_pinned: topic.is_pinned,
-        is_locked: topic.is_locked,
-        view_count: topic.view_count,
-        post_count: topic.post_count,
-        last_post_at: topic.last_post_at,
-        last_post_author_name: topic.last_post_author_name,
-        created_at: topic.created_at
-      })) || [];
+      // Format the topics data with proper author names
+      const formattedTopics: ForumTopic[] = topics?.map((topic: any) => {
+        const authorName = topic.profiles 
+          ? `${topic.profiles.first_name || ''} ${topic.profiles.last_name || ''}`.trim()
+          : 'Unknown User';
+        
+        return {
+          id: topic.id,
+          title: topic.title,
+          description: topic.description,
+          author_id: topic.author_id,
+          author_name: authorName || 'Unknown User',
+          is_pinned: topic.is_pinned,
+          is_locked: topic.is_locked,
+          view_count: topic.view_count,
+          post_count: topic.post_count,
+          last_post_at: topic.last_post_at,
+          last_post_author_name: topic.last_post_author_name || 'Unknown User',
+          created_at: topic.created_at
+        };
+      }) || [];
 
       setTopics(formattedTopics);
     } catch (error) {
@@ -292,7 +297,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         description: "Failed to load forum topics",
         variant: "destructive",
       });
-      setTopics([]); // Fallback to empty array
+      setTopics([]);
     } finally {
       setLoading(false);
     }
@@ -315,10 +320,16 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
 
       if (error) throw error;
 
-      const formattedPosts = posts.map(post => ({
-        ...post,
-        author_name: post.profiles ? `${post.profiles.first_name || ''} ${post.profiles.last_name || ''}`.trim() || 'Anonymous' : 'Anonymous'
-      }));
+      const formattedPosts = posts.map(post => {
+        const authorName = post.profiles 
+          ? `${post.profiles.first_name || ''} ${post.profiles.last_name || ''}`.trim()
+          : 'Unknown User';
+        
+        return {
+          ...post,
+          author_name: authorName || 'Unknown User'
+        };
+      });
 
       setPosts(formattedPosts);
     } catch (error) {
@@ -360,6 +371,8 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
     if (!newPostContent.trim() || !selectedTopic || !profile) return;
     
     try {
+      const authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User';
+      
       // Save the post to the database
       const { data: newPost, error } = await (supabase as any)
         .from('forum_posts')
@@ -384,7 +397,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         id: newPost.id,
         content: newPost.content,
         author_id: newPost.author_id,
-        author_name: `${newPost.profiles?.first_name || ''} ${newPost.profiles?.last_name || ''}`.trim() || 'Anonymous',
+        author_name: authorName,
         created_at: newPost.created_at,
         updated_at: newPost.updated_at,
         is_edited: newPost.is_edited
@@ -399,7 +412,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         .update({ 
           post_count: posts.length + 1,
           last_post_at: new Date().toISOString(),
-          last_post_author_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous'
+          last_post_author_name: authorName
         })
         .eq('id', selectedTopic.id);
       
@@ -426,6 +439,8 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
     if (!newTopicTitle.trim() || !selectedCategory || !profile) return;
     
     try {
+      const authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User';
+      
       // Save the topic to the database
       const { data: newTopic, error } = await (supabase as any)
         .from('forum_topics')
@@ -439,7 +454,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
           view_count: 0,
           post_count: 0,
           last_post_at: new Date().toISOString(),
-          last_post_author_name: `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Anonymous'
+          last_post_author_name: authorName
         })
         .select(`
           *,
@@ -457,7 +472,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         title: newTopic.title,
         description: newTopic.description,
         author_id: newTopic.author_id,
-        author_name: `${newTopic.profiles?.first_name || ''} ${newTopic.profiles?.last_name || ''}`.trim() || 'Anonymous',
+        author_name: authorName,
         is_pinned: newTopic.is_pinned,
         is_locked: newTopic.is_locked,
         view_count: newTopic.view_count,
@@ -636,6 +651,14 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
             {viewMode !== 'categories' && !initialCategory && (
               <button
                 onClick={viewMode === 'topics' ? handleBackToCategories : handleBackToTopics}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowLeft size={20} />
+              </button>
+            )}
+            {viewMode === 'topic' && initialCategory && (
+              <button
+                onClick={handleBackToTopics}
                 className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <ArrowLeft size={20} />
@@ -944,4 +967,4 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
   );
 };
 
-export default CommunityForum; 
+export default CommunityForum;
