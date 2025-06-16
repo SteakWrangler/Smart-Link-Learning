@@ -69,16 +69,17 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       const formattedConversations = conversations.map(conv => ({
         id: conv.id,
         title: conv.title,
-        childId: conv.child_id,
-        childName: conv.child ? conv.child.name : 'Unknown',
+        child_id: conv.child_id,
+        child_name: conv.child ? conv.child.name : 'Unknown',
         messages: conv.messages.map((msg: any) => ({
           id: msg.id,
           content: msg.content,
           type: msg.type,
-          timestamp: new Date(msg.created_at)
+          created_at: msg.created_at
         })),
-        createdAt: new Date(conv.created_at),
-        isFavorite: conv.is_favorite || false
+        created_at: conv.created_at,
+        is_favorite: conv.is_favorite || false,
+        is_saved: conv.is_saved || false
       }));
 
       setConversations(formattedConversations);
@@ -95,7 +96,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       const conversation = conversations.find(c => c.id === conversationId);
       if (!conversation) return;
 
-      const newFavoriteStatus = !conversation.isFavorite;
+      const newFavoriteStatus = !conversation.is_favorite;
 
       const { error } = await supabase
         .from('conversations')
@@ -108,7 +109,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setConversations(prev => 
         prev.map(conv => 
           conv.id === conversationId 
-            ? { ...conv, isFavorite: newFavoriteStatus }
+            ? { ...conv, is_favorite: newFavoriteStatus }
             : conv
         )
       );
@@ -136,16 +137,17 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     if (searchTerm && !conversation.title.toLowerCase().includes(searchTerm.toLowerCase())) {
       return false;
     }
-    if (filterChild !== 'all' && conversation.childId !== filterChild) {
+    if (filterChild !== 'all' && conversation.child_id !== filterChild) {
       return false;
     }
-    if (showFavoritesOnly && !conversation.isFavorite) {
+    if (showFavoritesOnly && !conversation.is_favorite) {
       return false;
     }
     return true;
   });
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
     const now = new Date();
     const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
     
@@ -276,18 +278,18 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                   >
                     <Star 
                       size={16} 
-                      className={conversation.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} 
+                      className={conversation.is_favorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} 
                     />
                   </button>
                 </div>
                 <div onClick={() => onLoadConversation(conversation)}>
-                  <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
+                  <p className="text-sm text-gray-500 mb-2">{conversation.child_name}</p>
                   <p className="text-sm text-gray-600 line-clamp-2">
                     {conversation.messages[conversation.messages.length - 1]?.content || 'No messages'}
                   </p>
                   <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                     <Clock size={14} />
-                    <span>{formatDate(conversation.createdAt)}</span>
+                    <span>{formatDate(conversation.created_at)}</span>
                   </div>
                 </div>
               </div>
