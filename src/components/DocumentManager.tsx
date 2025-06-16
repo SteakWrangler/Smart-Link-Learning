@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import DocumentUpload from './DocumentUpload';
 import DocumentList from './DocumentList';
-import type { DocumentData, Child, StudentProfile, Subject } from '@/types/database';
+import type { DocumentData, Child, Subject } from '@/types/database';
 
 interface DocumentManagerProps {
   onClose: () => void;
@@ -17,7 +18,6 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
   const { profile } = useAuth();
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [children, setChildren] = useState<Child[]>([]);
-  const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [showUpload, setShowUpload] = useState(false);
@@ -49,7 +49,6 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
         document_type: doc.document_type as 'failed_test' | 'study_guide' | 'homework' | 'other',
         processing_status: doc.processing_status as 'pending' | 'processing' | 'completed' | 'failed' | null,
         child_id: doc.child_id as string | null,
-        student_profile_id: doc.student_profile_id as string | null,
         description: doc.description as string | null,
         subject: doc.subject as string | null,
         extracted_content: doc.extracted_content as string | null,
@@ -66,29 +65,15 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
       if (subjectsError) throw subjectsError;
       setSubjects(subjectsData || []);
 
-      // If parent, fetch children
-      if (profile.user_type === 'parent') {
-        const { data: childrenData, error: childrenError } = await supabase
-          .from('children')
-          .select('*')
-          .eq('parent_id', profile.id);
+      // Fetch children for both parent and student users
+      const { data: childrenData, error: childrenError } = await supabase
+        .from('children')
+        .select('*')
+        .eq('parent_id', profile.id);
 
-        if (childrenError) throw childrenError;
-        console.log('Fetched children for document manager:', childrenData);
-        setChildren(childrenData || []);
-      }
-
-      // If student, fetch student profile
-      if (profile.user_type === 'student') {
-        const { data: studentData, error: studentError } = await supabase
-          .from('student_profiles')
-          .select('*')
-          .eq('user_id', profile.id)
-          .single();
-
-        if (studentError && studentError.code !== 'PGRST116') throw studentError;
-        setStudentProfile(studentData);
-      }
+      if (childrenError) throw childrenError;
+      console.log('Fetched children for document manager:', childrenData);
+      setChildren(childrenData || []);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -162,7 +147,6 @@ const DocumentManager: React.FC<DocumentManagerProps> = ({ onClose }) => {
 
               <DocumentUpload
                 children={children}
-                studentProfile={studentProfile}
                 subjects={subjects}
                 onUploadComplete={handleUploadComplete}
               />
