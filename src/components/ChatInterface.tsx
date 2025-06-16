@@ -449,16 +449,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return;
       }
 
-      // Create a title from the first user message
-      const firstUserMessage = messages.find(m => m.type === 'user');
-      const title = firstUserMessage?.content.slice(0, 50) + '...' || 'New Conversation';
+      // Create a title from the first user message if no title provided
+      const title = conversationTitle.trim() || 
+        (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
 
       const conversationData = {
         child_id: selectedChild?.id || null,
         student_profile_id: selectedStudentProfile?.id || null,
         parent_id: profile.id,
         title,
-        is_favorite: true
+        is_favorite: isFavorite,
+        is_saved: true
       };
 
       console.log('Saving conversation with data:', conversationData);
@@ -507,6 +508,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         title: 'Success',
         description: 'Conversation saved successfully!',
       });
+
+      // Close the dialog and reset form
+      setShowSaveDialog(false);
+      setConversationTitle('');
+      setIsFavorite(false);
 
       onSaveConversation(conversation);
     } catch (error) {
@@ -655,14 +661,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             <div className="space-y-4">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Title
+                  Title (optional)
                 </label>
                 <input
                   id="title"
                   type="text"
                   value={conversationTitle}
                   onChange={(e) => setConversationTitle(e.target.value)}
-                  placeholder="Enter conversation title"
+                  placeholder="Enter conversation title (auto-generated if empty)"
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -690,8 +696,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 </button>
                 <button
                   onClick={handleSaveConversation}
-                  disabled={!conversationTitle.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white rounded-lg transition-colors"
+                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                 >
                   Save
                 </button>
