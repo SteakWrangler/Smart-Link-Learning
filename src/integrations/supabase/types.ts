@@ -165,7 +165,6 @@ export type Database = {
           is_favorite: boolean | null
           is_saved: boolean | null
           parent_id: string | null
-          student_profile_id: string | null
           title: string
           updated_at: string
         }
@@ -176,7 +175,6 @@ export type Database = {
           is_favorite?: boolean | null
           is_saved?: boolean | null
           parent_id?: string | null
-          student_profile_id?: string | null
           title: string
           updated_at?: string
         }
@@ -187,7 +185,6 @@ export type Database = {
           is_favorite?: boolean | null
           is_saved?: boolean | null
           parent_id?: string | null
-          student_profile_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -204,13 +201,6 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "conversations_student_profile_id_fkey"
-            columns: ["student_profile_id"]
-            isOneToOne: false
-            referencedRelation: "student_profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -230,7 +220,6 @@ export type Database = {
           id: string
           processing_error: string | null
           processing_status: string | null
-          student_profile_id: string | null
           subject: string | null
           updated_at: string
           user_id: string
@@ -249,7 +238,6 @@ export type Database = {
           id?: string
           processing_error?: string | null
           processing_status?: string | null
-          student_profile_id?: string | null
           subject?: string | null
           updated_at?: string
           user_id: string
@@ -268,7 +256,6 @@ export type Database = {
           id?: string
           processing_error?: string | null
           processing_status?: string | null
-          student_profile_id?: string | null
           subject?: string | null
           updated_at?: string
           user_id?: string
@@ -279,13 +266,6 @@ export type Database = {
             columns: ["child_id"]
             isOneToOne: false
             referencedRelation: "children"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documents_student_profile_id_fkey"
-            columns: ["student_profile_id"]
-            isOneToOne: false
-            referencedRelation: "student_profiles"
             referencedColumns: ["id"]
           },
           {
@@ -500,148 +480,6 @@ export type Database = {
           user_type?: string
         }
         Relationships: []
-      }
-      student_challenges: {
-        Row: {
-          challenge_id: string
-          id: string
-          student_profile_id: string
-        }
-        Insert: {
-          challenge_id: string
-          id?: string
-          student_profile_id: string
-        }
-        Update: {
-          challenge_id?: string
-          id?: string
-          student_profile_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_challenges_challenge_id_fkey"
-            columns: ["challenge_id"]
-            isOneToOne: false
-            referencedRelation: "challenges"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_challenges_student_profile_id_fkey"
-            columns: ["student_profile_id"]
-            isOneToOne: false
-            referencedRelation: "student_profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      student_profiles: {
-        Row: {
-          age_group: string
-          created_at: string
-          id: string
-          name: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          age_group: string
-          created_at?: string
-          id?: string
-          name: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          age_group?: string
-          created_at?: string
-          id?: string
-          name?: string
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_profiles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      student_subjects: {
-        Row: {
-          id: string
-          student_profile_id: string
-          subject_id: string
-        }
-        Insert: {
-          id?: string
-          student_profile_id: string
-          subject_id: string
-        }
-        Update: {
-          id?: string
-          student_profile_id?: string
-          subject_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_subjects_student_profile_id_fkey"
-            columns: ["student_profile_id"]
-            isOneToOne: false
-            referencedRelation: "student_profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "student_subjects_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      students: {
-        Row: {
-          age_group: string
-          challenges: string[]
-          created_at: string
-          id: string
-          name: string
-          subjects: string[]
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          age_group: string
-          challenges?: string[]
-          created_at?: string
-          id?: string
-          name: string
-          subjects?: string[]
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          age_group?: string
-          challenges?: string[]
-          created_at?: string
-          id?: string
-          name?: string
-          subjects?: string[]
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "students_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       subjects: {
         Row: {

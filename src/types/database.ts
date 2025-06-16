@@ -1,3 +1,4 @@
+
 export interface Profile {
   id: string;
   email: string;
@@ -30,19 +31,9 @@ export interface Challenge {
   created_at: string;
 }
 
-export interface StudentProfile {
-  id: string;
-  user_id: string;
-  name: string;
-  age_group: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface Conversation {
   id: string;
-  child_id?: string;
-  student_profile_id?: string;
+  child_id: string; // Now required, no longer nullable
   title: string;
   is_favorite: boolean;
   created_at: string;
@@ -67,7 +58,6 @@ export interface DocumentData {
   id: string;
   user_id: string;
   child_id?: string | null;
-  student_profile_id?: string | null;
   file_name: string;
   file_path: string;
   file_size: number;

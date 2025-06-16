@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { User, Edit2, Trash2, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
@@ -16,14 +17,6 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
   onDelete,
   onSelect
 }) => {
-  const subjects = [
-    { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
-    { id: 'reading', label: 'Reading', color: 'bg-green-100 text-green-700' },
-    { id: 'writing', label: 'Writing', color: 'bg-purple-100 text-purple-700' },
-    { id: 'science', label: 'Science', color: 'bg-orange-100 text-orange-700' },
-    { id: 'social-studies', label: 'Social Studies', color: 'bg-red-100 text-red-700' }
-  ];
-
   const ageGroups = [
     { id: 'early-elementary', label: 'Early Elementary (5-7)' },
     { id: 'elementary', label: 'Elementary (8-10)' },
@@ -32,22 +25,8 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
     { id: 'college', label: 'College (18+)' }
   ];
 
-  const challenges = [
-    { id: 'adhd-focus', label: 'ADHD/Focus Issues' },
-    { id: 'dyslexia', label: 'Dyslexia' },
-    { id: 'processing-delays', label: 'Processing Delays' },
-    { id: 'math-anxiety', label: 'Math Anxiety' },
-    { id: 'general-support', label: 'General Learning Support' }
-  ];
-
-  const getSubjectLabel = (subjectId: string) => 
-    subjects.find(s => s.id === subjectId)?.label || subjectId;
-  
   const getAgeGroupLabel = (ageGroupId: string) => 
     ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
-  
-  const getChallengeLabel = (challengeId: string) => 
-    challenges.find(c => c.id === challengeId)?.label || challengeId;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -90,39 +69,43 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
           <span className="text-sm text-gray-600">{getAgeGroupLabel(child.ageGroup)}</span>
         </div>
 
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <BookOpen size={16} className="text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Subjects</span>
+        {child.subjects && child.subjects.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <BookOpen size={16} className="text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Subjects</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {child.subjects.map(subject => (
+                <span
+                  key={subject}
+                  className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                >
+                  {subject}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {child.subjects.map(subject => (
-              <span
-                key={subject}
-                className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
-              >
-                {getSubjectLabel(subject)}
-              </span>
-            ))}
-          </div>
-        </div>
+        )}
 
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Brain size={16} className="text-gray-600" />
-            <span className="text-sm font-medium text-gray-700">Learning Challenges</span>
+        {child.challenges && child.challenges.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Brain size={16} className="text-gray-600" />
+              <span className="text-sm font-medium text-gray-700">Learning Challenges</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {child.challenges.map(challenge => (
+                <span
+                  key={challenge}
+                  className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
+                >
+                  {challenge}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1">
-            {child.challenges.map(challenge => (
-              <span
-                key={challenge}
-                className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
-              >
-                {getChallengeLabel(challenge)}
-              </span>
-            ))}
-          </div>
-        </div>
+        )}
       </div>
 
       <button
