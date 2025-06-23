@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
@@ -161,9 +160,7 @@ const AuthenticatedApp: React.FC = () => {
       <>
         {currentView === 'dashboard' && (
           <Dashboard 
-            children={children}
-            onStartChat={handleStartChat}
-            onViewConversationHistory={handleViewConversationHistory}
+            onBack={() => {}}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
@@ -175,8 +172,6 @@ const AuthenticatedApp: React.FC = () => {
                 [type]: value
               }));
             }}
-            onCategoriesSelected={handleCategoriesSelected}
-            onBack={handleBackFromCategories}
           />
         )}
         {currentView === 'chat' && selectedChild && (
