@@ -33,7 +33,7 @@ export const useChildrenData = () => {
       // Get child IDs for batch queries
       const childIds = childrenData.map(child => child.id);
 
-      // Fetch subjects for all children with proper joins
+      // Fetch subjects for all children
       const { data: childSubjects, error: subjectsError } = await supabase
         .from('child_subjects')
         .select(`
@@ -44,7 +44,7 @@ export const useChildrenData = () => {
 
       if (subjectsError) throw subjectsError;
 
-      // Fetch challenges for all children with proper joins  
+      // Fetch challenges for all children
       const { data: childChallenges, error: challengesError } = await supabase
         .from('child_challenges')
         .select(`

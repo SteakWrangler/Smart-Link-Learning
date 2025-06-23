@@ -40,22 +40,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         .single();
 
       if (childData) {
-        // Fetch selected subjects with proper joins
+        // Fetch selected subjects
         const { data: subjectData } = await supabase
           .from('child_subjects')
-          .select(`
-            subject_id,
-            subject:subjects(id, name, created_at)
-          `)
+          .select('subject_id, subjects(id, name)')
           .eq('child_id', childData.id);
 
-        // Fetch selected challenges with proper joins
+        // Fetch selected challenges
         const { data: challengeData } = await supabase
           .from('child_challenges')
-          .select(`
-            challenge_id,
-            challenge:challenges(id, name, description, created_at)
-          `)
+          .select('challenge_id, challenges(id, name)')
           .eq('child_id', childData.id);
 
         // Convert to unified Child interface
@@ -64,8 +58,16 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
           parent_id: childData.parent_id,
           name: childData.name,
           age_group: childData.age_group,
-          subjects: subjectData?.map(s => s.subject).filter(Boolean) || [],
-          challenges: challengeData?.map(c => c.challenge).filter(Boolean) || [],
+          subjects: subjectData?.map(s => ({ 
+            id: s.subjects.id, 
+            name: s.subjects.name, 
+            created_at: '' 
+          })).filter(Boolean) || [],
+          challenges: challengeData?.map(c => ({ 
+            id: c.challenges.id, 
+            name: c.challenges.name, 
+            created_at: '' 
+          })).filter(Boolean) || [],
           created_at: childData.created_at,
           updated_at: childData.updated_at
         };
@@ -91,10 +93,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
   const handleProfileSave = async (profileData: any) => {
     try {
-      // Extract subject and challenge names for database operations
-      const subjectNames = profileData.subjects || [];
-      const challengeNames = profileData.challenges || [];
-
       if (studentChild) {
         // Update existing child record
         const { error: updateError } = await supabase
@@ -109,7 +107,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         if (updateError) throw updateError;
 
         // Update subjects and challenges
-        await updateChildSubjectsAndChallenges(studentChild.id, subjectNames, challengeNames);
+        await updateChildSubjectsAndChallenges(studentChild.id, profileData.subjects, profileData.challenges);
       } else {
         // Create new child record for student
         const { data: newChild, error: insertError } = await supabase
@@ -125,7 +123,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         if (insertError) throw insertError;
 
         // Add subjects and challenges
-        await updateChildSubjectsAndChallenges(newChild.id, subjectNames, challengeNames);
+        await updateChildSubjectsAndChallenges(newChild.id, profileData.subjects, profileData.challenges);
       }
 
       await fetchStudentData();
