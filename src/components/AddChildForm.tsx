@@ -66,24 +66,19 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (name.trim() && selectedSubjects.length > 0 && selectedAgeGroup && selectedChallenges.length > 0) {
-      // Convert string arrays to the expected object format for the Child interface
-      const subjectObjects = selectedSubjects.map(subjectName => ({
-        id: subjectName.toLowerCase().replace(/\s+/g, '-'),
-        name: subjectName,
-        created_at: new Date().toISOString()
-      }));
-      
-      const challengeObjects = selectedChallenges.map(challengeName => ({
-        id: challengeName.toLowerCase().replace(/\s+/g, '-'),
-        name: challengeName,
-        created_at: new Date().toISOString()
-      }));
+      // Convert IDs to labels for database storage
+      const subjectLabels = selectedSubjects.map(subjectId => 
+        subjects.find(s => s.id === subjectId)?.label || subjectId
+      );
+      const challengeLabels = selectedChallenges.map(challengeId => 
+        challenges.find(c => c.id === challengeId)?.label || challengeId
+      );
 
       onSave({
         parent_id: '', // This will be set by the parent component
         name: name.trim(),
-        subjects: subjectObjects,
-        challenges: challengeObjects,
+        subjects: subjectLabels,
+        challenges: challengeLabels,
         age_group: selectedAgeGroup
       });
     }
