@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Plus, BookOpen, MessageSquare, History, User, Users, UserPlus } from 'lucide-react';
+import { Plus, BookOpen, MessageSquare, History, User, Users, UserPlus, TestTube } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import { useAuth } from '@/hooks/useAuth';
 import { useChildrenData } from '@/hooks/useChildrenData';
@@ -11,6 +10,7 @@ import AddChildForm from './AddChildForm';
 import ChatInterface from './ChatInterface';
 import ConversationHistory from './ConversationHistory';
 import StudentDashboard from './StudentDashboard';
+import TestValidation from './TestValidation';
 
 const Dashboard: React.FC = () => {
   const { profile, loading: authLoading } = useAuth();
@@ -25,6 +25,7 @@ const Dashboard: React.FC = () => {
   } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [showStudentView, setShowStudentView] = useState(false);
+  const [showTesting, setShowTesting] = useState(false);
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
   const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
 
@@ -315,6 +316,11 @@ const Dashboard: React.FC = () => {
     );
   }
 
+  // Show testing validation
+  if (showTesting) {
+    return <TestValidation />;
+  }
+
   // Show student dashboard if student view is selected
   if (showStudentView) {
     return <StudentDashboard onBack={() => setShowStudentView(false)} />;
@@ -371,6 +377,13 @@ const Dashboard: React.FC = () => {
               <User size={20} />
               Student View
             </button>
+            <button
+              onClick={() => setShowTesting(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              <TestTube size={20} />
+              Run Tests
+            </button>
           </div>
         </div>
       </div>
@@ -378,7 +391,7 @@ const Dashboard: React.FC = () => {
       {/* Main Content */}
       <div className="max-w-6xl mx-auto p-6">
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <button
             onClick={() => setShowAddChild(true)}
             className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 text-left border border-gray-200"
@@ -420,6 +433,21 @@ const Dashboard: React.FC = () => {
               <div>
                 <h3 className="text-lg font-semibold text-gray-800">Student Dashboard</h3>
                 <p className="text-gray-600 text-sm">Switch to student learning view</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setShowTesting(true)}
+            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 text-left border border-gray-200"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center">
+                <TestTube className="text-white" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Run Tests</h3>
+                <p className="text-gray-600 text-sm">Validate system functionality</p>
               </div>
             </div>
           </button>
