@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
@@ -14,9 +15,13 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   editingChild
 }) => {
   const [name, setName] = useState(editingChild?.name || '');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
+    editingChild?.subjects?.map(s => s.name) || []
+  );
   const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.age_group || '');
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(editingChild?.challenges || []);
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(
+    editingChild?.challenges?.map(c => c.name) || []
+  );
 
   const subjects = [
     { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
@@ -73,8 +78,8 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
         parent_id: '', // This will be set by the parent component
         name: name.trim(),
         subjects: subjectLabels,
-        age_group: selectedAgeGroup,
-        challenges: challengeLabels
+        challenges: challengeLabels,
+        age_group: selectedAgeGroup
       });
     }
   };
