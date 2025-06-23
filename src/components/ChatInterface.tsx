@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Send, Star, Save, FileText } from 'lucide-react';
-import { Child } from '../types';
+import { Child, SavedConversation } from '../types';
 import { DocumentData } from '../types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -16,13 +16,15 @@ interface ChatInterfaceProps {
   onBack: () => void;
   selectedChild: Child | null;
   onSaveConversation: (conversation: any) => void;
+  loadedConversation?: SavedConversation | null;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
   selectedCategories,
   onBack,
   selectedChild,
-  onSaveConversation
+  onSaveConversation,
+  loadedConversation
 }) => {
   const { profile } = useAuth();
   const [messages, setMessages] = useState<Array<{ id: string; type: 'user' | 'ai'; content: string; timestamp: Date }>>([]);
@@ -33,6 +35,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isFavorite, setIsFavorite] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
+  const [isLoadedConversation, setIsLoadedConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Conversation context tracking
@@ -143,15 +146,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
   };
 
+  // Load conversation messages if a loaded conversation is provided
+  useEffect(() => {
+    if (loadedConversation && loadedConversation.messages) {
+      console.log('Loading conversation:', loadedConversation);
+      setMessages(loadedConversation.messages);
+      setConversationTitle(loadedConversation.title);
+      setIsFavorite(loadedConversation.isFavorite || false);
+      setIsLoadedConversation(true);
+    }
+  }, [loadedConversation]);
+
   useEffect(() => {
     if (profile) {
       fetchDocuments();
     }
   }, [profile, selectedChild]);
 
-  // Add initial AI greeting when chat loads
+  // Add initial AI greeting when chat loads (only for new conversations)
   useEffect(() => {
-    if (messages.length === 0) {
+    if (messages.length === 0 && !loadedConversation) {
       const greeting = generateInitialGreeting();
       const initialMessage = {
         id: 'initial-greeting',
@@ -161,7 +175,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       };
       setMessages([initialMessage]);
     }
-  }, [selectedChild, documents]);
+  }, [selectedChild, documents, loadedConversation]);
 
   const fetchDocuments = async () => {
     if (!profile) return;
@@ -438,71 +452,118 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         return;
       }
 
-      // Create a title from the first user message if no title provided
-      const title = conversationTitle.trim() || 
-        (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
+      // If this is a loaded conversation, update it instead of creating new
+      if (isLoadedConversation && loadedConversation) {
+        // Update existing conversation
+        const { error: conversationError } = await supabase
+          .from('conversations')
+          .update({
+            title: conversationTitle.trim() || loadedConversation.title,
+            is_favorite: isFavorite
+          })
+          .eq('id', loadedConversation.id);
 
-      // Simplified conversation data structure
-      const conversationData = {
-        child_id: selectedChild.id,
-        title,
-        is_favorite: isFavorite,
-        is_saved: true
-      };
+        if (conversationError) {
+          console.error('Error updating conversation:', conversationError);
+          throw conversationError;
+        }
 
-      console.log('Saving conversation with data:', conversationData);
+        // Delete existing messages
+        const { error: deleteError } = await supabase
+          .from('messages')
+          .delete()
+          .eq('conversation_id', loadedConversation.id);
 
-      // Save conversation to database
-      const { data: conversation, error: conversationError } = await supabase
-        .from('conversations')
-        .insert(conversationData)
-        .select()
-        .single();
+        if (deleteError) {
+          console.error('Error deleting old messages:', deleteError);
+          throw deleteError;
+        }
 
-      if (conversationError) {
-        console.error('Error saving conversation:', conversationError);
-        throw conversationError;
+        // Insert updated messages
+        const messageInserts = messages.map(msg => ({
+          conversation_id: loadedConversation.id,
+          content: msg.content,
+          type: msg.type,
+          created_at: msg.timestamp.toISOString()
+        }));
+
+        const { error: messagesError } = await supabase
+          .from('messages')
+          .insert(messageInserts);
+
+        if (messagesError) {
+          console.error('Error saving updated messages:', messagesError);
+          throw messagesError;
+        }
+
+        toast({
+          title: 'Success',
+          description: 'Conversation updated successfully!',
+        });
+      } else {
+        // Create new conversation (existing code)
+        const title = conversationTitle.trim() || 
+          (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
+
+        const conversationData = {
+          child_id: selectedChild.id,
+          title,
+          is_favorite: isFavorite,
+          is_saved: true
+        };
+
+        console.log('Saving conversation with data:', conversationData);
+
+        const { data: conversation, error: conversationError } = await supabase
+          .from('conversations')
+          .insert(conversationData)
+          .select()
+          .single();
+
+        if (conversationError) {
+          console.error('Error saving conversation:', conversationError);
+          throw conversationError;
+        }
+
+        if (!conversation) {
+          console.error('No conversation data returned after insert');
+          throw new Error('No conversation data returned after insert');
+        }
+
+        console.log('Conversation saved successfully:', conversation);
+
+        const messageInserts = messages.map(msg => ({
+          conversation_id: conversation.id,
+          content: msg.content,
+          type: msg.type,
+          created_at: msg.timestamp.toISOString()
+        }));
+
+        console.log('Saving messages:', messageInserts);
+
+        const { error: messagesError } = await supabase
+          .from('messages')
+          .insert(messageInserts);
+
+        if (messagesError) {
+          console.error('Error saving messages:', messagesError);
+          throw messagesError;
+        }
+
+        console.log('Messages saved successfully');
+
+        toast({
+          title: 'Success',
+          description: 'Conversation saved successfully!',
+        });
+
+        onSaveConversation(conversation);
       }
-
-      if (!conversation) {
-        console.error('No conversation data returned after insert');
-        throw new Error('No conversation data returned after insert');
-      }
-
-      console.log('Conversation saved successfully:', conversation);
-
-      // Save messages
-      const messageInserts = messages.map(msg => ({
-        conversation_id: conversation.id,
-        content: msg.content,
-        type: msg.type,
-        created_at: msg.timestamp.toISOString()
-      }));
-
-      console.log('Saving messages:', messageInserts);
-
-      const { error: messagesError } = await supabase
-        .from('messages')
-        .insert(messageInserts);
-
-      if (messagesError) {
-        console.error('Error saving messages:', messagesError);
-        throw messagesError;
-      }
-
-      console.log('Messages saved successfully');
-
-      toast({
-        title: 'Success',
-        description: 'Conversation saved successfully!',
-      });
 
       // Close the dialog and reset form
       setShowSaveDialog(false);
       setConversationTitle('');
       setIsFavorite(false);
-
-      onSaveConversation(conversation);
     } catch (error) {
       console.error('Error saving conversation:', error);
       toast({
@@ -532,11 +593,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
             </button>
             <div>
               <h1 className="text-xl font-bold text-gray-800">
-                Learning with {learnerName}
+                {isLoadedConversation ? `Conversation: ${loadedConversation?.title}` : `Learning with ${learnerName}`}
               </h1>
-              <p className="text-sm text-gray-600">
-                {selectedCategories.subject} • {selectedCategories.ageGroup} • {selectedCategories.challenge}
-              </p>
+              {!isLoadedConversation && (
+                <p className="text-sm text-gray-600">
+                  {selectedCategories.subject} • {selectedCategories.ageGroup} • {selectedCategories.challenge}
+                </p>
+              )}
               {documents.length > 0 && (
                 <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
                   <FileText size={12} />
@@ -552,7 +615,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
             >
               <Save size={16} />
-              Save Conversation
+              {isLoadedConversation ? 'Update Conversation' : 'Save Conversation'}
             </button>
           )}
         </div>
@@ -644,19 +707,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {showSaveDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Save Conversation</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              {isLoadedConversation ? 'Update Conversation' : 'Save Conversation'}
+            </h3>
             
             <div className="space-y-4">
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Title (optional)
+                  Title {!isLoadedConversation && '(optional)'}
                 </label>
                 <input
                   id="title"
                   type="text"
                   value={conversationTitle}
                   onChange={(e) => setConversationTitle(e.target.value)}
-                  placeholder="Enter conversation title (auto-generated if empty)"
+                  placeholder={isLoadedConversation ? "Enter conversation title" : "Enter conversation title (auto-generated if empty)"}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -686,7 +751,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   onClick={handleSaveConversation}
                   className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
                 >
-                  Save
+                  {isLoadedConversation ? 'Update' : 'Save'}
                 </button>
               </div>
             </div>
