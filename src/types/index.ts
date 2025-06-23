@@ -1,7 +1,5 @@
 
-// Unified type definitions for the application
-// All student-related functionality now uses the Child interface
-
+// Main application types
 export interface Child {
   id: string;
   parent_id: string;
@@ -18,24 +16,41 @@ export interface SavedConversation {
   title: string;
   child_id: string;
   child_name: string;
-  messages: Message[];
+  messages: ConversationMessage[];
   created_at: string;
   is_favorite: boolean;
   is_saved: boolean;
 }
 
-export interface Message {
+export interface ConversationMessage {
   id: string;
-  type: 'user' | 'ai';
   content: string;
+  type: 'user' | 'ai';
   created_at: string;
 }
 
-// Extended child interface with computed properties for UI
-export interface ChildWithDetails extends Child {
-  subject_names: string[];
-  challenge_names: string[];
+export interface ChatMessage {
+  id: string;
+  content: string;
+  type: 'user' | 'ai';
+  timestamp: Date;
 }
 
-// For backward compatibility during transition
-export type StudentProfile = Child;
+export interface SelectedCategories {
+  subject: string;
+  ageGroup: string;
+  challenge: string;
+}
+
+// Re-export database types for convenience
+export type { 
+  Profile, 
+  Subject, 
+  Challenge, 
+  Conversation, 
+  Message,
+  DocumentData,
+  ForumCategory,
+  ForumTopic,
+  ForumPost
+} from './database';
