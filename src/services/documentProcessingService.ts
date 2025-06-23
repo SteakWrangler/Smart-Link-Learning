@@ -1,7 +1,5 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { extractTextFromPDF, analyzeTestContent } from '@/utils/pdfProcessor';
-import { DatabaseError, handleError } from '@/utils/errorHandler';
 import type { DocumentData } from '@/types/database';
 
 export const processDocument = async (
@@ -40,11 +38,7 @@ export const processDocument = async (
     
     if (error) {
       console.error('Error updating document:', error);
-      throw new DatabaseError(
-        'Failed to update document after processing',
-        'DOCUMENT_UPDATE_ERROR',
-        error
-      );
+      throw error;
     }
     
     console.log('Document processing completed successfully');
@@ -56,28 +50,27 @@ export const processDocument = async (
   } catch (error) {
     console.error('Error processing document:', error);
     
-    // Handle the error through our centralized system
-    const appError = handleError(error, 'Document Processing');
-    
     // Update the document with error status
+    const errorMessage = error instanceof Error ? error.message : 'Unknown processing error';
+    
     try {
       await supabase
         .from('documents')
         .update({
           processing_status: 'failed',
-          processing_error: appError.message,
+          processing_error: errorMessage,
           updated_at: new Date().toISOString()
         })
         .eq('id', documentId);
     } catch (updateError) {
-      handleError(updateError, 'Document Error Status Update');
+      console.error('Error updating document with error status:', updateError);
     }
     
     // Return partial result with error information
     return {
       extractedText: '',
       analysis: null,
-      error: appError.message
+      error: errorMessage
     };
   }
 };
@@ -88,19 +81,16 @@ export const getProcessedDocument = async (documentId: string): Promise<Document
       .from('documents')
       .select('*')
       .eq('id', documentId)
-      .maybeSingle(); // Use maybeSingle instead of single to handle no data gracefully
+      .single();
     
     if (error) {
-      throw new DatabaseError(
-        'Failed to fetch processed document',
-        'DOCUMENT_FETCH_ERROR',
-        error
-      );
+      console.error('Error fetching processed document:', error);
+      return null;
     }
     
     return data as DocumentData;
   } catch (error) {
-    handleError(error, 'Get Processed Document');
+    console.error('Error in getProcessedDocument:', error);
     return null;
   }
 };
