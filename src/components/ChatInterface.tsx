@@ -36,6 +36,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [tags, setTags] = useState<string[]>([]);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
   const [isLoadedConversation, setIsLoadedConversation] = useState(false);
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Conversation context tracking
@@ -53,6 +54,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   });
 
   const learnerName = selectedChild?.name || 'Student';
+
+  // Load conversation messages if a loaded conversation is provided
+  useEffect(() => {
+    console.log('ChatInterface: loadedConversation prop changed:', loadedConversation);
+    
+    if (loadedConversation && loadedConversation.messages) {
+      console.log('Loading conversation messages:', loadedConversation.messages);
+      setMessages(loadedConversation.messages);
+      setConversationTitle(loadedConversation.title);
+      setIsFavorite(loadedConversation.isFavorite || false);
+      setIsLoadedConversation(true);
+      setCurrentConversationId(loadedConversation.id);
+      console.log('Conversation loaded successfully');
+    } else if (!loadedConversation) {
+      // Reset to new conversation state
+      console.log('Resetting to new conversation');
+      setMessages([]);
+      setConversationTitle('');
+      setIsFavorite(false);
+      setIsLoadedConversation(false);
+      setCurrentConversationId(null);
+    }
+  }, [loadedConversation]);
+
+  useEffect(() => {
+    if (profile) {
+      fetchDocuments();
+    }
+  }, [profile, selectedChild]);
 
   // Generate initial greeting with personalized examples
   const generateInitialGreeting = (): string => {
@@ -146,23 +176,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
   };
 
-  // Load conversation messages if a loaded conversation is provided
-  useEffect(() => {
-    if (loadedConversation && loadedConversation.messages) {
-      console.log('Loading conversation:', loadedConversation);
-      setMessages(loadedConversation.messages);
-      setConversationTitle(loadedConversation.title);
-      setIsFavorite(loadedConversation.isFavorite || false);
-      setIsLoadedConversation(true);
-    }
-  }, [loadedConversation]);
-
-  useEffect(() => {
-    if (profile) {
-      fetchDocuments();
-    }
-  }, [profile, selectedChild]);
-
   // Add initial AI greeting when chat loads (only for new conversations)
   useEffect(() => {
     if (messages.length === 0 && !loadedConversation) {
@@ -177,6 +190,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   }, [selectedChild, documents, loadedConversation]);
 
+  // Fetch documents from Supabase
   const fetchDocuments = async () => {
     if (!profile) return;
 
@@ -216,7 +230,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  // Intelligent response generation using context
+  // Generate context-aware response using OpenAI API
   const generateContextAwareResponse = async (userMessage: string): Promise<string> => {
     // Build conversation context for the LLM
     const conversationHistory = messages.map(msg => ({
@@ -387,6 +401,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     return `I'm here to help ${learnerName} with personalized learning! I can create practice tests, explain concepts, suggest activities, or analyze uploaded documents. What would be most helpful?`;
   };
 
+  // Handle sending a message
   const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
     
@@ -430,6 +445,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  // Handle saving the conversation
   const handleSaveConversation = async () => {
     try {
       if (!selectedChild) {
@@ -453,15 +469,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       }
 
       // If this is a loaded conversation, update it instead of creating new
-      if (isLoadedConversation && loadedConversation) {
+      if (isLoadedConversation && currentConversationId) {
         // Update existing conversation
         const { error: conversationError } = await supabase
           .from('conversations')
           .update({
-            title: conversationTitle.trim() || loadedConversation.title,
+            title: conversationTitle.trim() || loadedConversation?.title || 'Updated Conversation',
             is_favorite: isFavorite
           })
-          .eq('id', loadedConversation.id);
+          .eq('id', currentConversationId);
 
         if (conversationError) {
           console.error('Error updating conversation:', conversationError);
@@ -472,7 +488,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         const { error: deleteError } = await supabase
           .from('messages')
           .delete()
-          .eq('conversation_id', loadedConversation.id);
+          .eq('conversation_id', currentConversationId);
 
         if (deleteError) {
           console.error('Error deleting old messages:', deleteError);
@@ -481,7 +497,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
         // Insert updated messages
         const messageInserts = messages.map(msg => ({
-          conversation_id: loadedConversation.id,
+          conversation_id: currentConversationId,
           content: msg.content,
           type: msg.type,
           created_at: msg.timestamp.toISOString()
