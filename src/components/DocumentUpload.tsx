@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
@@ -8,18 +9,16 @@ import { FileInput } from '@/components/ui/file-input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
-import type { Child, StudentProfile, Subject } from '@/types/database';
+import type { Child, Subject } from '@/types/database';
 
 interface DocumentUploadProps {
   children?: Child[];
-  studentProfile?: StudentProfile | null;
   subjects: Subject[];
   onUploadComplete: () => void;
 }
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({
   children,
-  studentProfile,
   subjects,
   onUploadComplete
 }) => {
@@ -31,15 +30,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const [uploading, setUploading] = useState(false);
   const { profile } = useAuth();
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (profile?.user_type === 'student' && !studentProfile) {
-      toast({
-        title: "Info",
-        description: "Please complete your student profile to upload documents.",
-      });
-    }
-  }, [profile, studentProfile, toast]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +62,6 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       const documentData = {
         user_id: profile.id,
         child_id: profile.user_type === 'parent' ? selectedChild : null,
-        student_profile_id: profile.user_type === 'student' ? studentProfile?.id : null,
         file_name: selectedFile.name,
         file_path: filePath,
         file_size: selectedFile.size,
@@ -95,7 +84,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         try {
           const learnerName = profile.user_type === 'parent' 
             ? children?.find(child => child.id === selectedChild)?.name || 'Student'
-            : studentProfile?.name || 'Student';
+            : profile.first_name || 'Student';
           
           console.log('Starting PDF processing for document:', document.id);
           

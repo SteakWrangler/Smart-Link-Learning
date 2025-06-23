@@ -80,88 +80,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
     }
   };
 
-  const handleProfileSave = async (profileData: any) => {
-    try {
-      if (studentChild) {
-        // Update existing child record
-        const { error: updateError } = await supabase
-          .from('children')
-          .update({
-            name: profileData.name,
-            age_group: profileData.ageGroup,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', studentChild.id);
-
-        if (updateError) throw updateError;
-
-        // Update subjects and challenges
-        await updateChildSubjectsAndChallenges(studentChild.id, profileData.subjects, profileData.challenges);
-      } else {
-        // Create new child record for student
-        const { data: newChild, error: insertError } = await supabase
-          .from('children')
-          .insert({
-            name: profileData.name,
-            age_group: profileData.ageGroup,
-            parent_id: profile?.id
-          })
-          .select()
-          .single();
-
-        if (insertError) throw insertError;
-
-        // Add subjects and challenges
-        await updateChildSubjectsAndChallenges(newChild.id, profileData.subjects, profileData.challenges);
-        setStudentChild(newChild);
-      }
-
-      await fetchStudentData();
-    } catch (error) {
-      console.error('Error saving student profile:', error);
-    }
-  };
-
-  const updateChildSubjectsAndChallenges = async (childId: string, subjects: string[], challenges: string[]) => {
-    try {
-      // Remove existing subjects and challenges
-      await supabase.from('child_subjects').delete().eq('child_id', childId);
-      await supabase.from('child_challenges').delete().eq('child_id', childId);
-
-      // Get subject and challenge IDs (lookup by name)
-      const { data: subjectsData } = await supabase
-        .from('subjects')
-        .select('id, name')
-        .in('name', subjects);
-
-      const { data: challengesData } = await supabase
-        .from('challenges')
-        .select('id, name')
-        .in('name', challenges);
-
-      // Add new subject associations
-      if (subjectsData && subjectsData.length > 0) {
-        const subjectInserts = subjectsData.map(subject => ({
-          child_id: childId,
-          subject_id: subject.id
-        }));
-        await supabase.from('child_subjects').insert(subjectInserts);
-      }
-
-      // Add new challenge associations
-      if (challengesData && challengesData.length > 0) {
-        const challengeInserts = challengesData.map(challenge => ({
-          child_id: childId,
-          challenge_id: challenge.id
-        }));
-        await supabase.from('child_challenges').insert(challengeInserts);
-      }
-    } catch (error) {
-      console.error('Error updating child subjects and challenges:', error);
-      throw error;
-    }
-  };
-
   const startLearningSession = () => {
     if (!studentChild) return;
     setShowChat(true);
@@ -252,12 +170,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
                 Let's set up your learning profile so we can provide you with personalized lessons!
               </p>
               <Button
-                onClick={() => handleProfileSave({
-                  name: 'My Profile',
-                  ageGroup: 'elementary',
-                  subjects: [],
-                  challenges: []
-                })}
+                onClick={() => {/* Profile setup would go here */}}
                 className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600"
               >
                 Create My Profile
