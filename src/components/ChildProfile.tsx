@@ -38,7 +38,7 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
           <div>
             <h3 className="text-lg font-semibold text-gray-800">{child.name}</h3>
             <p className="text-sm text-gray-500">
-              Created {child.createdAt.toLocaleDateString()}
+              Created {new Date(child.created_at).toLocaleDateString()}
             </p>
           </div>
         </div>
@@ -66,7 +66,7 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <Users size={16} className="text-gray-600" />
             <span className="text-sm font-medium text-gray-700">Age Group</span>
           </div>
-          <span className="text-sm text-gray-600">{getAgeGroupLabel(child.ageGroup)}</span>
+          <span className="text-sm text-gray-600">{getAgeGroupLabel(child.age_group)}</span>
         </div>
 
         {child.subjects && child.subjects.length > 0 && (
@@ -78,10 +78,10 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <div className="flex flex-wrap gap-1">
               {child.subjects.map(subject => (
                 <span
-                  key={subject}
+                  key={subject.id}
                   className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
                 >
-                  {subject}
+                  {subject.name}
                 </span>
               ))}
             </div>
@@ -97,10 +97,10 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <div className="flex flex-wrap gap-1">
               {child.challenges.map(challenge => (
                 <span
-                  key={challenge}
+                  key={challenge.id}
                   className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
                 >
-                  {challenge}
+                  {challenge.name}
                 </span>
               ))}
             </div>
