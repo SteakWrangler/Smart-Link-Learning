@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, BookOpen, Brain, MessageSquare, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -123,7 +122,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         }}
         onBack={() => setShowChat(false)}
         selectedChild={childForChat}
-        selectedStudentProfile={null}
         onSaveConversation={() => {}}
       />
     );
