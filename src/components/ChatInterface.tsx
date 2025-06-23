@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Save, ArrowLeft, MessageSquare, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,18 +56,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [saving, setSaving] = useState(false);
   const [conversationTitle, setConversationTitle] = useState('');
   const [tags, setTags] = useState<string[]>([]);
-  const [showSaveSection, setShowSaveSection] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const { profile } = useAuth();
 
   useEffect(() => {
     // Scroll to bottom on message change
     chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // Show save section only when there are messages
-  useEffect(() => {
-    setShowSaveSection(messages.length > 0);
   }, [messages]);
 
   const handleSaveConversation = async () => {
@@ -186,7 +179,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     setTimeout(() => {
       const aiResponse: ChatMessage = {
         id: crypto.randomUUID(),
-        content: `This is a simulated AI response to: "${input}". I'm here to help with ${selectedCategories.subject} for ${selectedCategories.ageGroup} students, focusing on ${selectedCategories.challenge}.`,
+        content: `This is a simulated AI response to: "${input}".`,
         type: 'ai',
         timestamp: new Date()
       };
@@ -221,7 +214,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <ArrowLeft size={20} />
               Back
             </button>
-            <h1 className="text-2xl font-bold text-gray-800">Learning Session with {selectedChild.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Learning Session</h1>
           </div>
         </div>
       </div>
@@ -229,72 +222,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       {/* Content */}
       <div className="max-w-4xl mx-auto p-6">
         <Card className="mb-4">
-          <CardContent className="p-4">
-            <h2 className="text-lg font-semibold mb-3">Session Details</h2>
-            <div className="space-y-2">
-              <p>
-                <span className="font-medium">Subject:</span> {selectedCategories.subject || 'Not specified'}
-              </p>
-              <p>
-                <span className="font-medium">Age Group:</span> {selectedCategories.ageGroup || selectedChild.ageGroup}
-              </p>
-              <p>
-                <span className="font-medium">Challenge:</span> {selectedCategories.challenge || 'General learning support'}
-              </p>
-            </div>
+          <CardContent>
+            <h2 className="text-xl font-semibold mb-2">Session Details</h2>
+            <p>
+              <span className="font-medium">Subject:</span> {selectedCategories.subject}
+            </p>
+            <p>
+              <span className="font-medium">Age Group:</span> {selectedCategories.ageGroup}
+            </p>
+            <p>
+              <span className="font-medium">Challenge:</span> {selectedCategories.challenge}
+            </p>
           </CardContent>
         </Card>
 
         <div className="space-y-4">
-          {/* Welcome Message */}
-          {messages.length === 0 && (
-            <Card className="bg-gradient-to-r from-blue-50 to-green-50">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <MessageSquare className="text-blue-600" size={20} />
-                  <h3 className="font-semibold text-gray-800">Welcome to your Learning Session!</h3>
-                </div>
-                <p className="text-gray-600 mb-3">
-                  Hi {selectedChild.name}! I'm here to help you with {selectedCategories.subject || 'your studies'}.
-                  What would you like to learn about today?
-                </p>
-                <div className="text-sm text-gray-500">
-                  💡 Try asking me questions like:
-                  <ul className="list-disc list-inside mt-1 space-y-1">
-                    <li>"Can you help me understand fractions?"</li>
-                    <li>"What's the difference between there, their, and they're?"</li>
-                    <li>"Can you explain photosynthesis?"</li>
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Chat Messages */}
-          <div className="space-y-3">
+          <div className="space-y-2">
             {messages.map(message => (
               <div
                 key={message.id}
-                className={`p-4 rounded-lg ${
-                  message.type === 'user' 
-                    ? 'bg-blue-100 text-blue-800 ml-auto max-w-[80%]' 
-                    : 'bg-gray-100 text-gray-800 mr-auto max-w-[80%]'
-                }`}
+                className={`p-3 rounded-lg ${message.type === 'user' ? 'bg-blue-100 text-blue-800 ml-auto w-fit max-w-[80%]' : 'bg-gray-100 text-gray-800 mr-auto w-fit max-w-[80%]'}`}
               >
-                <div className="whitespace-pre-wrap">{message.content}</div>
-                <div className="text-xs text-gray-500 mt-2">
+                {message.content}
+                <div className="text-xs text-gray-500 mt-1 text-right">
                   {message.timestamp.toLocaleTimeString()}
                 </div>
               </div>
             ))}
-            <div ref={chatBottomRef} />
+            <div ref={chatBottomRef} /> {/* Scroll anchor */}
           </div>
 
           {/* Input Area */}
-          <div className="flex items-center gap-2 bg-white p-4 rounded-lg border">
+          <div className="flex items-center gap-2">
             <Input
               type="text"
-              placeholder="Type your message here..."
+              placeholder="Type your message..."
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
@@ -302,83 +265,69 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                   sendMessage();
                 }
               }}
-              className="flex-1"
             />
-            <Button onClick={sendMessage} disabled={!input.trim()}>
+            <Button onClick={sendMessage}>
               <Send size={16} />
             </Button>
           </div>
 
-          {/* Save Conversation Section - Only show when there are messages */}
-          {showSaveSection && (
-            <Card className="bg-gray-50">
-              <CardContent className="p-4">
-                <h3 className="text-lg font-semibold mb-3">Save This Conversation</h3>
-                <div className="space-y-3">
-                  <Input
-                    type="text"
-                    placeholder="Enter a title for this conversation"
-                    value={conversationTitle}
-                    onChange={e => setConversationTitle(e.target.value)}
-                  />
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      placeholder="Add tags (press Enter to add)..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          const target = e.target as HTMLInputElement;
-                          addTag(target.value);
-                          target.value = '';
-                        }
-                      }}
-                      className="flex-1"
-                    />
-                  </div>
-                  {tags.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {tags.map(tag => (
-                        <Button
-                          key={tag}
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => removeTag(tag)}
-                          className="text-xs"
-                        >
-                          {tag} ×
-                        </Button>
-                      ))}
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between pt-2">
-                    <Button
-                      onClick={handleSaveConversation}
-                      disabled={saving}
-                      className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600"
-                    >
-                      {saving ? 'Saving...' : (
-                        <>
-                          <Save size={16} className="mr-2" />
-                          Save Conversation
-                        </>
-                      )}
-                    </Button>
-                    <button
-                      onClick={toggleFavorite}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
-                        isFavorite
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-                      }`}
-                    >
-                      <Star size={16} className={isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} />
-                      {isFavorite ? 'Favorite' : 'Add to Favorites'}
-                    </button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
+          {/* Save Conversation Section */}
+          <div className="border-t pt-4">
+            <h3 className="text-lg font-semibold mb-2">Save Conversation</h3>
+            <Input
+              type="text"
+              placeholder="Conversation Title"
+              value={conversationTitle}
+              onChange={e => setConversationTitle(e.target.value)}
+              className="mb-2"
+            />
+            <div className="flex items-center gap-2 mb-2">
+              <Input
+                type="text"
+                placeholder="Add tags..."
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    addTag(e.target.value);
+                    e.target.value = ''; // Clear the input
+                  }
+                }}
+              />
+              {/* Tag List */}
+              <div>
+                {tags.map(tag => (
+                  <Button
+                    key={tag}
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => removeTag(tag)}
+                    className="mr-1"
+                  >
+                    {tag} x
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <Button
+                onClick={handleSaveConversation}
+                disabled={saving}
+                className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600"
+              >
+                {saving ? 'Saving...' : <><Save size={16} className="mr-2" /> Save Conversation</>}
+              </Button>
+              <button
+                onClick={toggleFavorite}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
+                  isFavorite
+                    ? 'bg-yellow-100 text-yellow-700'
+                    : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                }`}
+              >
+                <Star size={16} className={isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} />
+                {isFavorite ? 'Favorite' : 'Add to Favorites'}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
