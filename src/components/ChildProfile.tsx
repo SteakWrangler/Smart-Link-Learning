@@ -78,10 +78,10 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <div className="flex flex-wrap gap-1">
               {child.subjects.map(subject => (
                 <span
-                  key={subject.id}
+                  key={subject}
                   className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
                 >
-                  {subject.name}
+                  {subject}
                 </span>
               ))}
             </div>
@@ -97,10 +97,10 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
             <div className="flex flex-wrap gap-1">
               {child.challenges.map(challenge => (
                 <span
-                  key={challenge.id}
+                  key={challenge}
                   className="px-2 py-1 bg-orange-100 text-orange-700 text-xs rounded-full"
                 >
-                  {challenge.name}
+                  {challenge}
                 </span>
               ))}
             </div>

@@ -5,38 +5,10 @@ export interface Child {
   parent_id: string;
   name: string;
   age_group: string;
+  subjects: string[];
+  challenges: string[];
   created_at: string;
   updated_at: string;
-  // These will be populated via joins with the junction tables
-  subjects?: Subject[];
-  challenges?: Challenge[];
-}
-
-export interface Subject {
-  id: string;
-  name: string;
-  created_at: string;
-}
-
-export interface Challenge {
-  id: string;
-  name: string;
-  description?: string;
-  created_at: string;
-}
-
-export interface ChildSubject {
-  id: string;
-  child_id: string;
-  subject_id: string;
-  subject?: Subject;
-}
-
-export interface ChildChallenge {
-  id: string;
-  child_id: string;
-  challenge_id: string;
-  challenge?: Challenge;
 }
 
 export interface SavedConversation {
@@ -73,6 +45,8 @@ export interface SelectedCategories {
 // Re-export database types for convenience
 export type { 
   Profile, 
+  Subject, 
+  Challenge, 
   Conversation, 
   Message,
   DocumentData,
