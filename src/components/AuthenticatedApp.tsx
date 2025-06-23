@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
@@ -36,7 +37,7 @@ const AuthenticatedApp: React.FC = () => {
           .eq('parent_id', profile.id)
           .order('created_at', { ascending: false });
 
-        const { data: children, error } = await query;
+        const { data: childrenData, error } = await query;
 
         if (error) {
           console.error('Error fetching children:', error);
@@ -48,8 +49,17 @@ const AuthenticatedApp: React.FC = () => {
           return;
         }
 
-        if (children) {
-          setChildren(children);
+        if (childrenData) {
+          // Transform database children to match Child type
+          const transformedChildren: Child[] = childrenData.map(dbChild => ({
+            id: dbChild.id,
+            name: dbChild.name,
+            ageGroup: dbChild.age_group,
+            subjects: [], // Will be populated when needed
+            challenges: [], // Will be populated when needed
+            createdAt: new Date(dbChild.created_at)
+          }));
+          setChildren(transformedChildren);
         } else {
           setChildren([]);
         }
@@ -151,13 +161,20 @@ const AuthenticatedApp: React.FC = () => {
       <>
         {currentView === 'dashboard' && (
           <Dashboard 
+            children={children}
             onStartChat={handleStartChat}
             onViewConversationHistory={handleViewConversationHistory}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
           <CategorySelector
-            selectedChild={selectedChild}
+            selectedCategories={selectedCategories}
+            onCategoryChange={(type: string, value: string) => {
+              setSelectedCategories(prev => ({
+                ...prev,
+                [type]: value
+              }));
+            }}
             onCategoriesSelected={handleCategoriesSelected}
             onBack={handleBackFromCategories}
           />
@@ -185,7 +202,7 @@ const AuthenticatedApp: React.FC = () => {
 
   if (profile?.user_type === 'student') {
     return (
-      <StudentDashboard user={user} profile={profile} />
+      <StudentDashboard onBack={() => {}} />
     );
   }
 
