@@ -58,16 +58,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
           parent_id: childData.parent_id,
           name: childData.name,
           age_group: childData.age_group,
-          subjects: subjectData?.map(s => ({ 
-            id: s.subjects.id, 
-            name: s.subjects.name, 
-            created_at: '' 
-          })).filter(Boolean) || [],
-          challenges: challengeData?.map(c => ({ 
-            id: c.challenges.id, 
-            name: c.challenges.name, 
-            created_at: '' 
-          })).filter(Boolean) || [],
+          subjects: subjectData?.map(s => s.subjects?.name).filter(Boolean) || [],
+          challenges: challengeData?.map(c => c.challenges?.name).filter(Boolean) || [],
           created_at: childData.created_at,
           updated_at: childData.updated_at
         };
@@ -189,9 +181,9 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
     return (
       <ChatInterface
         selectedCategories={{
-          subject: studentChild.subjects?.map(s => s.name).join(', ') || '',
+          subject: studentChild.subjects.join(', '),
           ageGroup: studentChild.age_group,
-          challenge: studentChild.challenges?.map(c => c.name).join(', ') || ''
+          challenge: studentChild.challenges.join(', ')
         }}
         onBack={() => setShowChat(false)}
         selectedChild={studentChild}
@@ -271,7 +263,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
                   </span>
                 </div>
 
-                {studentChild.subjects && studentChild.subjects.length > 0 && (
+                {studentChild.subjects.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <BookOpen size={16} />
@@ -283,14 +275,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
                           key={index}
                           className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
                         >
-                          {subject.name}
+                          {subject}
                         </span>
                       ))}
                     </div>
                   </div>
                 )}
 
-                {studentChild.challenges && studentChild.challenges.length > 0 && (
+                {studentChild.challenges.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <Brain size={16} />
@@ -302,7 +294,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
                           key={index}
                           className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
                         >
-                          {challenge.name}
+                          {challenge}
                         </span>
                       ))}
                     </div>

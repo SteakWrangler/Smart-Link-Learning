@@ -1,8 +1,8 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, BookOpen, MessageSquare, History, User, Users, UserPlus } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import { useAuth } from '@/hooks/useAuth';
-import { useChildrenData } from '@/hooks/useChildrenData';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import ChildProfile from './ChildProfile';
@@ -13,7 +13,7 @@ import StudentDashboard from './StudentDashboard';
 
 const Dashboard: React.FC = () => {
   const { profile, loading: authLoading } = useAuth();
-  const { children, loading: childrenLoading, refetch: refetchChildren } = useChildrenData();
+  const [children, setChildren] = useState<Child[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
@@ -25,13 +25,66 @@ const Dashboard: React.FC = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [showStudentView, setShowStudentView] = useState(false);
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
 
   useEffect(() => {
     if (profile && !authLoading) {
+      loadChildren();
       loadConversations();
     }
   }, [profile, authLoading]);
+
+  const loadChildren = async () => {
+    if (!profile) return;
+
+    try {
+      console.log('Loading children for user:', profile.id);
+      
+      const { data, error } = await supabase
+        .from('children')
+        .select(`
+          *,
+          child_subjects (
+            subjects (
+              name
+            )
+          ),
+          child_challenges (
+            challenges (
+              name
+            )
+          )
+        `)
+        .eq('parent_id', profile.id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading children:', error);
+        throw error;
+      }
+
+      console.log('Loaded children data:', data);
+
+      setChildren(data.map(child => ({
+        id: child.id,
+        parent_id: child.parent_id,
+        name: child.name,
+        age_group: child.age_group,
+        subjects: child.child_subjects.map((cs: any) => cs.subjects.name),
+        challenges: child.child_challenges.map((cc: any) => cc.challenges.name),
+        created_at: child.created_at,
+        updated_at: child.updated_at
+      })));
+    } catch (error) {
+      console.error('Error loading children:', error);
+      toast({
+        title: "Error loading student profiles",
+        description: "Please try again later.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleAddChild = async (childData: Omit<Child, 'id' | 'created_at' | 'updated_at'>) => {
     if (!profile) return;
@@ -51,11 +104,7 @@ const Dashboard: React.FC = () => {
         if (updateError) throw updateError;
 
         // Update subjects and challenges
-        await updateChildSubjectsAndChallenges(
-          editingChild.id, 
-          childData.subjects as string[], 
-          childData.challenges as string[]
-        );
+        await updateChildSubjectsAndChallenges(editingChild.id, childData.subjects, childData.challenges);
 
         toast({
           title: "Student profile updated successfully!",
@@ -76,11 +125,7 @@ const Dashboard: React.FC = () => {
         if (insertError) throw insertError;
 
         // Add subjects and challenges
-        await updateChildSubjectsAndChallenges(
-          newChild.id, 
-          childData.subjects as string[], 
-          childData.challenges as string[]
-        );
+        await updateChildSubjectsAndChallenges(newChild.id, childData.subjects, childData.challenges);
 
         toast({
           title: "Student profile created successfully!",
@@ -88,7 +133,7 @@ const Dashboard: React.FC = () => {
         });
       }
 
-      await refetchChildren();
+      await loadChildren();
       setShowAddChild(false);
       setEditingChild(null);
     } catch (error: any) {
@@ -189,6 +234,8 @@ const Dashboard: React.FC = () => {
       setSavedConversations(formattedConversations);
     } catch (error) {
       console.error('Error loading conversations:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -208,7 +255,7 @@ const Dashboard: React.FC = () => {
       if (error) throw error;
 
       // Refresh children list
-      await refetchChildren();
+      await loadChildren();
       setSavedConversations(prev => prev.filter(conv => conv.child_id !== deleteConfirmChild));
       
       toast({
@@ -237,9 +284,9 @@ const Dashboard: React.FC = () => {
     
     // Auto-select some default categories based on the child's profile
     setSelectedCategories({
-      subject: child.subjects?.[0]?.name || 'General',
+      subject: child.subjects?.[0] || 'General',
       ageGroup: child.age_group,
-      challenge: child.challenges?.[0]?.name || 'General Support'
+      challenge: child.challenges?.[0] || 'General Support'
     });
   };
 
@@ -268,11 +315,18 @@ const Dashboard: React.FC = () => {
       // Load the conversation into the chat interface
       setSelectedChild(child);
       
+      // Convert SavedConversation back to the conversation format expected by ChatInterface
+      const conversationData = {
+        id: conversation.id,
+        title: conversation.title,
+        messages: conversation.messages
+      };
+
       // Set the selected categories based on the conversation context
       setSelectedCategories({
         subject: 'Previous Conversation',
         ageGroup: child.age_group,
-        challenge: child.challenges?.[0]?.name || 'General'
+        challenge: child.challenges?.[0] || 'General'
       });
 
       // Hide history to show chat
@@ -292,7 +346,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  if (authLoading || childrenLoading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
