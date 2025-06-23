@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
 import { SavedConversation, Child } from '../types';
@@ -35,57 +34,89 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       setLoading(true);
       setError(null);
 
-      let query = supabase
+      // Query conversations with child data and messages
+      const { data: conversationsData, error: conversationsError } = await supabase
         .from('conversations')
         .select(`
-          *,
-          child:child_id (
+          id,
+          title,
+          child_id,
+          is_favorite,
+          is_saved,
+          created_at,
+          children!inner (
             id,
-            name
-          ),
-          messages (
-            id,
-            content,
-            type,
-            created_at
+            name,
+            parent_id
           )
         `)
-        .eq('parent_id', profile.id)
+        // Filter by parent through the children table relationship
+        .eq('children.parent_id', profile.id)
         .order('created_at', { ascending: false });
 
-      // Filter based on tab
-      if (activeTab === 'saved') {
-        query = query.eq('is_saved', true);
+      if (conversationsError) {
+        throw conversationsError;
       }
-      // For recent, we could add additional logic here if needed
 
-      const { data: conversations, error } = await query;
-
-      if (error) {
-        console.error('Error loading conversations:', error);
-        throw error;
+      if (!conversationsData || conversationsData.length === 0) {
+        setConversations([]);
+        return;
       }
+
+      // Get messages for each conversation
+      const conversationIds = conversationsData.map(conv => conv.id);
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('*')
+        .in('conversation_id', conversationIds)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        throw messagesError;
+      }
+
+      // Group messages by conversation
+      const messagesByConversation = messagesData?.reduce((acc, message) => {
+        if (!acc[message.conversation_id]) {
+          acc[message.conversation_id] = [];
+        }
+        acc[message.conversation_id].push(message);
+        return acc;
+      }, {} as Record<string, any[]>) || {};
 
       // Transform the data to match our SavedConversation type
-      const formattedConversations = conversations.map(conv => ({
-        id: conv.id,
-        title: conv.title,
-        childId: conv.child_id,
-        childName: conv.child ? conv.child.name : 'Unknown',
-        messages: conv.messages.map((msg: any) => ({
-          id: msg.id,
-          content: msg.content,
-          type: msg.type,
-          timestamp: new Date(msg.created_at)
-        })),
-        createdAt: new Date(conv.created_at),
-        isFavorite: conv.is_favorite || false
-      }));
+      const formattedConversations = conversationsData
+        .filter(conv => {
+          // Filter based on active tab
+          if (activeTab === 'saved') {
+            return conv.is_saved === true;
+          }
+          return true; // For recent, show all
+        })
+        .map(conv => ({
+          id: conv.id,
+          title: conv.title,
+          childId: conv.child_id,
+          childName: conv.children?.name || 'Unknown',
+          messages: (messagesByConversation[conv.id] || []).map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            type: msg.type,
+            timestamp: new Date(msg.created_at)
+          })),
+          createdAt: new Date(conv.created_at),
+          isFavorite: conv.is_favorite || false
+        }));
 
       setConversations(formattedConversations);
     } catch (err) {
       console.error('Error loading conversations:', err);
       setError('Failed to load conversations');
+      toast({
+        title: 'Error',
+        description: 'Failed to load conversations. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
