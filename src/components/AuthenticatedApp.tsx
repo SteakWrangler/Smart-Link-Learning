@@ -1,65 +1,195 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
-import Auth from './Auth';
 import Dashboard from './Dashboard';
 import StudentDashboard from './StudentDashboard';
-import WelcomeSection from './WelcomeSection';
-import { Button } from '@/components/ui/button';
-import { LogOut, User } from 'lucide-react';
+import ChatInterface from './ChatInterface';
+import ConversationHistory from './ConversationHistory';
+import CategorySelector from './CategorySelector';
+import { Child, SavedConversation } from '../types';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
-const AuthenticatedApp = () => {
-  const { user, profile, loading, signOut } = useAuth();
-  const [showDashboard, setShowDashboard] = useState(false);
+const AuthenticatedApp: React.FC = () => {
+  const { user, profile, loading } = useAuth();
+  const [children, setChildren] = useState<Child[]>([]);
+  const [selectedChild, setSelectedChild] = useState<Child | null>(null);
+  const [currentView, setCurrentView] = useState<'dashboard' | 'category-selector' | 'chat' | 'conversation-history'>('dashboard');
+  const [selectedCategories, setSelectedCategories] = useState({
+    subject: '',
+    ageGroup: '',
+    challenge: ''
+  });
+  const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
+
+  useEffect(() => {
+    const fetchChildren = async () => {
+      if (!profile?.id) {
+        console.error('No profile ID available');
+        return;
+      }
+
+      try {
+        let query = supabase
+          .from('children')
+          .select('*')
+          .eq('parent_id', profile.id)
+          .order('created_at', { ascending: false });
+
+        const { data: children, error } = await query;
+
+        if (error) {
+          console.error('Error fetching children:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load students. Please try again.',
+            variant: 'destructive'
+          });
+          return;
+        }
+
+        if (children) {
+          setChildren(children);
+        } else {
+          setChildren([]);
+        }
+      } catch (error) {
+        console.error('Error fetching children:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load students. Please try again.',
+          variant: 'destructive'
+        });
+      }
+    };
+
+    if (profile?.user_type === 'parent') {
+      fetchChildren();
+    }
+  }, [profile]);
+
+  const handleStartChat = (child: Child) => {
+    console.log('Starting chat with child:', child);
+    setSelectedChild(child);
+    setLoadedConversation(null); // Clear any loaded conversation when starting fresh
+    setCurrentView('category-selector');
+  };
+
+  const handleCategoriesSelected = (categories: any) => {
+    console.log('Categories selected:', categories);
+    setSelectedCategories(categories);
+    setCurrentView('chat');
+  };
+
+  const handleBackFromChat = () => {
+    console.log('Returning from chat to dashboard');
+    setLoadedConversation(null); // Clear loaded conversation when going back
+    setCurrentView('dashboard');
+  };
+
+  const handleBackFromCategories = () => {
+    console.log('Returning from categories to dashboard');
+    setCurrentView('dashboard');
+  };
+
+  const handleBackFromHistory = () => {
+    console.log('Returning from conversation history to dashboard');
+    setCurrentView('dashboard');
+  };
+
+  const handleViewConversationHistory = (child: Child) => {
+    console.log('Viewing conversation history for child:', child);
+    setSelectedChild(child);
+    setCurrentView('conversation-history');
+  };
+
+  const handleLoadConversation = async (conversation: SavedConversation) => {
+    console.log('Loading conversation:', conversation);
+    console.log('Setting loaded conversation and navigating to chat');
+    
+    // Find the child for this conversation
+    const child = children.find(c => c.id === conversation.childId);
+    if (!child) {
+      console.error('Child not found for conversation:', conversation.childId);
+      toast({
+        title: 'Error',
+        description: 'Student not found for this conversation',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    console.log('Found child for conversation:', child);
+    
+    // Set the selected child and loaded conversation
+    setSelectedChild(child);
+    setLoadedConversation(conversation);
+    
+    // Navigate to chat interface
+    console.log('Navigating to chat with loaded conversation');
+    setCurrentView('chat');
+  };
+
+  const handleSaveConversation = (conversation: any) => {
+    console.log('Conversation saved:', conversation);
+    toast({
+      title: 'Success',
+      description: 'Conversation saved successfully!',
+    });
+  };
 
   if (loading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!user) {
+    return <div>Not authenticated.</div>;
+  }
+
+  if (profile?.user_type === 'parent') {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
+      <>
+        {currentView === 'dashboard' && (
+          <Dashboard 
+            onStartChat={handleStartChat}
+            onViewConversationHistory={handleViewConversationHistory}
+          />
+        )}
+        {currentView === 'category-selector' && selectedChild && (
+          <CategorySelector
+            selectedChild={selectedChild}
+            onCategoriesSelected={handleCategoriesSelected}
+            onBack={handleBackFromCategories}
+          />
+        )}
+        {currentView === 'chat' && selectedChild && (
+          <ChatInterface
+            selectedCategories={selectedCategories}
+            onBack={handleBackFromChat}
+            selectedChild={selectedChild}
+            onSaveConversation={handleSaveConversation}
+            loadedConversation={loadedConversation}
+          />
+        )}
+        {currentView === 'conversation-history' && selectedChild && (
+          <ConversationHistory
+            children={children}
+            onLoadConversation={handleLoadConversation}
+            onBack={handleBackFromHistory}
+            profile={profile}
+          />
+        )}
+      </>
     );
   }
 
-  if (!user || !profile) {
-    return <Auth onAuthSuccess={() => setShowDashboard(true)} />;
+  if (profile?.user_type === 'student') {
+    return (
+      <StudentDashboard user={user} profile={profile} />
+    );
   }
 
-  if (showDashboard) {
-    return <Dashboard onBack={() => setShowDashboard(false)} />;
-  }
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
-      {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-gray-800">Joyful Learner</h1>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-gray-600">
-              <User size={20} />
-              <span>Welcome, {profile.first_name || profile.email}</span>
-            </div>
-            <Button
-              onClick={signOut}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <LogOut size={16} />
-              Sign Out
-            </Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="max-w-6xl mx-auto p-6">
-        <WelcomeSection onGetStarted={() => setShowDashboard(true)} />
-      </div>
-    </div>
-  );
+  return <div>Authenticated App</div>;
 };
 
 export default AuthenticatedApp;
