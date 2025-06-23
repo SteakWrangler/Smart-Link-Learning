@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
 import { SavedConversation, Child } from '../types';
@@ -28,20 +27,31 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   useEffect(() => {
     loadConversations();
-  }, [activeTab]);
+  }, [activeTab, profile]);
 
   const loadConversations = async () => {
     try {
       setLoading(true);
       setError(null);
 
+      if (!profile?.id) {
+        console.error('No profile ID available');
+        setError('User profile not available');
+        return;
+      }
+
+      console.log('Loading conversations for profile:', profile.id);
+      console.log('Active tab:', activeTab);
+
+      // First, get conversations that belong to this user's children
       let query = supabase
         .from('conversations')
         .select(`
           *,
-          child:child_id (
+          child:children!inner (
             id,
-            name
+            name,
+            parent_id
           ),
           messages (
             id,
@@ -50,15 +60,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             created_at
           )
         `)
-        .eq('parent_id', profile.id)
+        .eq('child.parent_id', profile.id)
         .order('created_at', { ascending: false });
 
       // Filter based on tab
       if (activeTab === 'saved') {
         query = query.eq('is_saved', true);
       }
-      // For recent, we could add additional logic here if needed
 
+      console.log('Executing query...');
       const { data: conversations, error } = await query;
 
       if (error) {
@@ -66,26 +76,43 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         throw error;
       }
 
-      // Transform the data to match our SavedConversation type
-      const formattedConversations = conversations.map(conv => ({
-        id: conv.id,
-        title: conv.title,
-        childId: conv.child_id,
-        childName: conv.child ? conv.child.name : 'Unknown',
-        messages: conv.messages.map((msg: any) => ({
-          id: msg.id,
-          content: msg.content,
-          type: msg.type,
-          timestamp: new Date(msg.created_at)
-        })),
-        createdAt: new Date(conv.created_at),
-        isFavorite: conv.is_favorite || false
-      }));
+      console.log('Raw conversations data:', conversations);
 
+      if (!conversations) {
+        console.log('No conversations returned');
+        setConversations([]);
+        return;
+      }
+
+      // Transform the data to match our SavedConversation type
+      const formattedConversations = conversations.map(conv => {
+        console.log('Processing conversation:', conv);
+        return {
+          id: conv.id,
+          title: conv.title,
+          childId: conv.child_id,
+          childName: conv.child ? conv.child.name : 'Unknown',
+          messages: conv.messages ? conv.messages.map((msg: any) => ({
+            id: msg.id,
+            content: msg.content,
+            type: msg.type,
+            timestamp: new Date(msg.created_at)
+          })) : [],
+          createdAt: new Date(conv.created_at),
+          isFavorite: conv.is_favorite || false
+        };
+      });
+
+      console.log('Formatted conversations:', formattedConversations);
       setConversations(formattedConversations);
     } catch (err) {
       console.error('Error loading conversations:', err);
       setError('Failed to load conversations');
+      toast({
+        title: 'Error',
+        description: 'Failed to load conversations. Please try again.',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -251,7 +278,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         ) : conversations.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
             {activeTab === 'recent' 
-              ? 'No recent conversations'
+              ? 'No recent conversations found'
               : 'No saved conversations yet. Click the save button in a conversation to save it.'}
           </div>
         ) : (
@@ -284,7 +311,9 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                 <div onClick={() => onLoadConversation(conversation)}>
                   <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
                   <p className="text-sm text-gray-600 line-clamp-2">
-                    {conversation.messages[conversation.messages.length - 1]?.content || 'No messages'}
+                    {conversation.messages && conversation.messages.length > 0 
+                      ? conversation.messages[conversation.messages.length - 1]?.content || 'No messages'
+                      : 'No messages'}
                   </p>
                   <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
                     <Clock size={14} />
