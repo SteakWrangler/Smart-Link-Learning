@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Child, Subject, Challenge } from '@/types/database';
+import type { Child } from '@/types';
+import type { Subject, Challenge } from '@/types/database';
 import ChatInterface from './ChatInterface';
 import DocumentManager from './DocumentManager';
 
@@ -18,8 +19,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const [studentChild, setStudentChild] = useState<Child | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -41,27 +40,31 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         .single();
 
       if (childData) {
-        setStudentChild(childData);
-        
         // Fetch selected subjects
         const { data: subjectData } = await supabase
           .from('child_subjects')
-          .select('subject_id, subjects(name)')
+          .select('subject_id, subjects(id, name)')
           .eq('child_id', childData.id);
-
-        if (subjectData) {
-          setSelectedSubjects(subjectData.map(s => s.subject_id));
-        }
 
         // Fetch selected challenges
         const { data: challengeData } = await supabase
           .from('child_challenges')
-          .select('challenge_id, challenges(name)')
+          .select('challenge_id, challenges(id, name)')
           .eq('child_id', childData.id);
 
-        if (challengeData) {
-          setSelectedChallenges(challengeData.map(c => c.challenge_id));
-        }
+        // Convert to unified Child interface
+        const childWithDetails: Child = {
+          id: childData.id,
+          parent_id: childData.parent_id,
+          name: childData.name,
+          age_group: childData.age_group,
+          subjects: subjectData?.map(s => s.subjects?.name).filter(Boolean) || [],
+          challenges: challengeData?.map(c => c.challenges?.name).filter(Boolean) || [],
+          created_at: childData.created_at,
+          updated_at: childData.updated_at
+        };
+
+        setStudentChild(childWithDetails);
       }
 
       // Fetch all subjects and challenges
@@ -113,7 +116,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
         // Add subjects and challenges
         await updateChildSubjectsAndChallenges(newChild.id, profileData.subjects, profileData.challenges);
-        setStudentChild(newChild);
       }
 
       await fetchStudentData();
@@ -176,37 +178,15 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
   }
 
   if (showChat && studentChild) {
-    const selectedSubjectNames = subjects
-      .filter(s => selectedSubjects.includes(s.id))
-      .map(s => s.name)
-      .join(', ');
-    
-    const selectedChallengeNames = challenges
-      .filter(c => selectedChallenges.includes(c.id))
-      .map(c => c.name)
-      .join(', ');
-
-    // Convert Child to the expected format for ChatInterface
-    const childForChat = {
-      id: studentChild.id,
-      parent_id: studentChild.parent_id,
-      name: studentChild.name,
-      age_group: studentChild.age_group,
-      subjects: subjects.filter(s => selectedSubjects.includes(s.id)).map(s => s.name),
-      challenges: challenges.filter(c => selectedChallenges.includes(c.id)).map(c => c.name),
-      created_at: studentChild.created_at,
-      updated_at: studentChild.updated_at
-    };
-
     return (
       <ChatInterface
         selectedCategories={{
-          subject: selectedSubjectNames,
+          subject: studentChild.subjects.join(', '),
           ageGroup: studentChild.age_group,
-          challenge: selectedChallengeNames
+          challenge: studentChild.challenges.join(', ')
         }}
         onBack={() => setShowChat(false)}
-        selectedChild={childForChat}
+        selectedChild={studentChild}
         onSaveConversation={() => {}}
       />
     );
@@ -283,44 +263,40 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
                   </span>
                 </div>
 
-                {selectedSubjects.length > 0 && (
+                {studentChild.subjects.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <BookOpen size={16} />
                       My Subjects
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {subjects
-                        .filter(s => selectedSubjects.includes(s.id))
-                        .map(subject => (
-                          <span
-                            key={subject.id}
-                            className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
-                          >
-                            {subject.name}
-                          </span>
-                        ))}
+                      {studentChild.subjects.map((subject, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                        >
+                          {subject}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
 
-                {selectedChallenges.length > 0 && (
+                {studentChild.challenges.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <Brain size={16} />
                       Learning Support Areas
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {challenges
-                        .filter(c => selectedChallenges.includes(c.id))
-                        .map(challenge => (
-                          <span
-                            key={challenge.id}
-                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
-                          >
-                            {challenge.name}
-                          </span>
-                        ))}
+                      {studentChild.challenges.map((challenge, index) => (
+                        <span
+                          key={index}
+                          className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
+                        >
+                          {challenge}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 )}
