@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Plus, BookOpen, MessageSquare, History, User, Users, UserPlus } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
@@ -37,6 +38,10 @@ const Dashboard: React.FC = () => {
     if (!profile) return;
 
     try {
+      // Extract subject and challenge names for database operations
+      const subjectNames = childData.subjects?.map(s => s.name) || [];
+      const challengeNames = childData.challenges?.map(c => c.name) || [];
+
       if (editingChild) {
         // Update existing child
         const { error: updateError } = await supabase
@@ -53,8 +58,8 @@ const Dashboard: React.FC = () => {
         // Update subjects and challenges
         await updateChildSubjectsAndChallenges(
           editingChild.id, 
-          childData.subjects as string[], 
-          childData.challenges as string[]
+          subjectNames, 
+          challengeNames
         );
 
         toast({
@@ -78,8 +83,8 @@ const Dashboard: React.FC = () => {
         // Add subjects and challenges
         await updateChildSubjectsAndChallenges(
           newChild.id, 
-          childData.subjects as string[], 
-          childData.challenges as string[]
+          subjectNames, 
+          challengeNames
         );
 
         toast({
