@@ -442,9 +442,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const title = conversationTitle.trim() || 
         (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
 
+      // Simplified conversation data structure
       const conversationData = {
-        child_id: selectedChild?.id || null,
-        parent_id: profile.id,
+        child_id: selectedChild.id,
         title,
         is_favorite: isFavorite,
         is_saved: true
