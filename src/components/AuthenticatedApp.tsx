@@ -161,9 +161,6 @@ const AuthenticatedApp: React.FC = () => {
       <>
         {currentView === 'dashboard' && (
           <Dashboard 
-            children={children}
-            onStartChat={handleStartChat}
-            onViewConversationHistory={handleViewConversationHistory}
             onBack={() => {}}
           />
         )}
@@ -176,8 +173,6 @@ const AuthenticatedApp: React.FC = () => {
                 [type]: value
               }));
             }}
-            onCategoriesSelected={handleCategoriesSelected}
-            onBack={handleBackFromCategories}
           />
         )}
         {currentView === 'chat' && selectedChild && (
