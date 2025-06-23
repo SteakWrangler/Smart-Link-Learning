@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Save, ArrowLeft, MessageSquare, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -287,8 +288,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
                 placeholder="Add tags..."
                 onKeyDown={e => {
                   if (e.key === 'Enter') {
-                    addTag(e.target.value);
-                    e.target.value = ''; // Clear the input
+                    const target = e.target as HTMLInputElement;
+                    addTag(target.value);
+                    target.value = ''; // Clear the input
                   }
                 }}
               />
