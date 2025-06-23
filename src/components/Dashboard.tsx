@@ -1,75 +1,70 @@
+
 import React, { useState, useEffect } from 'react';
-import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users } from 'lucide-react';
+import { Plus, BookOpen, MessageSquare, History, User, Users, UserPlus } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
-import { Child as DatabaseChild } from '../types/database';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 import ChildProfile from './ChildProfile';
 import AddChildForm from './AddChildForm';
-import ConversationHistory from './ConversationHistory';
 import ChatInterface from './ChatInterface';
-import DocumentManager from './DocumentManager';
-import CommunityForum from './CommunityForum';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/useAuth';
-import { useToast } from '@/hooks/use-toast';
+import ConversationHistory from './ConversationHistory';
+import StudentDashboard from './StudentDashboard';
 
-interface DashboardProps {
-  onBack: () => void;
-}
-
-const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
-  const { profile } = useAuth();
-  const { toast } = useToast();
+const Dashboard: React.FC = () => {
+  const { profile, loading: authLoading } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
-  const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
   const [showAddChild, setShowAddChild] = useState(false);
-  const [editingChild, setEditingChild] = useState<Child | undefined>();
+  const [editingChild, setEditingChild] = useState<Child | null>(null);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
-  const [showChat, setShowChat] = useState(false);
-  const [showDocuments, setShowDocuments] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
-  const [showResourceModal, setShowResourceModal] = useState<string | null>(null);
-  const [showCommunityForum, setShowCommunityForum] = useState(false);
-  const [forumInitialCategory, setForumInitialCategory] = useState<string | undefined>(undefined);
-  const [showAddChildForm, setShowAddChildForm] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<{
     subject: string;
     ageGroup: string;
     challenge: string;
   } | null>(null);
-  const [showChatInterface, setShowChatInterface] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showStudentView, setShowStudentView] = useState(false);
+  const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !authLoading) {
       loadChildren();
+      loadConversations();
     }
-  }, [profile]);
+  }, [profile, authLoading]);
 
   const loadChildren = async () => {
+    if (!profile) return;
+
     try {
-      setLoading(true);
+      console.log('Loading children for user:', profile.id);
+      
       const { data, error } = await supabase
         .from('children')
         .select(`
           *,
-          child_challenges (
-            challenge_id,
-            challenges (
+          child_subjects (
+            subjects (
               name
             )
           ),
-          child_subjects (
-            subject_id,
-            subjects (
+          child_challenges (
+            challenges (
               name
             )
           )
         `)
-        .eq('parent_id', profile?.id)
+        .eq('parent_id', profile.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error loading children:', error);
+        throw error;
+      }
+
+      console.log('Loaded children data:', data);
 
       setChildren(data.map(child => ({
         id: child.id,
@@ -84,12 +79,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     } catch (error) {
       console.error('Error loading children:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load students. Please try again.',
-        variant: 'destructive'
+        title: "Error loading student profiles",
+        description: "Please try again later.",
+        variant: "destructive",
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -97,8 +90,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     if (!profile) return;
 
     try {
-      console.log('Adding/updating child:', childData);
-
       if (editingChild) {
         // Update existing child
         const { error: updateError } = await supabase
@@ -114,10 +105,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
         // Update subjects and challenges
         await updateChildSubjectsAndChallenges(editingChild.id, childData.subjects, childData.challenges);
-        
+
         toast({
-          title: "Success",
-          description: "Child updated successfully",
+          title: "Student profile updated successfully!",
+          description: "Changes have been saved.",
         });
       } else {
         // Create new child
@@ -132,26 +123,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           .single();
 
         if (insertError) throw insertError;
-        console.log('Created new child:', newChild);
 
         // Add subjects and challenges
         await updateChildSubjectsAndChallenges(newChild.id, childData.subjects, childData.challenges);
 
         toast({
-          title: "Success",
-          description: "Child added successfully",
+          title: "Student profile created successfully!",
+          description: "You can now start learning sessions.",
         });
       }
 
-      // Refresh children list
       await loadChildren();
-      setEditingChild(undefined);
       setShowAddChild(false);
-    } catch (error) {
+      setEditingChild(null);
+    } catch (error: any) {
       console.error('Error saving child:', error);
       toast({
-        title: "Error",
-        description: "Failed to save child",
+        title: "Error saving student profile",
+        description: error.message,
         variant: "destructive",
       });
     }
@@ -159,8 +148,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
   const updateChildSubjectsAndChallenges = async (childId: string, subjects: string[], challenges: string[]) => {
     try {
-      console.log('Updating subjects and challenges for child:', childId, { subjects, challenges });
-
       // Remove existing subjects and challenges
       await supabase.from('child_subjects').delete().eq('child_id', childId);
       await supabase.from('child_challenges').delete().eq('child_id', childId);
@@ -176,17 +163,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         .select('id, name')
         .in('name', challenges);
 
-      console.log('Found subjects:', subjectsData);
-      console.log('Found challenges:', challengesData);
-
       // Add new subject associations
       if (subjectsData && subjectsData.length > 0) {
         const subjectInserts = subjectsData.map(subject => ({
           child_id: childId,
           subject_id: subject.id
         }));
-        const { error: subjectError } = await supabase.from('child_subjects').insert(subjectInserts);
-        if (subjectError) throw subjectError;
+        await supabase.from('child_subjects').insert(subjectInserts);
       }
 
       // Add new challenge associations
@@ -195,12 +178,99 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           child_id: childId,
           challenge_id: challenge.id
         }));
-        const { error: challengeError } = await supabase.from('child_challenges').insert(challengeInserts);
-        if (challengeError) throw challengeError;
+        await supabase.from('child_challenges').insert(challengeInserts);
       }
     } catch (error) {
       console.error('Error updating child subjects and challenges:', error);
       throw error;
+    }
+  };
+
+  const loadConversations = async () => {
+    if (!profile) return;
+
+    try {
+      console.log('Loading conversations for user:', profile.id);
+      
+      const { data, error } = await supabase
+        .from('conversations')
+        .select(`
+          *,
+          child:child_id (
+            id,
+            name
+          ),
+          messages (
+            id,
+            content,
+            type,
+            created_at
+          )
+        `)
+        .eq('parent_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+
+      console.log('Loaded conversations data:', data);
+
+      const formattedConversations = data.map(conv => ({
+        id: conv.id,
+        title: conv.title,
+        child_id: conv.child_id,
+        child_name: conv.child ? conv.child.name : 'Unknown',
+        messages: conv.messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          type: msg.type,
+          created_at: msg.created_at
+        })),
+        created_at: conv.created_at,
+        is_favorite: conv.is_favorite || false,
+        is_saved: conv.is_saved || false
+      }));
+
+      setSavedConversations(formattedConversations);
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteChild = async (childId: string) => {
+    if (!profile) return;
+
+    try {
+      console.log('Deleting child:', childId);
+      
+      // Delete the child (cascade will handle related records)
+      const { error } = await supabase
+        .from('children')
+        .delete()
+        .eq('id', childId)
+        .eq('parent_id', profile.id);
+
+      if (error) throw error;
+
+      // Refresh children list
+      await loadChildren();
+      setSavedConversations(prev => prev.filter(conv => conv.child_id !== deleteConfirmChild));
+      
+      toast({
+        title: "Success",
+        description: "Student profile deleted successfully.",
+      });
+    } catch (error: any) {
+      console.error('Error deleting child:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete student profile. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeleteConfirmChild(null);
     }
   };
 
@@ -209,84 +279,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     setShowAddChild(true);
   };
 
-  const handleDeleteChild = (childId: string) => {
-    console.log('Delete clicked for child:', childId);
-    setDeleteConfirmChild(childId);
-  };
-
-  const confirmDeleteChild = async () => {
-    if (!deleteConfirmChild) return;
-
-    try {
-      console.log('Starting delete process for child:', deleteConfirmChild);
-      
-      // Delete child associations first
-      const { error: subjectsError } = await supabase.from('child_subjects').delete().eq('child_id', deleteConfirmChild);
-      if (subjectsError) {
-        console.error('Error deleting child subjects:', subjectsError);
-        throw subjectsError;
-      }
-      
-      const { error: challengesError } = await supabase.from('child_challenges').delete().eq('child_id', deleteConfirmChild);
-      if (challengesError) {
-        console.error('Error deleting child challenges:', challengesError);
-        throw challengesError;
-      }
-      
-      // Delete child
-      const { error } = await supabase
-        .from('children')
-        .delete()
-        .eq('id', deleteConfirmChild);
-
-      if (error) {
-        console.error('Error deleting child:', error);
-        throw error;
-      }
-
-      console.log('Child deleted successfully');
-
-      // Refresh children list
-      await loadChildren();
-      setSavedConversations(prev => prev.filter(conv => conv.child_id !== deleteConfirmChild));
-      
-      toast({
-        title: "Success",
-        description: "Child deleted successfully",
-      });
-    } catch (error) {
-      console.error('Error deleting child:', error);
-      toast({
-        title: "Error",
-        description: "Failed to delete child",
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteConfirmChild(null);
-    }
-  };
-
   const handleSelectChild = (child: Child) => {
     setSelectedChild(child);
-    setShowChat(true);
+    
+    // Auto-select some default categories based on the child's profile
+    setSelectedCategories({
+      subject: child.subjects?.[0] || 'General',
+      ageGroup: child.age_group,
+      challenge: child.challenges?.[0] || 'General Support'
+    });
   };
 
-  const handleSaveConversation = async (conversation: SavedConversation) => {
+  const handleSaveConversation = async (conversation: any) => {
     try {
-      // The conversation is already saved in the database by ChatInterface
-      // We just need to refresh the conversation list
-      await loadChildren();
+      console.log('Saving conversation:', conversation);
+      await loadConversations();
+      
       toast({
-        title: 'Success',
-        description: 'Conversation saved successfully!',
+        title: "Conversation saved!",
+        description: "You can find it in your conversation history.",
       });
     } catch (error) {
-      console.error('Error saving conversation:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save conversation. Please try again.',
-        variant: 'destructive'
-      });
+      console.error('Error in save conversation callback:', error);
     }
   };
 
@@ -298,17 +312,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         throw new Error('Child not found');
       }
 
-      // Set the selected child
+      // Load the conversation into the chat interface
       setSelectedChild(child);
-
-      // Load the conversation messages
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversation.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
+      
+      // Convert SavedConversation back to the conversation format expected by ChatInterface
+      const conversationData = {
+        id: conversation.id,
+        title: conversation.title,
+        messages: conversation.messages
+      };
 
       // Set the selected categories based on the conversation context
       setSelectedCategories({
@@ -317,416 +329,70 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         challenge: child.challenges?.[0] || 'General'
       });
 
-      // Show the chat interface
-      setShowChatInterface(true);
-    } catch (error) {
+      // Hide history to show chat
+      setShowHistory(false);
+      
+      toast({
+        title: "Conversation loaded!",
+        description: "Continuing your previous conversation.",
+      });
+    } catch (error: any) {
       console.error('Error loading conversation:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to load conversation. Please try again.',
-        variant: 'destructive'
+        title: "Error",
+        description: "Failed to load conversation. Please try again.",
+        variant: "destructive",
       });
     }
   };
 
-  // Handle support action clicks
-  const handleSupportAction = (topic: string, actionType: 'resources' | 'community') => {
-    switch (actionType) {
-      case 'resources':
-        // Show resource modal with multiple options
-        setShowResourceModal(topic);
-        break;
-      case 'community':
-        // Open community forum
-        setForumInitialCategory(topic);
-        setShowCommunityForum(true);
-        break;
-    }
-  };
-
-  // Get unique challenges from all children
-  const getChildrenChallenges = (): string[] => {
-    const allChallenges = children.flatMap(child => child.challenges || []);
-    return [...new Set(allChallenges)]; // Remove duplicates
-  };
-
-  // Comprehensive resource database with multiple sources for each topic
-  const getResourcesForTopic = (topic: string) => {
-    const resourceDatabase: Record<string, {
-      title: string;
-      resources: Array<{
-        title: string;
-        description: string;
-        url: string;
-        organization: string;
-      }>;
-    }> = {
-      'guide': {
-        title: 'Getting Started with Learning Support',
-        resources: [
-          {
-            title: 'Getting Started with Learning and Thinking Differences',
-            description: 'Step-by-step guide for parents beginning their learning support journey',
-            url: 'https://www.understood.org/articles/getting-started-with-learning-and-thinking-differences',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Learning Disabilities: What You Need to Know',
-            description: 'Comprehensive overview for families new to learning differences',
-            url: 'https://www.verywellmind.com/learning-disabilities-what-parents-need-to-know-20586',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'National Center for Learning Disabilities',
-            description: 'Research, resources, and advocacy for learning disabilities',
-            url: 'https://www.ncld.org/research-and-policy/what-is-ld/',
-            organization: 'NCLD'
-          },
-          {
-            title: 'CDC: Facts About Learning Disabilities',
-            description: 'Medical and educational information about learning disabilities',
-            url: 'https://www.cdc.gov/ncbddd/developmentaldisabilities/facts-about-intellectual-disability.html',
-            organization: 'CDC'
-          }
-        ]
-      },
-      'frustration': {
-        title: 'Managing Learning Frustration',
-        resources: [
-          {
-            title: '70+ Mental Health Coping Skills for Kids',
-            description: 'Practical tools to help your child stay strong in any situation',
-            url: 'https://www.verywellmind.com/mental-health-coping-skills-for-kids-8724073',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'How to Help a Child With Anxiety',
-            description: 'Supporting children through learning-related stress and worry',
-            url: 'https://www.understood.org/articles/anxiety-in-children-with-learning-differences',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Building Resilience in Children',
-            description: 'Helping kids bounce back from learning challenges',
-            url: 'https://childmind.org/guide/building-resilience-in-children/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'Teaching Coping Skills to Children',
-            description: 'Evidence-based strategies for emotional regulation',
-            url: 'https://www.internet4classrooms.com/blog/2022/04/teaching_coping_skills_to_children.htm',
-            organization: 'Internet4Classrooms'
-          }
-        ]
-      },
-      'adhd/focus issues': {
-        title: 'ADHD & Focus Support',
-        resources: [
-          {
-            title: 'CHADD Parent Resources',
-            description: 'Evidence-based information and support for ADHD families',
-            url: 'https://chadd.org/about-adhd/parents-caregivers/',
-            organization: 'CHADD'
-          },
-          {
-            title: '8 Simple Strategies for Students With ADHD',
-            description: 'Helpful techniques for teachers and parents',
-            url: 'https://www.verywellmind.com/help-for-students-with-adhd-20538',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'CDC ADHD Information for Parents',
-            description: 'Medical information and behavior management strategies',
-            url: 'https://www.cdc.gov/ncbddd/adhd/facts.html',
-            organization: 'CDC'
-          },
-          {
-            title: 'ADHD and School Success',
-            description: 'Academic support strategies and accommodations',
-            url: 'https://www.understood.org/articles/adhd-and-school-what-you-need-to-know',
-            organization: 'Understood.org'
-          }
-        ]
-      },
-      'dyslexia': {
-        title: 'Dyslexia Support',
-        resources: [
-          {
-            title: 'International Dyslexia Association',
-            description: 'Comprehensive information about dyslexia and reading difficulties',
-            url: 'https://dyslexiaida.org/dyslexia-basics/',
-            organization: 'IDA'
-          },
-          {
-            title: 'What Is Dyslexia?',
-            description: 'Signs, causes, and how to help children with dyslexia',
-            url: 'https://www.understood.org/articles/what-is-dyslexia',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Dyslexia Reading Programs That Work',
-            description: 'Evidence-based interventions and teaching methods',
-            url: 'https://www.verywellmind.com/teaching-reading-to-children-with-dyslexia-20530',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'Dyslexia and Your Child',
-            description: 'What parents need to know about supporting reading development',
-            url: 'https://childmind.org/guide/dyslexia-and-your-child/',
-            organization: 'Child Mind Institute'
-          }
-        ]
-      },
-      'processing delays': {
-        title: 'Processing Delays Support',
-        resources: [
-          {
-            title: 'Understanding Processing Issues',
-            description: 'What processing issues are and how to help',
-            url: 'https://www.understood.org/articles/processing-issues-in-kids-what-you-need-to-know',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Slow Processing Speed: What You Need to Know',
-            description: 'Signs, causes, and ways to help children with slow processing speed',
-            url: 'https://www.verywellmind.com/what-is-slow-processing-speed-20546',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'Processing Speed and Executive Functioning',
-            description: 'How processing speed impacts learning and daily activities',
-            url: 'https://childmind.org/article/processing-speed-and-executive-functioning/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'Sensory Processing Issues',
-            description: 'Understanding and supporting sensory processing differences',
-            url: 'https://www.understood.org/articles/sensory-processing-issues-what-you-need-to-know',
-            organization: 'Understood.org'
-          }
-        ]
-      },
-      'math anxiety': {
-        title: 'Math Anxiety Support',
-        resources: [
-          {
-            title: 'How to Help Your Child Overcome Math Anxiety',
-            description: 'Practical strategies to reduce math stress and build confidence',
-            url: 'https://www.verywellmind.com/math-anxiety-in-children-20558',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'Math Anxiety: What You Need to Know',
-            description: 'Understanding causes and solutions for math fear',
-            url: 'https://www.understood.org/articles/math-anxiety-what-you-need-to-know',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Math Anxiety and Dyscalculia',
-            description: 'When math difficulties go beyond anxiety',
-            url: 'https://childmind.org/article/how-to-help-kids-with-math-anxiety/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'Khan Academy for Parents',
-            description: 'Free resources to support math learning at home',
-            url: 'https://www.khanacademy.org/about/blog/tag/parents',
-            organization: 'Khan Academy'
-          }
-        ]
-      },
-      'general learning support': {
-        title: 'General Learning Support',
-        resources: [
-          {
-            title: 'Learning and Thinking Differences',
-            description: 'Comprehensive guide to various learning differences',
-            url: 'https://www.understood.org/articles/learning-and-thinking-differences-your-child-may-have',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Special Education Rights and Resources',
-            description: 'Understanding IEPs, 504 plans, and special education law',
-            url: 'https://www.parentcenterhub.org/find-your-center/',
-            organization: 'Parent Information Centers'
-          },
-          {
-            title: 'Learning Disabilities Association',
-            description: 'National organization supporting individuals with learning disabilities',
-            url: 'https://ldaamerica.org/support/new-to-ld/',
-            organization: 'LDA'
-          },
-          {
-            title: 'How to Support a Child With Learning Differences',
-            description: 'Evidence-based strategies for parents and caregivers',
-            url: 'https://www.verywellmind.com/supporting-children-with-learning-differences-20590',
-            organization: 'Verywell Mind'
-          }
-        ]
-      }
-    };
-
-    return resourceDatabase[topic] || null;
-  };
-
-  // Render challenge-specific support sections
-  const renderChallengeSupport = () => {
-    const challenges = getChildrenChallenges();
-    const supportConfigs: Record<string, { 
-      bgClass: string;
-      titleClass: string;
-      textClass: string;
-      buttonClass: string;
-      buttonHoverClass: string;
-      description: string;
-    }> = {
-      'ADHD/Focus Issues': {
-        bgClass: 'bg-purple-50',
-        titleClass: 'text-purple-800',
-        textClass: 'text-purple-700',
-        buttonClass: 'text-purple-600',
-        buttonHoverClass: 'hover:text-purple-800',
-        description: 'Specialized techniques for high-energy children and focus challenges.'
-      },
-      'Dyslexia': {
-        bgClass: 'bg-rose-50',
-        titleClass: 'text-rose-800',
-        textClass: 'text-rose-700',
-        buttonClass: 'text-rose-600',
-        buttonHoverClass: 'hover:text-rose-800',
-        description: 'Reading support strategies and tools for dyslexic learners.'
-      },
-      'Processing Delays': {
-        bgClass: 'bg-cyan-50',
-        titleClass: 'text-cyan-800',
-        textClass: 'text-cyan-700',
-        buttonClass: 'text-cyan-600',
-        buttonHoverClass: 'hover:text-cyan-800',
-        description: 'Techniques for children with information processing challenges.'
-      },
-      'Math Anxiety': {
-        bgClass: 'bg-amber-50',
-        titleClass: 'text-amber-800',
-        textClass: 'text-amber-700',
-        buttonClass: 'text-amber-600',
-        buttonHoverClass: 'hover:text-amber-800',
-        description: 'Strategies to reduce math stress and build confidence.'
-      },
-      'General Learning Support': {
-        bgClass: 'bg-green-50',
-        titleClass: 'text-green-800',
-        textClass: 'text-green-700',
-        buttonClass: 'text-green-600',
-        buttonHoverClass: 'hover:text-green-800',
-        description: 'Universal learning strategies and motivational support.'
-      }
-    };
-
-    return challenges.map(challenge => {
-      const config = supportConfigs[challenge];
-      if (!config) return null;
-
-      const { bgClass, titleClass, textClass, buttonClass, buttonHoverClass, description } = config;
-      
-      return (
-        <div key={challenge} className={`${bgClass} rounded-lg p-6`}>
-          <h3 className={`text-lg font-semibold ${titleClass} mb-3`}>
-            {challenge.includes('Support') ? challenge : `${challenge} Support`}
-          </h3>
-          <p className={`${textClass} mb-4`}>
-            {description}
-          </p>
-          <div className="space-y-2">
-            <button 
-              onClick={() => handleSupportAction(challenge.toLowerCase(), 'resources')}
-              className={`block ${buttonClass} font-medium ${buttonHoverClass} transition-colors`}
-            >
-              📚 Resources →
-            </button>
-            <button 
-              onClick={() => handleSupportAction(challenge.toLowerCase(), 'community')}
-              className={`block ${buttonClass} font-medium ${buttonHoverClass} transition-colors`}
-            >
-              👥 Discussion →
-            </button>
-          </div>
-        </div>
-      );
-    }).filter(Boolean);
-  };
-
-  const getParentSupportResources = () => {
-    const studentChallenges = getChildrenChallenges();
-    
-    return [
-      // Student-specific resources based on their challenges
-      ...studentChallenges.map(challenge => ({
-        title: `${challenge} Support Resources`,
-        description: `Resources and strategies for supporting ${challenge}`,
-        icon: <LifeBuoy className="w-6 h-6" />,
-        actions: [
-          {
-            label: 'View Resources',
-            onClick: () => handleSupportAction(challenge, 'resources')
-          },
-          {
-            label: 'Join Discussion',
-            onClick: () => handleSupportAction(challenge, 'community')
-          }
-        ]
-      })),
-      // General resources
-      {
-        title: 'Learning Support Guide',
-        description: 'Comprehensive guide for supporting your student\'s learning journey',
-        icon: <FileText className="w-6 h-6" />,
-        actions: [
-          {
-            label: 'View Guide',
-            onClick: () => handleSupportAction('guide', 'resources')
-          }
-        ]
-      },
-      {
-        title: 'Community Support',
-        description: 'Connect with other parents and share experiences',
-        icon: <Users className="w-6 h-6" />,
-        actions: [
-          {
-            label: 'Join Community',
-            onClick: () => handleSupportAction('community', 'community')
-          }
-        ]
-      }
-    ];
-  };
-
-  if (showChat && selectedChild) {
+  if (authLoading || loading) {
     return (
-      <ChatInterface
-        selectedCategories={selectedCategories || {
-          subject: 'Previous Conversation',
-          ageGroup: 'Previous Conversation',
-          challenge: 'Previous Conversation'
-        }}
-        onBack={() => setShowChat(false)}
-        selectedChild={selectedChild}
-        onSaveConversation={handleSaveConversation}
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Please log in to continue</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Show student dashboard if student view is selected
+  if (showStudentView) {
+    return <StudentDashboard onBack={() => setShowStudentView(false)} />;
+  }
+
+  // Show conversation history
+  if (showHistory) {
+    return (
+      <ConversationHistory
+        children={children}
+        onLoadConversation={handleLoadConversation}
+        onBack={() => setShowHistory(false)}
+        profile={profile}
       />
     );
   }
 
-  if (showDocuments) {
+  // Show chat interface
+  if (selectedChild && selectedCategories) {
     return (
-      <DocumentManager onClose={() => setShowDocuments(false)} />
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
+      <ChatInterface
+        selectedCategories={selectedCategories}
+        onBack={() => {
+          setSelectedChild(null);
+          setSelectedCategories(null);
+        }}
+        selectedChild={selectedChild}
+        onSaveConversation={handleSaveConversation}
+      />
     );
   }
 
@@ -735,208 +401,156 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeft size={20} />
-              Back to Welcome
-            </button>
-            <h1 className="text-2xl font-bold text-gray-800">Learning Dashboard</h1>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Learning Assistant Dashboard</h1>
+            <p className="text-gray-600">Manage student profiles and learning sessions</p>
           </div>
-          
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <button
-              onClick={() => setActiveTab('children')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'children'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
+              onClick={() => setShowHistory(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
             >
-              Students
+              <History size={20} />
+              Conversation History
             </button>
             <button
-              onClick={() => setActiveTab('conversations')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'conversations'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
+              onClick={() => setShowStudentView(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
             >
-              <MessageSquare size={16} className="inline mr-2" />
-              Saved Conversations
-            </button>
-            <button
-              onClick={() => setActiveTab('documents')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'documents'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <FileText size={16} className="inline mr-2" />
-              Documents
-            </button>
-            <button
-              onClick={() => setActiveTab('support')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'support'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <LifeBuoy size={16} className="inline mr-2" />
-              Parent Support
+              <User size={20} />
+              Student View
             </button>
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Main Content */}
       <div className="max-w-6xl mx-auto p-6">
-        {activeTab === 'children' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Your Students</h2>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <button
+            onClick={() => setShowAddChild(true)}
+            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 text-left border border-gray-200"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-green-500 rounded-lg flex items-center justify-center">
+                <UserPlus className="text-white" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Add Student</h3>
+                <p className="text-gray-600 text-sm">Create a new student profile</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setShowHistory(true)}
+            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 text-left border border-gray-200"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg flex items-center justify-center">
+                <MessageSquare className="text-white" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">View Conversations</h3>
+                <p className="text-gray-600 text-sm">Browse saved learning sessions</p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setShowStudentView(true)}
+            className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 text-left border border-gray-200"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-lg flex items-center justify-center">
+                <BookOpen className="text-white" size={24} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-800">Student Dashboard</h3>
+                <p className="text-gray-600 text-sm">Switch to student learning view</p>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        {/* Student Profiles */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Users size={24} />
+              Student Profiles ({children.length})
+            </h2>
+            <button
+              onClick={() => setShowAddChild(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:to-green-600 transition-all"
+            >
+              <Plus size={20} />
+              Add Student
+            </button>
+          </div>
+
+          {children.length === 0 ? (
+            <div className="bg-white rounded-xl shadow-sm p-8 text-center border border-gray-200">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="text-gray-400" size={32} />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Student Profiles Yet</h3>
+              <p className="text-gray-600 mb-4">
+                Create your first student profile to start personalized learning sessions.
+              </p>
               <button
                 onClick={() => setShowAddChild(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                className="px-6 py-3 bg-gradient-to-r from-blue-500 to-green-500 text-white rounded-lg hover:from-blue-600 hover:to-green-600 transition-all"
               >
-                <Plus size={20} />
-                Add Student
+                Create Student Profile
               </button>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {children.map(child => (
+                <ChildProfile
+                  key={child.id}
+                  child={child}
+                  onEdit={handleEditChild}
+                  onDelete={(childId) => setDeleteConfirmChild(childId)}
+                  onSelect={handleSelectChild}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
-            {children.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus size={32} className="text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-800 mb-2">No students added yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Add your first student to start creating personalized lesson plans
-                </p>
-                <button
-                  onClick={() => setShowAddChild(true)}
-                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
-                >
-                  Add Your First Student
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {children.map(child => (
-                  <ChildProfile
-                    key={child.id}
-                    child={child}
-                    onEdit={handleEditChild}
-                    onDelete={handleDeleteChild}
-                    onSelect={handleSelectChild}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'conversations' && (
-          <ConversationHistory
-            children={children}
-            onLoadConversation={handleLoadConversation}
-            onBack={() => setActiveTab('children')}
-            profile={profile}
-          />
-        )}
-
-        {activeTab === 'documents' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-800">Document Manager</h2>
+        {/* Recent Conversations */}
+        {savedConversations.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <MessageSquare size={24} />
+                Recent Conversations
+              </h2>
               <button
-                onClick={() => setShowDocuments(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                onClick={() => setShowHistory(true)}
+                className="text-blue-600 hover:text-blue-800 font-medium"
               >
-                <FileText size={20} />
-                Manage Documents
+                View All
               </button>
             </div>
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="text-center">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Upload and Manage Documents</h3>
-                <p className="text-gray-600 mb-4">
-                  Upload documents like failed tests, study guides, and homework to help create personalized learning plans.
-                </p>
-                <button
-                  onClick={() => setShowDocuments(true)}
-                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
-                >
-                  Open Document Manager
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {activeTab === 'support' && (
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Parent Support Resources</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* General Support */}
-              <div className="bg-blue-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-800 mb-3">Getting Started Guide</h3>
-                <p className="text-blue-700 mb-4">
-                  Learn how to create effective lesson plans and work with your child's learning style.
-                </p>
-                <div className="space-y-2">
-                  <button 
-                    onClick={() => handleSupportAction('guide', 'resources')}
-                    className="block text-blue-600 font-medium hover:text-blue-800 transition-colors"
-                  >
-                    📚 View Online Resources →
-                  </button>
-                </div>
-              </div>
-              
-              <div className="bg-green-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-green-800 mb-3">Managing Frustration</h3>
-                <p className="text-green-700 mb-4">
-                  Tips and strategies for handling learning challenges and keeping sessions positive.
-                </p>
-                <div className="space-y-2">
-                  <button 
-                    onClick={() => handleSupportAction('frustration', 'resources')}
-                    className="block text-green-600 font-medium hover:text-green-800 transition-colors"
-                  >
-                    📚 View Resources →
-                  </button>
-                  <button 
-                    onClick={() => handleSupportAction('frustration', 'community')}
-                    className="block text-green-600 font-medium hover:text-green-800 transition-colors"
-                  >
-                    👥 Join Discussion →
-                  </button>
-                </div>
-              </div>
-
-              {/* Dynamic Challenge-Specific Support */}
-              {renderChallengeSupport()}
-              
-              <div className="bg-orange-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-orange-800 mb-3">Community Forum</h3>
-                <p className="text-orange-700 mb-4">
-                  Connect with other parents and share experiences and advice.
-                </p>
-                <button 
-                  onClick={() => handleSupportAction('community', 'community')}
-                  className="text-orange-600 font-medium hover:text-orange-800 transition-colors"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {savedConversations.slice(0, 6).map(conversation => (
+                <div
+                  key={conversation.id}
+                  onClick={() => handleLoadConversation(conversation)}
+                  className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer border border-gray-200"
                 >
-                  👥 Join Discussion →
-                </button>
-              </div>
+                  <h3 className="font-medium text-gray-800 mb-2">{conversation.title}</h3>
+                  <p className="text-sm text-gray-600 mb-2">{conversation.child_name}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(conversation.created_at).toLocaleDateString()}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -948,7 +562,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           onSave={handleAddChild}
           onCancel={() => {
             setShowAddChild(false);
-            setEditingChild(undefined);
+            setEditingChild(null);
           }}
           editingChild={editingChild}
         />
@@ -958,13 +572,11 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
       {deleteConfirmChild && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-3">
-              Delete Child Profile
-            </h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Deletion</h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to delete this child profile? This action cannot be undone.
+              Are you sure you want to delete this student profile? This action cannot be undone and will also delete all associated conversations and data.
             </p>
-            <div className="flex gap-3">
+            <div className="flex gap-4">
               <button
                 onClick={() => setDeleteConfirmChild(null)}
                 className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
@@ -972,98 +584,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
                 Cancel
               </button>
               <button
-                onClick={confirmDeleteChild}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                onClick={() => deleteConfirmChild && handleDeleteChild(deleteConfirmChild)}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
               >
                 Delete
               </button>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Resource Modal */}
-      {showResourceModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {(() => {
-              const resources = getResourcesForTopic(showResourceModal);
-              if (!resources) return null;
-
-              return (
-                <div>
-                  <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h2 className="text-xl font-semibold text-gray-800">
-                      {resources.title}
-                    </h2>
-                    <button
-                      onClick={() => setShowResourceModal(null)}
-                      className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-
-                  <div className="p-6">
-                    <p className="text-gray-600 mb-6">
-                      Here are multiple trusted resources to help you. If one link isn't working, try the others:
-                    </p>
-                    
-                    <div className="space-y-4">
-                      {resources.resources.map((resource, index) => (
-                        <div key={index} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <h3 className="font-semibold text-gray-800 mb-2">
-                                {resource.title}
-                              </h3>
-                              <p className="text-gray-600 text-sm mb-2">
-                                {resource.description}
-                              </p>
-                              <p className="text-gray-500 text-xs">
-                                Source: {resource.organization}
-                              </p>
-                            </div>
-                            <button
-                              onClick={() => window.open(resource.url, '_blank')}
-                              className="ml-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center gap-2"
-                            >
-                              Visit Site
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-                      <h4 className="font-medium text-blue-800 mb-2">💡 Tips for Using These Resources:</h4>
-                      <ul className="text-blue-700 text-sm space-y-1">
-                        <li>• Try multiple resources to get different perspectives</li>
-                        <li>• Bookmark the ones that are most helpful for your situation</li>
-                        <li>• Many organizations offer free email newsletters with ongoing tips</li>
-                        <li>• Look for local chapters or support groups mentioned on these sites</li>
-                      </ul>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-        </div>
-      )}
-
-      {/* Community Forum Modal */}
-      {showCommunityForum && (
-        <CommunityForum
-          onClose={() => {
-            setShowCommunityForum(false);
-            setForumInitialCategory(undefined);
-          }}
-          initialCategory={forumInitialCategory}
-        />
       )}
     </div>
   );
