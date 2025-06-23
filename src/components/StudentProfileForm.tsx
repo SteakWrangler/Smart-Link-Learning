@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import type { Child, Subject, Challenge } from '@/types/database';
+import type { StudentProfile, Subject, Challenge } from '@/types/database';
 
 interface StudentProfileFormProps {
-  onSave: (profile: Child) => void;
+  onSave: (profile: StudentProfile) => void;
   onCancel: () => void;
-  editingProfile?: Child | null;
+  editingProfile?: StudentProfile | null;
   subjects: Subject[];
   challenges: Challenge[];
 }
@@ -54,12 +54,12 @@ const StudentProfileForm: React.FC<StudentProfileFormProps> = ({
     setLoading(true);
 
     try {
-      let childProfile: Child;
+      let studentProfile: StudentProfile;
 
       if (editingProfile) {
         // Update existing profile
         const { data, error } = await supabase
-          .from('children')
+          .from('student_profiles')
           .update({
             name: name.trim(),
             age_group: selectedAgeGroup,
@@ -70,13 +70,13 @@ const StudentProfileForm: React.FC<StudentProfileFormProps> = ({
           .single();
 
         if (error) throw error;
-        childProfile = data;
+        studentProfile = data;
       } else {
         // Create new profile
         const { data, error } = await supabase
-          .from('children')
+          .from('student_profiles')
           .insert({
-            parent_id: profile.id,
+            user_id: profile.id,
             name: name.trim(),
             age_group: selectedAgeGroup
           })
@@ -84,25 +84,25 @@ const StudentProfileForm: React.FC<StudentProfileFormProps> = ({
           .single();
 
         if (error) throw error;
-        childProfile = data;
+        studentProfile = data;
       }
 
       // Update subjects
       if (editingProfile) {
         await supabase
-          .from('child_subjects')
+          .from('student_subjects')
           .delete()
-          .eq('child_id', editingProfile.id);
+          .eq('student_profile_id', editingProfile.id);
       }
 
       const subjectInserts = selectedSubjects.map(subjectId => ({
-        child_id: childProfile.id,
+        student_profile_id: studentProfile.id,
         subject_id: subjectId
       }));
 
       if (subjectInserts.length > 0) {
         const { error: subjectsError } = await supabase
-          .from('child_subjects')
+          .from('student_subjects')
           .insert(subjectInserts);
 
         if (subjectsError) throw subjectsError;
@@ -111,19 +111,19 @@ const StudentProfileForm: React.FC<StudentProfileFormProps> = ({
       // Update challenges
       if (editingProfile) {
         await supabase
-          .from('child_challenges')
+          .from('student_challenges')
           .delete()
-          .eq('child_id', editingProfile.id);
+          .eq('student_profile_id', editingProfile.id);
       }
 
       const challengeInserts = selectedChallenges.map(challengeId => ({
-        child_id: childProfile.id,
+        student_profile_id: studentProfile.id,
         challenge_id: challengeId
       }));
 
       if (challengeInserts.length > 0) {
         const { error: challengesError } = await supabase
-          .from('child_challenges')
+          .from('student_challenges')
           .insert(challengeInserts);
 
         if (challengesError) throw challengesError;
@@ -134,7 +134,7 @@ const StudentProfileForm: React.FC<StudentProfileFormProps> = ({
         description: `Profile ${editingProfile ? 'updated' : 'created'} successfully.`,
       });
 
-      onSave(childProfile);
+      onSave(studentProfile);
     } catch (error: any) {
       toast({
         title: "Error",
