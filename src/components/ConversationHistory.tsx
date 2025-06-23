@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
 import { SavedConversation, Child } from '../types';
@@ -43,16 +44,21 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       console.log('Loading conversations for profile:', profile.id);
       console.log('Active tab:', activeTab);
 
-      // First, get conversations that belong to this user's children
+      // Get child IDs for this parent
+      const childIds = children.map(child => child.id);
+      console.log('Child IDs:', childIds);
+
+      if (childIds.length === 0) {
+        console.log('No children found for this parent');
+        setConversations([]);
+        return;
+      }
+
+      // Query conversations directly using child IDs
       let query = supabase
         .from('conversations')
         .select(`
           *,
-          child:children!inner (
-            id,
-            name,
-            parent_id
-          ),
           messages (
             id,
             content,
@@ -60,7 +66,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             created_at
           )
         `)
-        .eq('child.parent_id', profile.id)
+        .in('child_id', childIds)
         .order('created_at', { ascending: false });
 
       // Filter based on tab
@@ -87,11 +93,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       // Transform the data to match our SavedConversation type
       const formattedConversations = conversations.map(conv => {
         console.log('Processing conversation:', conv);
+        const child = children.find(c => c.id === conv.child_id);
         return {
           id: conv.id,
           title: conv.title,
           childId: conv.child_id,
-          childName: conv.child ? conv.child.name : 'Unknown',
+          childName: child ? child.name : 'Unknown',
           messages: conv.messages ? conv.messages.map((msg: any) => ({
             id: msg.id,
             content: msg.content,
