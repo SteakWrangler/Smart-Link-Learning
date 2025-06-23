@@ -4,7 +4,7 @@ export interface Profile {
   email: string;
   first_name?: string;
   last_name?: string;
-  user_type: 'parent' | 'student';
+  user_type: string;
   created_at: string;
   updated_at: string;
 }
@@ -31,25 +31,11 @@ export interface Challenge {
   created_at: string;
 }
 
-export interface ChildSubject {
-  id: string;
-  child_id: string;
-  subject_id: string;
-}
-
-export interface ChildChallenge {
-  id: string;
-  child_id: string;
-  challenge_id: string;
-}
-
 export interface Conversation {
   id: string;
-  child_id: string;
-  parent_id?: string;
+  child_id: string; // Now required, no longer nullable
   title: string;
-  is_favorite?: boolean;
-  is_saved?: boolean;
+  is_favorite: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -86,57 +72,3 @@ export interface DocumentData {
   created_at: string;
   updated_at: string;
 }
-
-export interface ForumCategory {
-  id: string;
-  name: string;
-  description?: string;
-  color?: string;
-  sort_order?: number;
-  created_at: string;
-}
-
-export interface ForumTopic {
-  id: string;
-  title: string;
-  description?: string;
-  category_id: string;
-  author_id: string;
-  is_pinned?: boolean;
-  is_locked?: boolean;
-  view_count?: number;
-  post_count?: number;
-  last_post_at?: string;
-  last_post_author_name?: string;
-  created_at: string;
-}
-
-export interface ForumPost {
-  id: string;
-  topic_id: string;
-  parent_post_id?: string;
-  author_id: string;
-  content: string;
-  is_edited?: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-// Helper types for database operations
-export type UserType = 'parent' | 'student';
-export type DocumentType = 'failed_test' | 'study_guide' | 'homework' | 'other';
-export type ProcessingStatus = 'pending' | 'processing' | 'completed' | 'failed';
-export type MessageType = 'user' | 'ai';
-
-// Database insert types (for creating new records)
-export type ProfileInsert = Omit<Profile, 'id' | 'created_at' | 'updated_at'> & {
-  id: string; // Required for profiles as it comes from auth
-};
-
-export type ChildInsert = Omit<Child, 'id' | 'created_at' | 'updated_at'>;
-
-export type ConversationInsert = Omit<Conversation, 'id' | 'created_at' | 'updated_at'>;
-
-export type MessageInsert = Omit<Message, 'id' | 'created_at'>;
-
-export type DocumentInsert = Omit<DocumentData, 'id' | 'created_at' | 'updated_at'>;

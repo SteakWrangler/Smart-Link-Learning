@@ -1,8 +1,8 @@
 
-import React from 'react';
-import { File, Download, Trash2, Brain, RefreshCw, FileText, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { File, Download, Trash2, Eye, Brain, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,13 +26,13 @@ const DocumentList: React.FC<DocumentListProps> = ({
   const getDocumentTypeColor = (type: string) => {
     switch (type) {
       case 'failed_test':
-        return 'bg-red-100 text-red-700 border-red-200';
+        return 'bg-red-100 text-red-700';
       case 'study_guide':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
+        return 'bg-blue-100 text-blue-700';
       case 'homework':
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'bg-green-100 text-green-700';
       default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
+        return 'bg-gray-100 text-gray-700';
     }
   };
 
@@ -55,21 +55,6 @@ const DocumentList: React.FC<DocumentListProps> = ({
     return child?.name;
   };
 
-  const getProcessingStatusBadge = (status: string | null | undefined) => {
-    switch (status) {
-      case 'pending':
-        return <Badge variant="outline" className="text-yellow-600 border-yellow-300">Processing...</Badge>;
-      case 'processing':
-        return <Badge variant="outline" className="text-blue-600 border-blue-300">Processing...</Badge>;
-      case 'completed':
-        return <Badge variant="outline" className="text-green-600 border-green-300">Completed</Badge>;
-      case 'failed':
-        return <Badge variant="outline" className="text-red-600 border-red-300">Failed</Badge>;
-      default:
-        return null;
-    }
-  };
-
   const handleDownload = async (document: DocumentData) => {
     try {
       const { data, error } = await supabase.storage
@@ -88,11 +73,6 @@ const DocumentList: React.FC<DocumentListProps> = ({
       window.document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      toast({
-        title: "Download started",
-        description: `Downloading ${document.file_name}`,
-      });
-
     } catch (error: any) {
       console.error('Download error:', error);
       toast({
@@ -104,20 +84,17 @@ const DocumentList: React.FC<DocumentListProps> = ({
   };
 
   const handleDelete = async (document: DocumentData) => {
-    if (!confirm('Are you sure you want to delete this document? This action cannot be undone.')) {
+    if (!confirm('Are you sure you want to delete this document?')) {
       return;
     }
 
     try {
-      // Delete from storage first
+      // Delete from storage
       const { error: storageError } = await supabase.storage
         .from('documents')
         .remove([document.file_path]);
 
-      if (storageError) {
-        console.warn('Storage deletion failed:', storageError);
-        // Continue with database deletion even if storage fails
-      }
+      if (storageError) throw storageError;
 
       // Delete from database
       const { error: dbError } = await supabase
@@ -145,14 +122,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
   };
 
   const handleReprocess = async (document: DocumentData) => {
-    if (document.file_type !== 'application/pdf') {
-      toast({
-        title: "Cannot reprocess",
-        description: "Only PDF documents can be reprocessed",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (document.file_type !== 'application/pdf') return;
 
     try {
       toast({
@@ -167,7 +137,7 @@ const DocumentList: React.FC<DocumentListProps> = ({
 
       if (downloadError) throw downloadError;
 
-      // Create a File object from the downloaded data
+      // Create a File object from the downloaded data with proper typing
       const file = new globalThis.File([fileData], document.file_name, { type: document.file_type });
 
       // Get learner name
@@ -213,10 +183,9 @@ const DocumentList: React.FC<DocumentListProps> = ({
   if (documents.length === 0) {
     return (
       <Card>
-        <CardContent className="text-center py-12">
-          <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No documents uploaded yet</h3>
-          <p className="text-gray-500">Upload your first document to get started with AI-powered analysis.</p>
+        <CardContent className="text-center py-8">
+          <File className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+          <p className="text-gray-500">No documents uploaded yet</p>
         </CardContent>
       </Card>
     );
@@ -225,51 +194,34 @@ const DocumentList: React.FC<DocumentListProps> = ({
   return (
     <div className="space-y-4">
       {documents.map((doc) => (
-        <Card key={doc.id} className="hover:shadow-md transition-shadow">
-          <CardContent className="p-6">
+        <Card key={doc.id}>
+          <CardContent className="p-4">
             <div className="flex items-start justify-between">
-              <div className="flex items-start space-x-4 flex-1">
-                <div className="p-2 bg-gray-50 rounded-lg">
-                  <File className="h-6 w-6 text-gray-600" />
-                </div>
-                
+              <div className="flex items-start space-x-3 flex-1">
+                <File className="h-8 w-8 text-gray-400 mt-1" />
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-3">
-                    <h3 className="text-base font-medium text-gray-900 truncate">
+                  <div className="flex items-center gap-2 mb-2">
+                    <h3 className="text-sm font-medium text-gray-900 truncate">
                       {doc.file_name}
                     </h3>
                     <Badge className={getDocumentTypeColor(doc.document_type)}>
                       {getDocumentTypeLabel(doc.document_type)}
                     </Badge>
-                    {getProcessingStatusBadge(doc.processing_status)}
+                    {doc.extracted_content && (
+                      <Badge variant="outline" className="text-blue-600">
+                        <Brain size={12} className="mr-1" />
+                        Analyzed
+                      </Badge>
+                    )}
                   </div>
                   
                   {doc.description && (
-                    <p className="text-sm text-gray-600 mb-3">{doc.description}</p>
+                    <p className="text-sm text-gray-600 mb-2">{doc.description}</p>
                   )}
                   
                   {doc.ai_analysis && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Brain className="h-4 w-4 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-900">AI Analysis</span>
-                      </div>
-                      <div className="text-sm text-blue-800">
-                        <p>
-                          📊 Accuracy: {(doc.ai_analysis as any).accuracy || 0}% • 
-                          ❌ Areas to improve: {(doc.ai_analysis as any).incorrectAnswers || 0}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {doc.processing_error && (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-                      <div className="flex items-center gap-2">
-                        <AlertCircle className="h-4 w-4 text-red-600" />
-                        <span className="text-sm font-medium text-red-900">Processing Error</span>
-                      </div>
-                      <p className="text-sm text-red-800 mt-1">{doc.processing_error}</p>
+                    <div className="text-xs text-blue-600 mb-2">
+                      <p>📊 Analysis: {(doc.ai_analysis as any).accuracy}% accuracy, {(doc.ai_analysis as any).incorrectAnswers} areas to improve</p>
                     </div>
                   )}
                   
@@ -284,24 +236,12 @@ const DocumentList: React.FC<DocumentListProps> = ({
                 </div>
               </div>
               
-              <div className="flex items-center gap-2 ml-4">
-                {doc.file_type === 'application/pdf' && doc.processing_status === 'failed' && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleReprocess(doc)}
-                    className="text-blue-600 hover:text-blue-700"
-                    title="Reprocess PDF"
-                  >
-                    <RefreshCw size={16} />
-                  </Button>
-                )}
+              <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => handleDownload(doc)}
                   className="text-blue-600 hover:text-blue-700"
-                  title="Download"
                 >
                   <Download size={16} />
                 </Button>
@@ -310,7 +250,6 @@ const DocumentList: React.FC<DocumentListProps> = ({
                   size="sm"
                   onClick={() => handleDelete(doc)}
                   className="text-red-600 hover:text-red-700"
-                  title="Delete"
                 >
                   <Trash2 size={16} />
                 </Button>

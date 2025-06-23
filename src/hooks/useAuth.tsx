@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
@@ -47,13 +46,7 @@ export const useAuth = () => {
 
       if (error) throw error;
       
-      // Type assertion to ensure proper typing
-      const typedProfile: Profile = {
-        ...data,
-        user_type: data.user_type as 'parent' | 'student'
-      };
-      
-      setProfile(typedProfile);
+      setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {

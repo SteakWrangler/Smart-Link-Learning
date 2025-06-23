@@ -1,15 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Search, Heart, Star, MessageSquare, Calendar, Filter } from 'lucide-react';
+import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
+import { SavedConversation, Child } from '../types';
 import { supabase } from '@/integrations/supabase/client';
-import type { Child, SavedConversation } from '@/types';
-import type { Profile } from '@/types/database';
+import { toast } from '@/components/ui/use-toast';
 
 interface ConversationHistoryProps {
   children: Child[];
   onLoadConversation: (conversation: SavedConversation) => void;
   onBack: () => void;
-  profile: Profile;
+  profile: any;
 }
 
 const ConversationHistory: React.FC<ConversationHistoryProps> = ({
@@ -18,25 +18,32 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   onBack,
   profile
 }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterChild, setFilterChild] = useState<string>('all');
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [activeTab, setActiveTab] = useState<'recent' | 'saved'>('recent');
   const [conversations, setConversations] = useState<SavedConversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedChild, setSelectedChild] = useState<string>('all');
-  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConversations();
-  }, [profile]);
+  }, [activeTab]);
 
   const loadConversations = async () => {
     try {
-      console.log('Loading conversations for user:', profile.id);
-      
-      const { data, error } = await supabase
+      setLoading(true);
+      setError(null);
+
+      let query = supabase
         .from('conversations')
         .select(`
           *,
           child:child_id (
+            id,
+            name
+          ),
+          student:student_profile_id (
             id,
             name
           ),
@@ -50,29 +57,40 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         .eq('parent_id', profile.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      // Filter based on tab
+      if (activeTab === 'saved') {
+        query = query.eq('is_saved', true);
+      }
+      // For recent, we could add additional logic here if needed
 
-      console.log('Loaded conversations data:', data);
+      const { data: conversations, error } = await query;
 
-      const formattedConversations = data.map(conv => ({
+      if (error) {
+        console.error('Error loading conversations:', error);
+        throw error;
+      }
+
+      // Transform the data to match our SavedConversation type
+      const formattedConversations = conversations.map(conv => ({
         id: conv.id,
         title: conv.title,
-        child_id: conv.child_id,
-        child_name: conv.child ? conv.child.name : 'Unknown',
+        childId: conv.child_id || conv.student_profile_id,
+        childName: conv.child ? conv.child.name : 
+                   conv.student ? conv.student.name : 'Unknown',
         messages: conv.messages.map((msg: any) => ({
           id: msg.id,
           content: msg.content,
           type: msg.type,
-          created_at: msg.created_at
+          timestamp: new Date(msg.created_at)
         })),
-        created_at: conv.created_at,
-        is_favorite: conv.is_favorite || false,
-        is_saved: conv.is_saved || false
+        createdAt: new Date(conv.created_at),
+        isFavorite: conv.is_favorite || false
       }));
 
       setConversations(formattedConversations);
-    } catch (error) {
-      console.error('Error loading conversations:', error);
+    } catch (err) {
+      console.error('Error loading conversations:', err);
+      setError('Failed to load conversations');
     } finally {
       setLoading(false);
     }
@@ -83,171 +101,200 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       const conversation = conversations.find(c => c.id === conversationId);
       if (!conversation) return;
 
+      const newFavoriteStatus = !conversation.isFavorite;
+
       const { error } = await supabase
         .from('conversations')
-        .update({ 
-          is_favorite: !conversation.is_favorite,
-          updated_at: new Date().toISOString()
-        })
+        .update({ is_favorite: newFavoriteStatus })
         .eq('id', conversationId);
 
       if (error) throw error;
 
-      setConversations(prev =>
-        prev.map(conv =>
-          conv.id === conversationId
-            ? { ...conv, is_favorite: !conv.is_favorite }
+      // Update local state
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === conversationId 
+            ? { ...conv, isFavorite: newFavoriteStatus }
             : conv
         )
       );
+
+      toast({
+        title: 'Success',
+        description: `Conversation ${newFavoriteStatus ? 'added to' : 'removed from'} favorites`,
+      });
     } catch (error) {
       console.error('Error toggling favorite:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update favorite status',
+        variant: 'destructive'
+      });
     }
   };
 
-  const filteredConversations = conversations.filter(conversation => {
-    const matchesSearch = conversation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         conversation.child_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesChild = selectedChild === 'all' || conversation.child_id === selectedChild;
-    const matchesFavorites = !showFavoritesOnly || conversation.is_favorite;
+  const getStudentName = (childId: string) => {
+    const child = children.find(c => c.id === childId);
+    return child?.name || 'Unknown Student';
+  };
 
-    return matchesSearch && matchesChild && matchesFavorites;
+  const filteredConversations = conversations.filter(conversation => {
+    if (searchTerm && !conversation.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+    if (filterChild !== 'all' && conversation.childId !== filterChild) {
+      return false;
+    }
+    if (showFavoritesOnly && !conversation.isFavorite) {
+      return false;
+    }
+    return true;
   });
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  const formatDate = (date: Date) => {
+    const now = new Date();
+    const diffInDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (diffInDays === 0) return 'Today';
+    if (diffInDays === 1) return 'Yesterday';
+    if (diffInDays < 7) return `${diffInDays} days ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={onBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                <ArrowLeft size={20} />
-                Back
-              </button>
-              <h1 className="text-2xl font-bold text-gray-800">Conversation History</h1>
-            </div>
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <ArrowLeft size={20} />
+              Back
+            </button>
+            <h1 className="text-2xl font-bold text-gray-800">
+              {activeTab === 'saved' ? 'Saved Conversations' : 'Recent Conversations'}
+            </h1>
           </div>
+        </div>
+      </div>
 
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
+      {/* Content */}
+      <div className="max-w-6xl mx-auto p-6">
+        {/* Search and Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="flex-1">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
               <input
                 type="text"
                 placeholder="Search conversations..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-
+          </div>
+          <div className="flex gap-2">
             <select
-              value={selectedChild}
-              onChange={(e) => setSelectedChild(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={filterChild}
+              onChange={(e) => setFilterChild(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">All Students</option>
               {children.map(child => (
-                <option key={child.id} value={child.id}>
-                  {child.name}
-                </option>
+                <option key={child.id} value={child.id}>{child.name}</option>
               ))}
             </select>
-
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
                 showFavoritesOnly
-                  ? 'bg-yellow-100 text-yellow-700 border border-yellow-300'
-                  : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  ? 'bg-yellow-100 text-yellow-700'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              <Star size={16} className={showFavoritesOnly ? 'fill-current' : ''} />
-              Favorites
+              <Star size={16} />
+              Favorites Only
             </button>
           </div>
         </div>
-      </div>
 
-      {/* Conversations */}
-      <div className="max-w-6xl mx-auto p-6">
-        {filteredConversations.length === 0 ? (
-          <div className="text-center py-12">
-            <MessageSquare className="mx-auto h-16 w-16 text-gray-400 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              {searchTerm || selectedChild !== 'all' || showFavoritesOnly
-                ? 'No conversations found'
-                : 'No conversations yet'
-              }
-            </h3>
-            <p className="text-gray-600">
-              {searchTerm || selectedChild !== 'all' || showFavoritesOnly
-                ? 'Try adjusting your filters or search terms.'
-                : 'Start a learning session to create your first conversation.'
-              }
-            </p>
+        {/* Tabs */}
+        <div className="flex gap-4 mb-6">
+          <button
+            onClick={() => setActiveTab('recent')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'recent'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
+          >
+            Recent
+          </button>
+          <button
+            onClick={() => setActiveTab('saved')}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              activeTab === 'saved'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+            }`}
+          >
+            Saved
+          </button>
+        </div>
+
+        {/* Conversation List */}
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          </div>
+        ) : error ? (
+          <div className="text-center text-red-600 py-8">{error}</div>
+        ) : conversations.length === 0 ? (
+          <div className="text-center text-gray-500 py-8">
+            {activeTab === 'recent' 
+              ? 'No recent conversations'
+              : 'No saved conversations yet. Click the save button in a conversation to save it.'}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredConversations.map(conversation => (
               <div
                 key={conversation.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 overflow-hidden cursor-pointer"
-                onClick={() => onLoadConversation(conversation)}
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer"
               >
-                <div className="p-6">
-                  <div className="flex items-start justify-between mb-3">
-                    <h3 className="font-semibold text-gray-800 line-clamp-2 flex-1">
-                      {conversation.title}
-                    </h3>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleFavorite(conversation.id);
-                      }}
-                      className={`ml-2 p-1 rounded transition-colors ${
-                        conversation.is_favorite
-                          ? 'text-yellow-500 hover:text-yellow-600'
-                          : 'text-gray-400 hover:text-yellow-500'
-                      }`}
-                    >
-                      <Heart size={16} className={conversation.is_favorite ? 'fill-current' : ''} />
-                    </button>
+                <div className="flex items-start justify-between mb-2">
+                  <h3 
+                    className="font-medium text-gray-800 line-clamp-1 flex-1 mr-2"
+                    onClick={() => onLoadConversation(conversation)}
+                  >
+                    {conversation.title}
+                  </h3>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFavorite(conversation.id);
+                    }}
+                    className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
+                  >
+                    <Star 
+                      size={16} 
+                      className={conversation.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400'} 
+                    />
+                  </button>
+                </div>
+                <div onClick={() => onLoadConversation(conversation)}>
+                  <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
+                  <p className="text-sm text-gray-600 line-clamp-2">
+                    {conversation.messages[conversation.messages.length - 1]?.content || 'No messages'}
+                  </p>
+                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                    <Clock size={14} />
+                    <span>{formatDate(conversation.createdAt)}</span>
                   </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <span className="font-medium">{conversation.child_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Calendar size={14} />
-                      <span>{new Date(conversation.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-gray-600">
-                    {conversation.messages.length} message{conversation.messages.length !== 1 ? 's' : ''}
-                  </div>
-
-                  {conversation.messages.length > 0 && (
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <p className="text-xs text-gray-600 line-clamp-2">
-                        {conversation.messages[0]?.content || 'No preview available'}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </div>
             ))}

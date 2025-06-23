@@ -5,8 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Child } from '@/types';
-import type { Subject, Challenge } from '@/types/database';
+import type { Child, Subject, Challenge } from '@/types/database';
 import ChatInterface from './ChatInterface';
 import DocumentManager from './DocumentManager';
 
@@ -19,6 +18,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
   const [studentChild, setStudentChild] = useState<Child | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [showDocuments, setShowDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -40,37 +41,27 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         .single();
 
       if (childData) {
-        // Fetch selected subjects with proper joins
+        setStudentChild(childData);
+        
+        // Fetch selected subjects
         const { data: subjectData } = await supabase
           .from('child_subjects')
-          .select(`
-            subject_id,
-            subject:subjects(id, name, created_at)
-          `)
+          .select('subject_id, subjects(name)')
           .eq('child_id', childData.id);
 
-        // Fetch selected challenges with proper joins
+        if (subjectData) {
+          setSelectedSubjects(subjectData.map(s => s.subject_id));
+        }
+
+        // Fetch selected challenges
         const { data: challengeData } = await supabase
           .from('child_challenges')
-          .select(`
-            challenge_id,
-            challenge:challenges(id, name, description, created_at)
-          `)
+          .select('challenge_id, challenges(name)')
           .eq('child_id', childData.id);
 
-        // Convert to unified Child interface
-        const childWithDetails: Child = {
-          id: childData.id,
-          parent_id: childData.parent_id,
-          name: childData.name,
-          age_group: childData.age_group,
-          subjects: subjectData?.map(s => s.subject).filter(Boolean) || [],
-          challenges: challengeData?.map(c => c.challenge).filter(Boolean) || [],
-          created_at: childData.created_at,
-          updated_at: childData.updated_at
-        };
-
-        setStudentChild(childWithDetails);
+        if (challengeData) {
+          setSelectedChallenges(challengeData.map(c => c.challenge_id));
+        }
       }
 
       // Fetch all subjects and challenges
@@ -91,17 +82,13 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
 
   const handleProfileSave = async (profileData: any) => {
     try {
-      // Extract subject and challenge names for database operations
-      const subjectNames = profileData.subjects || [];
-      const challengeNames = profileData.challenges || [];
-
       if (studentChild) {
         // Update existing child record
         const { error: updateError } = await supabase
           .from('children')
           .update({
             name: profileData.name,
-            age_group: profileData.age_group,
+            age_group: profileData.ageGroup,
             updated_at: new Date().toISOString()
           })
           .eq('id', studentChild.id);
@@ -109,14 +96,14 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         if (updateError) throw updateError;
 
         // Update subjects and challenges
-        await updateChildSubjectsAndChallenges(studentChild.id, subjectNames, challengeNames);
+        await updateChildSubjectsAndChallenges(studentChild.id, profileData.subjects, profileData.challenges);
       } else {
         // Create new child record for student
         const { data: newChild, error: insertError } = await supabase
           .from('children')
           .insert({
             name: profileData.name,
-            age_group: profileData.age_group,
+            age_group: profileData.ageGroup,
             parent_id: profile?.id
           })
           .select()
@@ -125,7 +112,8 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
         if (insertError) throw insertError;
 
         // Add subjects and challenges
-        await updateChildSubjectsAndChallenges(newChild.id, subjectNames, challengeNames);
+        await updateChildSubjectsAndChallenges(newChild.id, profileData.subjects, profileData.challenges);
+        setStudentChild(newChild);
       }
 
       await fetchStudentData();
@@ -188,15 +176,36 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
   }
 
   if (showChat && studentChild) {
+    const selectedSubjectNames = subjects
+      .filter(s => selectedSubjects.includes(s.id))
+      .map(s => s.name)
+      .join(', ');
+    
+    const selectedChallengeNames = challenges
+      .filter(c => selectedChallenges.includes(c.id))
+      .map(c => c.name)
+      .join(', ');
+
+    // Convert Child to the expected format for ChatInterface
+    const childForChat = {
+      id: studentChild.id,
+      name: studentChild.name,
+      ageGroup: studentChild.age_group,
+      subjects: subjects.filter(s => selectedSubjects.includes(s.id)).map(s => s.name),
+      challenges: challenges.filter(c => selectedChallenges.includes(c.id)).map(c => c.name),
+      createdAt: new Date(studentChild.created_at)
+    };
+
     return (
       <ChatInterface
         selectedCategories={{
-          subject: studentChild.subjects?.map(s => s.name).join(', ') || '',
+          subject: selectedSubjectNames,
           ageGroup: studentChild.age_group,
-          challenge: studentChild.challenges?.map(c => c.name).join(', ') || ''
+          challenge: selectedChallengeNames
         }}
         onBack={() => setShowChat(false)}
-        selectedChild={studentChild}
+        selectedChild={childForChat}
+        selectedStudentProfile={null}
         onSaveConversation={() => {}}
       />
     );
@@ -245,7 +254,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
               <Button
                 onClick={() => handleProfileSave({
                   name: 'My Profile',
-                  age_group: 'elementary',
+                  ageGroup: 'elementary',
                   subjects: [],
                   challenges: []
                 })}
@@ -273,40 +282,44 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
                   </span>
                 </div>
 
-                {studentChild.subjects && studentChild.subjects.length > 0 && (
+                {selectedSubjects.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <BookOpen size={16} />
                       My Subjects
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {studentChild.subjects.map((subject, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
-                        >
-                          {subject.name}
-                        </span>
-                      ))}
+                      {subjects
+                        .filter(s => selectedSubjects.includes(s.id))
+                        .map(subject => (
+                          <span
+                            key={subject.id}
+                            className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm"
+                          >
+                            {subject.name}
+                          </span>
+                        ))}
                     </div>
                   </div>
                 )}
 
-                {studentChild.challenges && studentChild.challenges.length > 0 && (
+                {selectedChallenges.length > 0 && (
                   <div>
                     <h4 className="font-medium text-gray-700 mb-2 flex items-center gap-2">
                       <Brain size={16} />
                       Learning Support Areas
                     </h4>
                     <div className="flex flex-wrap gap-2">
-                      {studentChild.challenges.map((challenge, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
-                        >
-                          {challenge.name}
-                        </span>
-                      ))}
+                      {challenges
+                        .filter(c => selectedChallenges.includes(c.id))
+                        .map(challenge => (
+                          <span
+                            key={challenge.id}
+                            className="px-3 py-1 bg-orange-100 text-orange-700 rounded-full text-sm"
+                          >
+                            {challenge.name}
+                          </span>
+                        ))}
                     </div>
                   </div>
                 )}

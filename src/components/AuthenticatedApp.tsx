@@ -27,7 +27,7 @@ const AuthenticatedApp = () => {
   }
 
   if (showDashboard) {
-    return <Dashboard />;
+    return <Dashboard onBack={() => setShowDashboard(false)} />;
   }
 
   return (
