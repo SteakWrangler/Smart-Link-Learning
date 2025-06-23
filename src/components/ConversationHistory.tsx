@@ -21,14 +21,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterChild, setFilterChild] = useState<string>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
-  const [activeTab, setActiveTab] = useState<'recent' | 'saved'>('recent');
   const [conversations, setConversations] = useState<SavedConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadConversations();
-  }, [activeTab, profile]);
+  }, [profile]);
 
   const loadConversations = async () => {
     try {
@@ -41,8 +40,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         return;
       }
 
-      console.log('Loading conversations for profile:', profile.id);
-      console.log('Active tab:', activeTab);
+      console.log('Loading saved conversations for profile:', profile.id);
 
       // Get child IDs for this parent
       const childIds = children.map(child => child.id);
@@ -54,7 +52,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         return;
       }
 
-      // Query conversations directly using child IDs
+      // Query only saved conversations
       let query = supabase
         .from('conversations')
         .select(`
@@ -67,14 +65,10 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           )
         `)
         .in('child_id', childIds)
+        .eq('is_saved', true)
         .order('created_at', { ascending: false });
 
-      // Filter based on tab
-      if (activeTab === 'saved') {
-        query = query.eq('is_saved', true);
-      }
-
-      console.log('Executing query...');
+      console.log('Executing query for saved conversations...');
       const { data: conversations, error } = await query;
 
       if (error) {
@@ -164,12 +158,20 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
 
   const handleConversationClick = (conversation: SavedConversation) => {
     console.log('Clicking conversation:', conversation);
+    console.log('onLoadConversation function:', onLoadConversation);
+    
+    // Debug: Let's see what we're passing
+    console.log('Conversation data being passed:', {
+      id: conversation.id,
+      title: conversation.title,
+      childId: conversation.childId,
+      childName: conversation.childName,
+      messages: conversation.messages,
+      createdAt: conversation.createdAt,
+      isFavorite: conversation.isFavorite
+    });
+    
     onLoadConversation(conversation);
-  };
-
-  const getStudentName = (childId: string) => {
-    const child = children.find(c => c.id === childId);
-    return child?.name || 'Unknown Student';
   };
 
   const filteredConversations = conversations.filter(conversation => {
@@ -209,7 +211,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               Back
             </button>
             <h1 className="text-2xl font-bold text-gray-800">
-              {activeTab === 'saved' ? 'Saved Conversations' : 'Recent Conversations'}
+              Saved Conversations
             </h1>
           </div>
         </div>
@@ -256,30 +258,6 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setActiveTab('recent')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'recent'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Recent
-          </button>
-          <button
-            onClick={() => setActiveTab('saved')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              activeTab === 'saved'
-                ? 'bg-blue-100 text-blue-700'
-                : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-            }`}
-          >
-            Saved
-          </button>
-        </div>
-
         {/* Conversation List */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -289,9 +267,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           <div className="text-center text-red-600 py-8">{error}</div>
         ) : conversations.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
-            {activeTab === 'recent' 
-              ? 'No recent conversations found'
-              : 'No saved conversations yet. Click the save button in a conversation to save it.'}
+            No saved conversations yet. Click the save button in a conversation to save it.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -299,7 +275,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               <div
                 key={conversation.id}
                 onClick={() => handleConversationClick(conversation)}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer p-4 relative"
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer p-4 relative group"
               >
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="font-medium text-gray-800 line-clamp-1 flex-1 mr-2">
