@@ -162,6 +162,11 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
     }
   };
 
+  const handleConversationClick = (conversation: SavedConversation) => {
+    console.log('Clicking conversation:', conversation);
+    onLoadConversation(conversation);
+  };
+
   const getStudentName = (childId: string) => {
     const child = children.find(c => c.id === childId);
     return child?.name || 'Unknown Student';
@@ -293,13 +298,11 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             {filteredConversations.map(conversation => (
               <div
                 key={conversation.id}
-                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-4 cursor-pointer"
+                onClick={() => handleConversationClick(conversation)}
+                className="bg-white rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer p-4 relative"
               >
                 <div className="flex items-start justify-between mb-2">
-                  <h3 
-                    className="font-medium text-gray-800 line-clamp-1 flex-1 mr-2"
-                    onClick={() => onLoadConversation(conversation)}
-                  >
+                  <h3 className="font-medium text-gray-800 line-clamp-1 flex-1 mr-2">
                     {conversation.title}
                   </h3>
                   <button
@@ -307,7 +310,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                       e.stopPropagation();
                       toggleFavorite(conversation.id);
                     }}
-                    className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors"
+                    className="flex-shrink-0 p-1 hover:bg-gray-100 rounded transition-colors z-10"
                   >
                     <Star 
                       size={16} 
@@ -315,17 +318,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                     />
                   </button>
                 </div>
-                <div onClick={() => onLoadConversation(conversation)}>
-                  <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
-                  <p className="text-sm text-gray-600 line-clamp-2">
-                    {conversation.messages && conversation.messages.length > 0 
-                      ? conversation.messages[conversation.messages.length - 1]?.content || 'No messages'
-                      : 'No messages'}
-                  </p>
-                  <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                    <Clock size={14} />
-                    <span>{formatDate(conversation.createdAt)}</span>
-                  </div>
+                <p className="text-sm text-gray-500 mb-2">{conversation.childName}</p>
+                <p className="text-sm text-gray-600 line-clamp-2">
+                  {conversation.messages && conversation.messages.length > 0 
+                    ? conversation.messages[conversation.messages.length - 1]?.content || 'No messages'
+                    : 'No messages'}
+                </p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                  <Clock size={14} />
+                  <span>{formatDate(conversation.createdAt)}</span>
                 </div>
               </div>
             ))}
