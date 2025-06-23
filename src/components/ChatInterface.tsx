@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Send, Star, Save, FileText } from 'lucide-react';
 import { Child } from '../types';
@@ -54,7 +53,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Generate initial greeting with personalized examples
   const generateInitialGreeting = (): string => {
-    const ageGroup = selectedChild?.age_group || '';
+    const ageGroup = selectedChild?.ageGroup || '';
     const subjects = selectedChild?.subjects || [];
     const challenges = selectedChild?.challenges || [];
     const hasDocuments = documents.length > 0;
@@ -221,7 +220,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     
     // Add child-specific context
     if (selectedChild) {
-      const ageGroupLabel = getAgeGroupLabel(selectedChild.age_group);
+      const ageGroupLabel = getAgeGroupLabel(selectedChild.ageGroup);
       systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
       
       if (selectedChild.subjects && selectedChild.subjects.length > 0) {

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, User, BookOpen, Brain, MessageSquare, FileText } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -88,7 +87,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
           .from('children')
           .update({
             name: profileData.name,
-            age_group: profileData.age_group,
+            age_group: profileData.ageGroup,
             updated_at: new Date().toISOString()
           })
           .eq('id', studentChild.id);
@@ -103,7 +102,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
           .from('children')
           .insert({
             name: profileData.name,
-            age_group: profileData.age_group,
+            age_group: profileData.ageGroup,
             parent_id: profile?.id
           })
           .select()
@@ -189,13 +188,11 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
     // Convert Child to the expected format for ChatInterface
     const childForChat = {
       id: studentChild.id,
-      parent_id: studentChild.parent_id,
       name: studentChild.name,
-      age_group: studentChild.age_group,
+      ageGroup: studentChild.age_group,
       subjects: subjects.filter(s => selectedSubjects.includes(s.id)).map(s => s.name),
       challenges: challenges.filter(c => selectedChallenges.includes(c.id)).map(c => c.name),
-      created_at: studentChild.created_at,
-      updated_at: studentChild.updated_at
+      createdAt: new Date(studentChild.created_at)
     };
 
     return (
@@ -255,7 +252,7 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
               <Button
                 onClick={() => handleProfileSave({
                   name: 'My Profile',
-                  age_group: 'elementary',
+                  ageGroup: 'elementary',
                   subjects: [],
                   challenges: []
                 })}

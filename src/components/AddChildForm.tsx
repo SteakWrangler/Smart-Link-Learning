@@ -3,7 +3,7 @@ import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
 
 interface AddChildFormProps {
-  onSave: (child: Omit<Child, 'id' | 'created_at' | 'updated_at'>) => void;
+  onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
   onCancel: () => void;
   editingChild?: Child;
 }
@@ -15,7 +15,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
 }) => {
   const [name, setName] = useState(editingChild?.name || '');
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.age_group || '');
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
   const [selectedChallenges, setSelectedChallenges] = useState<string[]>(editingChild?.challenges || []);
 
   const subjects = [
@@ -70,10 +70,9 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
       );
 
       onSave({
-        parent_id: '', // This will be set by the parent component
         name: name.trim(),
         subjects: subjectLabels,
-        age_group: selectedAgeGroup,
+        ageGroup: selectedAgeGroup,
         challenges: challengeLabels
       });
     }
