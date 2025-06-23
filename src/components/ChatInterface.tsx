@@ -119,7 +119,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabase.supabaseKey}`
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2a3Jyd3hnZXp4dG1ueGdweGh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0ODg1OTEsImV4cCI6MjA2NTA2NDU5MX0.uoQZYi7zlMXY6QIAZ8FKvYCHV5uIzzOODUl2YKXf75E`
         },
         body: JSON.stringify({
           message: userMessage.content,
