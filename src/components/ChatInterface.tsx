@@ -286,7 +286,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <Input
                 type="text"
                 placeholder="Add tags..."
-                onKeyDown={e => {
+                onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const target = e.target as HTMLInputElement;
                     addTag(target.value);
