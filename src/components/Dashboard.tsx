@@ -270,9 +270,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     
     // Set selected categories based on the child's profile
     setSelectedCategories({
-      subject: child.subjects?.[0] || 'General Learning',
+      subject: child.subjects?.join(', ') || 'General Learning',
       ageGroup: child.ageGroup,
-      challenge: child.challenges?.[0] || 'General Support'
+      challenge: child.challenges?.join(', ') || 'General Support'
     });
     
     setShowChat(true);
