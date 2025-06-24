@@ -832,6 +832,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               <LifeBuoy size={16} className="inline mr-2" />
               Parent Support
             </button>
+            <button
+              onClick={onBack}
+              className="px-4 py-2 rounded-lg font-medium transition-colors text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
       </div>
