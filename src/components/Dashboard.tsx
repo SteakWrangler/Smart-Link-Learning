@@ -267,6 +267,14 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
   const handleSelectChild = (child: Child) => {
     setSelectedChild(child);
+    
+    // Set selected categories based on the child's profile
+    setSelectedCategories({
+      subject: child.subjects?.[0] || 'General Learning',
+      ageGroup: child.ageGroup,
+      challenge: child.challenges?.[0] || 'General Support'
+    });
+    
     setShowChat(true);
   };
 
@@ -727,11 +735,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   if (showChat && selectedChild) {
     return (
       <ChatInterface
-        selectedCategories={selectedCategories || {
-          subject: 'Previous Conversation',
-          ageGroup: 'Previous Conversation',
-          challenge: 'Previous Conversation'
-        }}
+        selectedCategories={selectedCategories}
         onBack={() => setShowChat(false)}
         selectedChild={selectedChild}
         onSaveConversation={handleSaveConversation}
