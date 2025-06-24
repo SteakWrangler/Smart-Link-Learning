@@ -611,11 +611,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               <h1 className="text-xl font-bold text-gray-800">
                 {isLoadedConversation ? `Conversation: ${loadedConversation?.title}` : `Learning with ${learnerName}`}
               </h1>
-              {!isLoadedConversation && (
+              {/* Hide categories display to avoid cluttered UI - data still passed to AI for context */}
+              {/* {!isLoadedConversation && (
                 <p className="text-sm text-gray-600">
                   {selectedCategories?.subject} • {selectedCategories?.ageGroup} • {selectedCategories?.challenge}
                 </p>
-              )}
+              )} */}
               {documents.length > 0 && (
                 <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
                   <FileText size={12} />
