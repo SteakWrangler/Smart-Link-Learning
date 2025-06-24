@@ -39,6 +39,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     challenge: string;
   } | null>(null);
   const [showChatInterface, setShowChatInterface] = useState(false);
+  const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
 
   useEffect(() => {
     if (profile) {
@@ -290,11 +291,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
   const handleLoadConversation = async (conversation: SavedConversation) => {
     try {
+      console.log('Dashboard: handleLoadConversation called with:', conversation);
+      
       // Find the child
       const child = children.find(child => child.id === conversation.childId);
       if (!child) {
         throw new Error('Child not found');
       }
+
+      console.log('Dashboard: Found child:', child);
 
       // Set the selected child
       setSelectedChild(child);
@@ -308,6 +313,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
 
       if (error) throw error;
 
+      console.log('Dashboard: Loaded messages from database:', messages);
+
+      // Create a complete SavedConversation object with the loaded messages
+      const completeConversation: SavedConversation = {
+        ...conversation,
+        messages: messages ? messages.map((msg: any) => ({
+          id: msg.id,
+          content: msg.content,
+          type: msg.type,
+          timestamp: new Date(msg.created_at)
+        })) : []
+      };
+
+      console.log('Dashboard: Complete conversation object:', completeConversation);
+
       // Set the selected categories based on the conversation context
       setSelectedCategories({
         subject: 'Previous Conversation',
@@ -315,8 +335,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         challenge: child.challenges?.[0] || 'General'
       });
 
+      // Store the loaded conversation data
+      setLoadedConversation(completeConversation);
+
       // Show the chat interface
       setShowChatInterface(true);
+      
+      console.log('Dashboard: Chat interface should now be visible');
     } catch (error) {
       console.error('Error loading conversation:', error);
       toast({
@@ -710,6 +735,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
         onBack={() => setShowChat(false)}
         selectedChild={selectedChild}
         onSaveConversation={handleSaveConversation}
+      />
+    );
+  }
+
+  if (showChatInterface && selectedChild) {
+    return (
+      <ChatInterface
+        selectedCategories={selectedCategories || {
+          subject: 'Previous Conversation',
+          ageGroup: 'Previous Conversation',
+          challenge: 'Previous Conversation'
+        }}
+        onBack={() => {
+          setShowChatInterface(false);
+          setLoadedConversation(null);
+        }}
+        selectedChild={selectedChild}
+        onSaveConversation={handleSaveConversation}
+        loadedConversation={loadedConversation}
       />
     );
   }
