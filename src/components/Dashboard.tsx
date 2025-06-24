@@ -574,9 +574,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
             organization: 'Parent Information Centers'
           },
           {
-            title: 'Learning Disabilities Association',
-            description: 'National organization supporting individuals with learning disabilities',
-            url: 'https://ldaamerica.org/support/new-to-ld/',
+            title: 'Learning Disabilities Association of America',
+            description: 'Support, resources, and advocacy for learning disabilities',
+            url: 'https://ldaamerica.org/',
             organization: 'LDA'
           },
           {
