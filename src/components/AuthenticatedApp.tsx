@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
@@ -7,6 +6,7 @@ import StudentDashboard from './StudentDashboard';
 import ChatInterface from './ChatInterface';
 import ConversationHistory from './ConversationHistory';
 import CategorySelector from './CategorySelector';
+import Auth from './Auth';
 import { Child, SavedConversation } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -148,12 +148,29 @@ const AuthenticatedApp: React.FC = () => {
     });
   };
 
+  const handleBackToWelcome = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: 'Signed out',
+        description: 'You have been signed out successfully.',
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
 
   if (!user) {
-    return <div>Not authenticated.</div>;
+    return <Auth onAuthSuccess={() => {}} />;
   }
 
   if (profile?.user_type === 'parent') {
@@ -161,7 +178,7 @@ const AuthenticatedApp: React.FC = () => {
       <>
         {currentView === 'dashboard' && (
           <Dashboard 
-            onBack={() => {}}
+            onBack={handleBackToWelcome}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
