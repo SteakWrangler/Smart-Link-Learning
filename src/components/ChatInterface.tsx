@@ -12,7 +12,7 @@ interface ChatInterfaceProps {
     subject: string;
     ageGroup: string;
     challenge: string;
-  };
+  } | null;
   onBack: () => void;
   selectedChild: Child | null;
   onSaveConversation: (conversation: any) => void;
@@ -613,7 +613,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               </h1>
               {!isLoadedConversation && (
                 <p className="text-sm text-gray-600">
-                  {selectedCategories.subject} • {selectedCategories.ageGroup} • {selectedCategories.challenge}
+                  {selectedCategories?.subject} • {selectedCategories?.ageGroup} • {selectedCategories?.challenge}
                 </p>
               )}
               {documents.length > 0 && (

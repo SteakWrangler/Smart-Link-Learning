@@ -742,11 +742,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   if (showChatInterface && selectedChild) {
     return (
       <ChatInterface
-        selectedCategories={selectedCategories || {
-          subject: 'Previous Conversation',
-          ageGroup: 'Previous Conversation',
-          challenge: 'Previous Conversation'
-        }}
+        selectedCategories={null}
         onBack={() => {
           setShowChatInterface(false);
           setLoadedConversation(null);
