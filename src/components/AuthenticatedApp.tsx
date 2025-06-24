@@ -6,6 +6,7 @@ import StudentDashboard from './StudentDashboard';
 import ChatInterface from './ChatInterface';
 import ConversationHistory from './ConversationHistory';
 import CategorySelector from './CategorySelector';
+import WelcomeSection from './WelcomeSection';
 import Auth from './Auth';
 import { Child, SavedConversation } from '../types';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +16,7 @@ const AuthenticatedApp: React.FC = () => {
   const { user, profile, loading } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [currentView, setCurrentView] = useState<'dashboard' | 'category-selector' | 'chat' | 'conversation-history'>('dashboard');
+  const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history'>('welcome');
   const [selectedCategories, setSelectedCategories] = useState({
     subject: '',
     ageGroup: '',
@@ -148,21 +149,12 @@ const AuthenticatedApp: React.FC = () => {
     });
   };
 
-  const handleBackToWelcome = async () => {
-    try {
-      await supabase.auth.signOut();
-      toast({
-        title: 'Signed out',
-        description: 'You have been signed out successfully.',
-      });
-    } catch (error) {
-      console.error('Error signing out:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to sign out. Please try again.',
-        variant: 'destructive',
-      });
-    }
+  const handleBackToWelcome = () => {
+    setCurrentView('welcome');
+  };
+
+  const handleGetStarted = () => {
+    setCurrentView('dashboard');
   };
 
   if (loading) {
@@ -176,6 +168,13 @@ const AuthenticatedApp: React.FC = () => {
   if (profile?.user_type === 'parent') {
     return (
       <>
+        {currentView === 'welcome' && (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
+            <div className="max-w-6xl mx-auto">
+              <WelcomeSection onGetStarted={handleGetStarted} />
+            </div>
+          </div>
+        )}
         {currentView === 'dashboard' && (
           <Dashboard 
             onBack={handleBackToWelcome}

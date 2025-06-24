@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Target, MessageCircle } from 'lucide-react';
@@ -47,10 +46,10 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onGetStarted }) => {
             <Users className="w-8 h-8 text-green-600" />
           </div>
           <h3 className="text-lg font-semibold text-gray-800 mb-2">
-            Parent & Student Accounts
+            Family Learning Platform
           </h3>
           <p className="text-gray-600 text-sm">
-            Separate dashboards for parents and students
+            One account for parents and students to learn together
           </p>
         </div>
 
