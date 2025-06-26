@@ -17,6 +17,7 @@ const AuthenticatedApp: React.FC = () => {
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history'>('welcome');
+  const [showAuth, setShowAuth] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState({
     subject: '',
     ageGroup: '',
@@ -149,35 +150,47 @@ const AuthenticatedApp: React.FC = () => {
     });
   };
 
-  const handleBackToWelcome = () => {
-    setCurrentView('welcome');
-  };
-
-  const handleGetStarted = () => {
-    setCurrentView('dashboard');
-  };
-
   if (loading) {
     return <div>Loading...</div>;
   }
 
-  if (!user) {
-    return <Auth onAuthSuccess={() => {}} />;
+  // Show auth screen if user is not authenticated and showAuth is true
+  if (!user && showAuth) {
+    return <Auth onAuthSuccess={() => {
+      setShowAuth(false);
+      setCurrentView('dashboard');
+    }} />;
+  }
+
+  // Show welcome screen for all users (authenticated and unauthenticated)
+  if (currentView === 'welcome') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
+        <div className="max-w-6xl mx-auto">
+          <WelcomeSection 
+            isAuthenticated={!!user}
+            user={user}
+            onSignIn={() => setShowAuth(true)}
+            onSignUp={() => setShowAuth(true)}
+            onGetStarted={() => {
+              if (user) {
+                setCurrentView('dashboard');
+              } else {
+                setShowAuth(true);
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
   }
 
   if (profile?.user_type === 'parent') {
     return (
       <>
-        {currentView === 'welcome' && (
-          <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
-            <div className="max-w-6xl mx-auto">
-              <WelcomeSection onGetStarted={handleGetStarted} />
-            </div>
-          </div>
-        )}
         {currentView === 'dashboard' && (
           <Dashboard 
-            onBack={handleBackToWelcome}
+            onBack={() => setCurrentView('welcome')}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
@@ -189,6 +202,8 @@ const AuthenticatedApp: React.FC = () => {
                 [type]: value
               }));
             }}
+            onBack={handleBackFromCategories}
+            onCategoriesSelected={handleCategoriesSelected}
           />
         )}
         {currentView === 'chat' && selectedChild && (

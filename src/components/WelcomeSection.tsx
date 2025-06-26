@@ -1,14 +1,53 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Target, MessageCircle } from 'lucide-react';
+import { User } from '@supabase/supabase-js';
 
 interface WelcomeSectionProps {
+  isAuthenticated: boolean;
+  user: User | null;
+  onSignIn: () => void;
+  onSignUp: () => void;
   onGetStarted: () => void;
 }
 
-const WelcomeSection: React.FC<WelcomeSectionProps> = ({ onGetStarted }) => {
+const WelcomeSection: React.FC<WelcomeSectionProps> = ({ 
+  isAuthenticated, 
+  user, 
+  onSignIn, 
+  onSignUp, 
+  onGetStarted 
+}) => {
   return (
     <div className="space-y-8">
+      {/* Header with Auth Buttons */}
+      <div className="flex justify-between items-center">
+        <div></div> {/* Empty div for spacing */}
+        <div className="flex gap-2">
+          {isAuthenticated ? (
+            <div className="text-sm text-gray-600">
+              Signed in as {user?.email}
+            </div>
+          ) : (
+            <>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onSignIn}
+              >
+                Sign In
+              </Button>
+              <Button 
+                size="sm" 
+                onClick={onSignUp}
+              >
+                Sign Up
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+
       {/* Hero Section */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-gray-800">

@@ -1,6 +1,6 @@
-
 import React from 'react';
-import { BookOpen, Users, Brain } from 'lucide-react';
+import { BookOpen, Users, Brain, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface CategorySelectorProps {
   selectedCategories: {
@@ -9,11 +9,15 @@ interface CategorySelectorProps {
     challenge: string;
   };
   onCategoryChange: (type: string, value: string) => void;
+  onBack: () => void;
+  onCategoriesSelected: (categories: any) => void;
 }
 
 const CategorySelector: React.FC<CategorySelectorProps> = ({
   selectedCategories,
-  onCategoryChange
+  onCategoryChange,
+  onBack,
+  onCategoriesSelected
 }) => {
   const subjects = [
     { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
@@ -76,30 +80,52 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   );
 
   return (
-    <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
-      <CategorySection
-        title="Subject Area"
-        icon={BookOpen}
-        items={subjects}
-        selectedValue={selectedCategories.subject}
-        categoryType="subject"
-      />
-      
-      <CategorySection
-        title="Age Group"
-        icon={Users}
-        items={ageGroups}
-        selectedValue={selectedCategories.ageGroup}
-        categoryType="ageGroup"
-      />
-      
-      <CategorySection
-        title="Learning Challenge"
-        icon={Brain}
-        items={challenges}
-        selectedValue={selectedCategories.challenge}
-        categoryType="challenge"
-      />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <button
+            onClick={onBack}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft size={20} />
+            Back
+          </button>
+          <Button
+            onClick={() => onCategoriesSelected(selectedCategories)}
+            disabled={!selectedCategories.subject || !selectedCategories.ageGroup || !selectedCategories.challenge}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
+          >
+            Continue to Chat
+          </Button>
+        </div>
+
+        <div className="bg-white/50 backdrop-blur-sm rounded-xl p-6 shadow-lg border border-white/20">
+          <CategorySection
+            title="Subject Area"
+            icon={BookOpen}
+            items={subjects}
+            selectedValue={selectedCategories.subject}
+            categoryType="subject"
+          />
+          
+          <CategorySection
+            title="Age Group"
+            icon={Users}
+            items={ageGroups}
+            selectedValue={selectedCategories.ageGroup}
+            categoryType="ageGroup"
+          />
+          
+          <CategorySection
+            title="Learning Challenge"
+            icon={Brain}
+            items={challenges}
+            selectedValue={selectedCategories.challenge}
+            categoryType="challenge"
+          />
+        </div>
+      </div>
     </div>
   );
 };
