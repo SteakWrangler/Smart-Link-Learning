@@ -150,6 +150,25 @@ const AuthenticatedApp: React.FC = () => {
     });
   };
 
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      setShowAuth(false);
+      setCurrentView('welcome');
+      toast({
+        title: 'Signed Out',
+        description: 'You have been successfully signed out.',
+      });
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to sign out. Please try again.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -170,6 +189,7 @@ const AuthenticatedApp: React.FC = () => {
           <WelcomeSection 
             isAuthenticated={!!user}
             user={user}
+            profile={profile}
             onSignIn={() => setShowAuth(true)}
             onSignUp={() => setShowAuth(true)}
             onGetStarted={() => {
@@ -179,6 +199,7 @@ const AuthenticatedApp: React.FC = () => {
                 setShowAuth(true);
               }
             }}
+            onSignOut={handleSignOut}
           />
         </div>
       </div>

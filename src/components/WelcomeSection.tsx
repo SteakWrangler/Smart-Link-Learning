@@ -2,22 +2,45 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Target, MessageCircle } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
+import { Profile } from '@/types/database';
 
 interface WelcomeSectionProps {
   isAuthenticated: boolean;
   user: User | null;
+  profile: Profile | null;
   onSignIn: () => void;
   onSignUp: () => void;
   onGetStarted: () => void;
+  onSignOut: () => void;
 }
 
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ 
   isAuthenticated, 
   user, 
+  profile,
   onSignIn, 
   onSignUp, 
-  onGetStarted 
+  onGetStarted,
+  onSignOut
 }) => {
+  // Get user's display name
+  const getUserDisplayName = () => {
+    if (!profile) return user?.email || 'User';
+    
+    const firstName = profile.first_name || '';
+    const lastName = profile.last_name || '';
+    
+    if (firstName && lastName) {
+      return `${firstName} ${lastName}`;
+    } else if (firstName) {
+      return firstName;
+    } else if (lastName) {
+      return lastName;
+    } else {
+      return user?.email || 'User';
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header with Auth Buttons */}
@@ -25,9 +48,18 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         <div></div> {/* Empty div for spacing */}
         <div className="flex gap-2">
           {isAuthenticated ? (
-            <div className="text-sm text-gray-600">
-              Signed in as {user?.email}
-            </div>
+            <>
+              <div className="text-sm text-gray-600">
+                Signed in as {getUserDisplayName()}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onSignOut}
+              >
+                Sign Out
+              </Button>
+            </>
           ) : (
             <>
               <Button 
