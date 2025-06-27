@@ -1,4 +1,3 @@
-
 export interface Profile {
   id: string;
   email: string;
@@ -71,4 +70,11 @@ export interface DocumentData {
   processing_error?: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ConversationDocument {
+  id: string;
+  conversation_id: string;
+  document_id: string;
+  created_at: string | null;
 }

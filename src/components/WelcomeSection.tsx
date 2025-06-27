@@ -44,9 +44,9 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   return (
     <div className="space-y-8">
       {/* Header with Auth Buttons */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <div></div> {/* Empty div for spacing */}
-        <div className="flex gap-2">
+        <div className="flex flex-col items-end gap-2">
           {isAuthenticated ? (
             <>
               <div className="text-sm text-gray-600">
@@ -61,7 +61,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
               </Button>
             </>
           ) : (
-            <>
+            <div className="flex gap-2">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -75,7 +75,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
               >
                 Sign Up
               </Button>
-            </>
+            </div>
           )}
         </div>
       </div>

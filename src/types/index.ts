@@ -13,6 +13,7 @@ export interface SavedConversation {
   childId: string;
   childName: string;
   messages: Message[];
+  documents: ConversationDocument[];
   createdAt: Date;
   isFavorite: boolean;
 }
@@ -22,4 +23,17 @@ export interface Message {
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
+}
+
+export interface ConversationDocument {
+  id: string;
+  documentId: string;
+  fileName: string;
+  fileType: string;
+  documentType: string;
+  description?: string;
+  subject?: string;
+  extractedContent?: string;
+  aiAnalysis?: any;
+  createdAt: Date;
 }

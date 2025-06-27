@@ -1,11 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Star, Save, FileText } from 'lucide-react';
-import { Child, SavedConversation } from '../types';
+import { ArrowLeft, Send, Star, FileText, Upload, X } from 'lucide-react';
+import { Child, SavedConversation, ConversationDocument } from '../types';
 import { DocumentData } from '../types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { generateChatResponse, ChatMessage } from '@/utils/openaiClient';
 import { toast } from '@/components/ui/use-toast';
+import ConversationDocumentUpload from '@/components/ConversationDocumentUpload';
+import type { Tables } from '@/types/supabase';
+import { Button } from '@/components/ui/button';
+import { Paperclip } from 'lucide-react';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -30,13 +34,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [messages, setMessages] = useState<Array<{ id: string; type: 'user' | 'ai'; content: string; timestamp: Date }>>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [conversationTitle, setConversationTitle] = useState('');
   const [isFavorite, setIsFavorite] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [documents, setDocuments] = useState<DocumentData[]>([]);
+  const [conversationDocuments, setConversationDocuments] = useState<Tables<'documents'>[]>([]);
   const [isLoadedConversation, setIsLoadedConversation] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
+  const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Conversation context tracking
@@ -66,6 +72,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setIsFavorite(loadedConversation.isFavorite || false);
       setIsLoadedConversation(true);
       setCurrentConversationId(loadedConversation.id);
+      setHasUnsavedChanges(false);
       console.log('Conversation loaded successfully');
     } else if (!loadedConversation) {
       // Reset to new conversation state
@@ -75,6 +82,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setIsFavorite(false);
       setIsLoadedConversation(false);
       setCurrentConversationId(null);
+      setHasUnsavedChanges(false);
     }
   }, [loadedConversation]);
 
@@ -83,112 +91,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       fetchDocuments();
     }
   }, [profile, selectedChild]);
-
-  // Generate initial greeting with personalized examples
-  const generateInitialGreeting = (): string => {
-    const ageGroup = selectedChild?.ageGroup || '';
-    const subjects = selectedChild?.subjects || [];
-    const challenges = selectedChild?.challenges || [];
-    const hasDocuments = documents.length > 0;
-    
-    let greeting = `👋 **Hi there! I'm ${learnerName}'s AI learning assistant.**\n\n`;
-    
-    // Add contextual information based on learner profile
-    if (ageGroup) {
-      const ageLabel = getAgeGroupLabel(ageGroup);
-      greeting += `I'm here to help with ${ageLabel.toLowerCase()} learning. `;
-    }
-    
-    if (subjects.length > 0) {
-      greeting += `I see we're focusing on ${subjects.join(', ').toLowerCase()}. `;
-    }
-    
-    if (challenges.some(c => c.toLowerCase().includes('dyslexia'))) {
-      greeting += `I'll make sure to provide clear, visual explanations that work well for dyslexic learners. `;
-    }
-    
-    if (challenges.some(c => c.toLowerCase().includes('adhd'))) {
-      greeting += `I'll keep things engaging and structured for ADHD-friendly learning. `;
-    }
-    
-    greeting += `\n\n**Here are some examples of the type of things I can help with:**\n\n`;
-    
-    // Add document-specific examples if documents are available
-    if (hasDocuments) {
-      greeting += `📄 **Analyze uploaded tests or documents**\n`;
-      greeting += `• "Look at the test I uploaded and tell me what ${learnerName} got wrong"\n`;
-      greeting += `• "Create practice problems based on the uploaded test"\n\n`;
-    }
-    
-    // Age-appropriate examples
-    if (ageGroup === 'early-elementary' || ageGroup === 'elementary') {
-      greeting += `🧮 **Math Practice & Games**\n`;
-      greeting += `• "Create a superhero-themed addition practice test"\n`;
-      greeting += `• "Help me practice subtraction with dinosaurs"\n`;
-      greeting += `• "Make a fun counting activity with pizza"\n\n`;
-      
-      greeting += `📚 **Learning Activities**\n`;
-      greeting += `• "What's a fun way to learn multiplication tables?"\n`;
-      greeting += `• "Create a 5-minute math game for rainy days"\n\n`;
-    } else if (ageGroup === 'middle-school') {
-      greeting += `📊 **Math & Science Help**\n`;
-      greeting += `• "Explain fractions using real-world examples"\n`;
-      greeting += `• "Create word problems about sports statistics"\n`;
-      greeting += `• "Help me understand pre-algebra concepts"\n\n`;
-      
-      greeting += `🎯 **Study Strategies**\n`;
-      greeting += `• "Make a practice test for my upcoming exam"\n`;
-      greeting += `• "What's the best way to study for math tests?"\n\n`;
-    } else if (ageGroup === 'high-school' || ageGroup === 'college') {
-      greeting += `📈 **Advanced Math & Concepts**\n`;
-      greeting += `• "Help me understand calculus derivatives"\n`;
-      greeting += `• "Create practice problems for algebra II"\n`;
-      greeting += `• "Explain statistics concepts with examples"\n\n`;
-      
-      greeting += `🎓 **Test Prep & Study Skills**\n`;
-      greeting += `• "Build a comprehensive practice test for finals"\n`;
-      greeting += `• "Help me break down complex problems step-by-step"\n\n`;
-    } else {
-      greeting += `🧮 **Math Practice**\n`;
-      greeting += `• "Create practice problems for any math topic"\n`;
-      greeting += `• "Help explain difficult concepts step-by-step"\n`;
-      greeting += `• "Make learning fun with themed activities"\n\n`;
-    }
-    
-    greeting += `💡 **Teaching Support**\n`;
-    greeting += `• "How should I explain division to ${learnerName}?"\n`;
-    greeting += `• "What are some hands-on activities for learning fractions?"\n\n`;
-    
-    greeting += `Just tell me what you'd like to work on, and I'll create personalized content that makes learning engaging and effective! 🌟`;
-    
-    return greeting;
-  };
-
-  // Helper function to get age group labels
-  const getAgeGroupLabel = (ageGroupId: string): string => {
-    const ageGroups = [
-      { id: 'early-elementary', label: 'Early Elementary (5-7)' },
-      { id: 'elementary', label: 'Elementary (8-10)' },
-      { id: 'middle-school', label: 'Middle School (11-13)' },
-      { id: 'high-school', label: 'High School (14-18)' },
-      { id: 'college', label: 'College (18+)' }
-    ];
-    return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
-  };
-
-  // Add initial AI greeting when chat loads (only for new conversations)
-  useEffect(() => {
-    if (messages.length === 0 && !loadedConversation) {
-      const greeting = generateInitialGreeting();
-      const initialMessage = {
-        id: 'initial-greeting',
-        type: 'ai' as const,
-        content: greeting,
-        timestamp: new Date()
-      };
-      setMessages([initialMessage]);
-    }
-  }, [selectedChild, documents, loadedConversation]);
 
   // Fetch documents from Supabase
   const fetchDocuments = async () => {
@@ -230,6 +132,320 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  // Fetch conversation-specific documents
+  const fetchConversationDocuments = async () => {
+    if (!currentConversationId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('conversation_documents')
+        .select(`
+          *,
+          documents (*)
+        `)
+        .eq('conversation_id', currentConversationId);
+
+      if (error) throw error;
+
+      console.log('Fetched conversation documents:', data);
+      
+      const typedConversationDocuments: Tables<'documents'>[] = (data || []).map(cd => {
+        const doc = cd.documents as any;
+        return {
+          id: doc.id,
+          user_id: doc.user_id,
+          child_id: doc.child_id,
+          file_name: doc.file_name,
+          file_path: doc.file_path,
+          file_size: doc.file_size,
+          file_type: doc.file_type,
+          document_type: doc.document_type,
+          description: doc.description,
+          subject: doc.subject,
+          extracted_content: doc.extracted_content,
+          ai_analysis: doc.ai_analysis,
+          processing_status: doc.processing_status,
+          processing_error: doc.processing_error,
+          created_at: doc.created_at,
+          updated_at: doc.updated_at
+        };
+      });
+      
+      setConversationDocuments(typedConversationDocuments);
+    } catch (error) {
+      console.error('Error fetching conversation documents:', error);
+      setConversationDocuments([]);
+    }
+  };
+
+  // Load conversation documents when conversation changes
+  useEffect(() => {
+    if (currentConversationId) {
+      fetchConversationDocuments();
+    } else {
+      setConversationDocuments([]);
+    }
+  }, [currentConversationId]);
+
+  // Handle document upload to conversation
+  const handleDocumentUpload = (documents: Tables<'documents'>[]) => {
+    setConversationDocuments(prev => [...prev, ...documents]);
+    setHasUnsavedChanges(true);
+  };
+
+  // Auto-save conversation when messages change
+  useEffect(() => {
+    if (messages.length > 1 && selectedChild && profile?.id) {
+      const autoSaveConversation = async () => {
+        try {
+          // If this is a loaded conversation, update it
+          if (isLoadedConversation && currentConversationId) {
+            // Update existing conversation
+            const { error: conversationError } = await supabase
+              .from('conversations')
+              .update({
+                title: conversationTitle.trim() || loadedConversation?.title || 'Updated Conversation',
+                is_favorite: isFavorite,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', currentConversationId);
+
+            if (conversationError) {
+              console.error('Error updating conversation:', conversationError);
+              return;
+            }
+
+            // Delete existing messages
+            const { error: deleteError } = await supabase
+              .from('messages')
+              .delete()
+              .eq('conversation_id', currentConversationId);
+
+            if (deleteError) {
+              console.error('Error deleting old messages:', deleteError);
+              return;
+            }
+
+            // Insert updated messages
+            const messageInserts = messages.map(msg => ({
+              conversation_id: currentConversationId,
+              content: msg.content,
+              type: msg.type,
+              created_at: msg.timestamp.toISOString()
+            }));
+
+            const { error: messagesError } = await supabase
+              .from('messages')
+              .insert(messageInserts);
+
+            if (messagesError) {
+              console.error('Error saving updated messages:', messagesError);
+              return;
+            }
+
+            console.log('Conversation auto-saved successfully');
+            setHasUnsavedChanges(false);
+          } else {
+            // Create new conversation
+            const title = conversationTitle.trim() || 
+              (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
+
+            const conversationData = {
+              child_id: selectedChild.id,
+              title,
+              is_favorite: isFavorite,
+              is_saved: true
+            };
+
+            const { data: conversation, error: conversationError } = await supabase
+              .from('conversations')
+              .insert(conversationData)
+              .select()
+              .single();
+
+            if (conversationError) {
+              console.error('Error saving conversation:', conversationError);
+              return;
+            }
+
+            if (!conversation) {
+              console.error('No conversation data returned after insert');
+              return;
+            }
+
+            const messageInserts = messages.map(msg => ({
+              conversation_id: conversation.id,
+              content: msg.content,
+              type: msg.type,
+              created_at: msg.timestamp.toISOString()
+            }));
+
+            const { error: messagesError } = await supabase
+              .from('messages')
+              .insert(messageInserts);
+
+            if (messagesError) {
+              console.error('Error saving messages:', messagesError);
+              return;
+            }
+
+            console.log('New conversation auto-saved successfully');
+            setCurrentConversationId(conversation.id);
+            setIsLoadedConversation(true);
+            setHasUnsavedChanges(false);
+          }
+        } catch (error) {
+          console.error('Error auto-saving conversation:', error);
+        }
+      };
+
+      // Debounce auto-save to avoid too many database calls
+      const timeoutId = setTimeout(autoSaveConversation, 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [messages, selectedChild, profile?.id, isLoadedConversation, currentConversationId, conversationTitle, isFavorite, loadedConversation?.title]);
+
+  // Handle back button - no save prompt needed
+  const handleBack = () => {
+    onBack();
+  };
+
+  // Generate initial greeting with personalized examples
+  const generateInitialGreeting = (): string => {
+    const ageGroup = selectedChild?.ageGroup || '';
+    const subjects = selectedChild?.subjects || [];
+    const challenges = selectedChild?.challenges || [];
+    
+    let greeting = `👋 **Hi there! I'm ${learnerName}'s AI learning assistant.**\n\n`;
+    
+    // Add contextual information based on learner profile
+    if (ageGroup) {
+      const ageLabel = getAgeGroupLabel(ageGroup);
+      greeting += `I'm here to help with ${ageLabel.toLowerCase()} learning. `;
+    }
+    
+    if (subjects.length > 0) {
+      greeting += `I see we're focusing on ${subjects.join(', ').toLowerCase()}. `;
+    }
+    
+    // Only mention challenges the student actually has
+    const challengeLower = challenges.map(c => c.toLowerCase());
+    
+    if (challengeLower.some(c => c.includes('dyslexia'))) {
+      greeting += `I'll make sure to provide clear, visual explanations that work well for dyslexic learners. `;
+    }
+    
+    if (challengeLower.some(c => c.includes('adhd') || c.includes('focus'))) {
+      greeting += `I'll keep things engaging and structured for ADHD-friendly learning. `;
+    }
+    
+    if (challengeLower.some(c => c.includes('processing'))) {
+      greeting += `I'll provide extra time and break down complex concepts to support processing needs. `;
+    }
+    
+    if (challengeLower.some(c => c.includes('math anxiety'))) {
+      greeting += `I'll create a supportive, low-pressure environment to help build math confidence. `;
+    }
+    
+    if (challengeLower.some(c => c.includes('general learning support'))) {
+      greeting += `I'll use multiple teaching approaches and provide positive reinforcement to support learning. `;
+    }
+    
+    greeting += `\n\n**Here are some examples of the type of things I can help with:**\n\n`;
+    
+    // Add document upload capability
+    greeting += `📄 **Upload and Analyze Documents**\n`;
+    greeting += `• Upload a test or document using the upload button below\n`;
+    greeting += `• "Look at the test I uploaded and tell me what ${learnerName} got wrong"\n`;
+    greeting += `• "Create practice problems based on the uploaded test"\n\n`;
+    
+    // Age-appropriate examples with specific subjects and themes
+    if (ageGroup === 'early-elementary' || ageGroup === 'elementary') {
+      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+      greeting += `🧮 **Subject Practice & Games**\n`;
+      greeting += `• "Create a dinosaur-themed ${primarySubject} practice test"\n`;
+      greeting += `• "Help me practice ${primarySubject} with space exploration"\n`;
+      greeting += `• "Make a fun ${primarySubject} activity with underwater creatures"\n\n`;
+      
+      greeting += `📚 **Learning Activities**\n`;
+      greeting += `• "What's a fun way to learn ${primarySubject} using building blocks?"\n`;
+      greeting += `• "Create a 5-minute ${primarySubject} game about animals"\n\n`;
+    } else if (ageGroup === 'middle-school') {
+      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+      greeting += `📊 **Subject & Science Help**\n`;
+      greeting += `• "Explain ${primarySubject} concepts using video game examples"\n`;
+      greeting += `• "Create ${primarySubject} problems about basketball statistics"\n`;
+      greeting += `• "Help me understand ${primarySubject} using cooking measurements"\n\n`;
+      
+      greeting += `🎯 **Study Strategies**\n`;
+      greeting += `• "Make a practice test for my upcoming ${primarySubject} exam"\n`;
+      greeting += `• "What's the best way to study for ${primarySubject} tests?"\n\n`;
+    } else if (ageGroup === 'high-school' || ageGroup === 'college') {
+      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+      greeting += `📈 **Advanced Subject & Concepts**\n`;
+      greeting += `• "Help me understand advanced ${primarySubject} concepts"\n`;
+      greeting += `• "Create practice problems for ${primarySubject}"\n`;
+      greeting += `• "Explain ${primarySubject} concepts with real-world examples"\n\n`;
+      
+      greeting += `🎓 **Test Prep & Study Skills**\n`;
+      greeting += `• "Build a comprehensive practice test for ${primarySubject} finals"\n`;
+      greeting += `• "Help me break down complex ${primarySubject} problems step-by-step"\n\n`;
+    } else {
+      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+      greeting += `🧮 **Subject Practice**\n`;
+      greeting += `• "Create practice problems for ${primarySubject} topics"\n`;
+      greeting += `• "Help explain difficult ${primarySubject} concepts step-by-step"\n`;
+      greeting += `• "Make learning fun with themed ${primarySubject} activities"\n\n`;
+    }
+    
+    greeting += `💡 **Teaching Support**\n`;
+    const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+    greeting += `• "How should I explain ${primarySubject} concepts to ${learnerName}?"\n`;
+    greeting += `• "What are some hands-on activities for learning ${primarySubject}?"\n\n`;
+    
+    greeting += `🎭 **Themed Learning**\n`;
+    greeting += `• "Create space exploration ${primarySubject} problems where astronauts use math to navigate"\n`;
+    greeting += `• "Make dinosaur ${primarySubject} problems that use actual dinosaur facts and measurements"\n`;
+    greeting += `• "Design ocean ${primarySubject} activities that incorporate real marine biology concepts"\n\n`;
+    
+    greeting += `🎮 **Immersive Activities & Games**\n`;
+    greeting += `• "Create a space station game where ${learnerName} is an astronaut using ${primarySubject} to solve problems"\n`;
+    greeting += `• "Design a dinosaur park simulation where ${learnerName} manages resources using ${primarySubject} skills"\n`;
+    greeting += `• "Make an underwater adventure where ${learnerName} uses ${primarySubject} knowledge to explore the ocean"\n`;
+    greeting += `• "Create a robot workshop where ${learnerName} builds machines using ${primarySubject} concepts"\n`;
+    greeting += `• "Design a superhero challenge where ${learnerName} uses ${primarySubject} thinking to save the day"\n\n`;
+    
+    greeting += `Just tell me what you'd like to work on, and I'll create personalized content that makes learning engaging and effective! 🌟`;
+    
+    return greeting;
+  };
+
+  // Helper function to get age group labels
+  const getAgeGroupLabel = (ageGroupId: string): string => {
+    const ageGroups = [
+      { id: 'early-elementary', label: 'Early Elementary (5-7)' },
+      { id: 'elementary', label: 'Elementary (8-10)' },
+      { id: 'middle-school', label: 'Middle School (11-13)' },
+      { id: 'high-school', label: 'High School (14-18)' },
+      { id: 'college', label: 'College (18+)' }
+    ];
+    return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
+  };
+
+  // Add initial AI greeting when chat loads (only for new conversations)
+  useEffect(() => {
+    if (messages.length === 0 && !loadedConversation) {
+      const greeting = generateInitialGreeting();
+      const initialMessage = {
+        id: 'initial-greeting',
+        type: 'ai' as const,
+        content: greeting,
+        timestamp: new Date()
+      };
+      setMessages([initialMessage]);
+    }
+  }, [selectedChild, documents, loadedConversation]);
+
   // Generate context-aware response using OpenAI API
   const generateContextAwareResponse = async (userMessage: string): Promise<string> => {
     // Build conversation context for the LLM
@@ -256,32 +472,129 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         systemContext += `Their focus subjects are: ${selectedChild.subjects.join(', ')}. `;
       }
       
+      // Only include challenges that the student actually has
       if (selectedChild.challenges && selectedChild.challenges.length > 0) {
         systemContext += `Important learning considerations: ${selectedChild.challenges.join(', ')}. `;
         
-        // Provide specific guidance for learning differences
-        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('dyslexia'))) {
+        // Provide specific guidance only for challenges the student actually has
+        const challenges = selectedChild.challenges.map(c => c.toLowerCase());
+        
+        if (challenges.some(c => c.includes('dyslexia'))) {
           systemContext += `Since ${learnerName} has dyslexia, when relevant to the task, use clear fonts, avoid dense text, provide visual aids, and break down complex instructions into smaller steps. However, if the current task is purely mathematical and doesn't involve reading comprehension, the dyslexia may not be relevant to address. `;
         }
         
-        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('adhd'))) {
-          systemContext += `Since ${learnerName} has ADHD, when relevant, keep activities shorter, provide clear structure, use engaging themes, and include movement or hands-on elements when possible. `;
+        if (challenges.some(c => c.includes('adhd') || c.includes('focus'))) {
+          systemContext += `Since ${learnerName} has ADHD/focus issues, when relevant, keep activities shorter, provide clear structure, use engaging themes, and include movement or hands-on elements when possible. `;
         }
         
-        if (selectedChild.challenges.some(challenge => challenge.toLowerCase().includes('autism'))) {
-          systemContext += `Since ${learnerName} has autism, when relevant, provide clear expectations, consistent structure, and consider sensory preferences. `;
+        if (challenges.some(c => c.includes('processing'))) {
+          systemContext += `Since ${learnerName} has processing delays, when relevant, provide extra time for responses, break down complex concepts into smaller parts, and use visual aids to support understanding. `;
+        }
+        
+        if (challenges.some(c => c.includes('math anxiety'))) {
+          systemContext += `Since ${learnerName} experiences math anxiety, when relevant, create a supportive, low-pressure environment, emphasize progress over perfection, and use encouraging language. Focus on building confidence through gradual success. `;
+        }
+        
+        if (challenges.some(c => c.includes('general learning support'))) {
+          systemContext += `Since ${learnerName} benefits from general learning support, when relevant, provide clear explanations, use multiple teaching approaches, and offer positive reinforcement to maintain engagement and motivation. `;
         }
       }
     }
     
-    // Add document context if available
-    const pdfDocs = documents.filter(doc => doc.file_type === 'application/pdf');
-    if (pdfDocs.length > 0 && pdfDocs[0].ai_analysis) {
-      const analysis = pdfDocs[0].ai_analysis as any;
-      systemContext += `You have access to a test analysis showing ${learnerName} got ${analysis.accuracy}% accuracy with problem areas in: ${analysis.problemAreas?.join(', ')}. `;
+    // Add document context if available - prioritize conversation-specific documents
+    const availableDocuments = conversationDocuments.length > 0 ? conversationDocuments : documents;
+    const pdfDocs = availableDocuments.filter(doc => {
+      if ('fileType' in doc) {
+        return doc.fileType === 'application/pdf';
+      } else {
+        return doc.file_type === 'application/pdf';
+      }
+    });
+    
+    if (pdfDocs.length > 0) {
+      systemContext += `You have access to ${pdfDocs.length} document${pdfDocs.length > 1 ? 's' : ''} uploaded to this conversation:\n\n`;
+      
+      pdfDocs.forEach((doc, index) => {
+        systemContext += `Document ${index + 1}: "${doc.file_name}"\n`;
+        
+        // Add document analysis if available
+        if (doc.ai_analysis && typeof doc.ai_analysis === 'object' && 'accuracy' in doc.ai_analysis) {
+          const analysis = doc.ai_analysis as any;
+          systemContext += `- Analysis shows ${learnerName} got ${analysis.accuracy}% accuracy with problem areas in: ${analysis.problemAreas?.join(', ')}\n`;
+        }
+        
+        // Add document content if available
+        if (doc.extracted_content) {
+          const contentPreview = doc.extracted_content.length > 300 
+            ? doc.extracted_content.substring(0, 300) + '...' 
+            : doc.extracted_content;
+          systemContext += `- Content: ${contentPreview}\n`;
+        }
+        
+        systemContext += '\n';
+      });
     }
     
-    systemContext += `Generate helpful, engaging responses that incorporate any themes, time constraints, difficulty preferences, or other requirements the user mentions. Be natural and conversational while providing practical educational content. Only address learning differences when they are relevant to the current task.`;
+    // Add conversation-specific document context for non-PDF documents
+    const nonPdfDocs = conversationDocuments.filter(doc => {
+      if ('fileType' in doc) {
+        return doc.fileType !== 'application/pdf';
+      } else {
+        return doc.file_type !== 'application/pdf';
+      }
+    });
+    
+    if (nonPdfDocs.length > 0) {
+      systemContext += `Additional documents uploaded to this conversation:\n`;
+      nonPdfDocs.forEach(doc => {
+        systemContext += `- "${doc.file_name}" (${doc.file_type})\n`;
+      });
+      systemContext += '\n';
+    }
+    
+    systemContext += `Generate helpful, engaging responses that incorporate any themes, time constraints, difficulty preferences, or other requirements the user mentions. Be natural and conversational while providing practical educational content. Only address learning differences when they are relevant to the current task.
+
+IMPORTANT: When creating themed problems or activities, make them genuinely thematic rather than just adding theme words to basic problems. For example:
+- GOOD: "Detective Justin is investigating a case. He found 12 clues and needs to organize them into 4 evidence categories. How many clues per category?"
+- BAD: "Detective Justin buys 12 doughnuts for 4 friends. How many does each get?"
+
+The theme should be integral to the problem's context and logic, not just decorative.
+
+CRITICAL FOR ACTIVITIES/GAMES: When creating themed activities or games, the theme must be central to the gameplay mechanics, not just a superficial wrapper. 
+
+STEP-BY-STEP PROCESS FOR CREATING IMMERSIVE GAMES WITH ANY THEME:
+1. SETTING: Create a detailed, immersive world based on the student's chosen theme
+2. ROLE: Give the student a specific, meaningful role within that theme's world
+3. MECHANICS: Design game mechanics that naturally use the theme's tools, objects, or concepts
+4. LEARNING: Integrate the relevant subject concepts naturally within those theme-specific mechanics
+5. PROGRESSION: Build complexity within the theme's context
+
+HOW TO MAKE ANY THEME IMMERSIVE FOR ANY SUBJECT (examples showing the process, not specific themes):
+
+EXAMPLE 1 - DETECTIVE THEME:
+EXCELLENT: "Welcome to Detective [Student]'s Investigation Office! You have a magnifying glass and case files. Each case file contains word problems with hidden clues. Use your magnifying glass to find keywords like 'less than' (subtraction), 'more than' (addition), 'each' (division), 'total' (addition), 'difference' (subtraction). Highlight these clues in red. Once you find all the clues, solve the case by doing the math."
+BAD: "You're a detective. Solve: 24 - (6 × 3) = ?"
+
+EXAMPLE 2 - PIZZERIA THEME:
+EXCELLENT: "Welcome to [Student]'s Pizzeria! You're the head chef today. Customers will place orders, and you need to: 1) Read the order form (reading comprehension), 2) Calculate ingredient costs (addition), 3) Figure out how many pizzas to make (multiplication), 4) Calculate change from payments (subtraction), 5) Update your inventory (problem solving)."
+BAD: "You're a pizza chef. Solve: (2 × 12) + 8 = ?, then 40 - ? = ?"
+
+EXAMPLE 3 - SPACE THEME:
+EXCELLENT: "Commander [Student], welcome to Mission Control! You're piloting a spaceship to Mars. Your mission: 1) Calculate fuel consumption (multiplication/division), 2) Navigate using coordinates (graphing), 3) Manage oxygen levels (subtraction), 4) Plan food rations (division)."
+BAD: "You're an astronaut. Solve: 1000 - (50 × 15) = ?"
+
+EXAMPLE 4 - DINOSAUR THEME:
+EXCELLENT: "Welcome to Paleontologist [Student]'s Dinosaur Dig Site! You're excavating fossils and need to: 1) Measure bone lengths (measurement), 2) Categorize fossils by dinosaur type (classification), 3) Calculate excavation time (multiplication), 4) Organize findings in the museum (problem solving)."
+BAD: "You're a paleontologist. Solve: (12 + 15 + 18) ÷ 3 = ?"
+
+GENERAL PRINCIPLES FOR ANY THEME AND ANY SUBJECT:
+- The student should have a specific role within the theme's world
+- The theme should provide tools, objects, or concepts that naturally involve the subject being studied
+- Subject learning should happen through the theme's activities, not separate from them
+- The activity should feel like playing within the theme, not doing subject work with theme words added
+- Adapt the activity to focus on the specific subject(s) the student needs help with (math, reading, science, etc.)
+
+The activity should immerse the student in the theme's world and make the learning content feel natural within that context. Avoid any activity that just adds theme words to basic subject problems.`;
     
     // Call the LLM API with full conversation context
     return await callLLMAPI(systemContext, conversationHistory);
@@ -403,196 +716,71 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Handle sending a message
   const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-    
-    const userMessage = {
-      id: Date.now().toString(),
-      type: 'user' as const,
-      content: inputMessage.trim(),
-      timestamp: new Date()
-    };
+    if (!inputMessage.trim() || isLoading) return;
 
-    setMessages(prev => [...prev, userMessage]);
-    const currentMessage = inputMessage.trim();
+    const userMessage = inputMessage.trim();
     setInputMessage('');
     setIsLoading(true);
 
+    // Add user message to chat
+    const userMessageObj = {
+      id: Date.now().toString(),
+      type: 'user' as const,
+      content: userMessage,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessageObj]);
+    setHasUnsavedChanges(true);
+
     try {
-      // Generate AI response using context
-      const aiResponse = await generateContextAwareResponse(currentMessage);
+      // Generate AI response
+      const aiResponse = await generateContextAwareResponse(userMessage);
       
-      // Note: Context updates can be handled by the LLM naturally through conversation history
-      
-      const aiMessage = {
+      // Add AI response to chat
+      const aiMessageObj = {
         id: (Date.now() + 1).toString(),
         type: 'ai' as const,
         content: aiResponse,
         timestamp: new Date()
       };
-      
-      setMessages(prev => [...prev, aiMessage]);
+
+      setMessages(prev => [...prev, aiMessageObj]);
     } catch (error) {
-      console.error('Error generating AI response:', error);
-      const errorMessage = {
+      console.error('Error generating response:', error);
+      
+      // Add error message
+      const errorMessageObj = {
         id: (Date.now() + 1).toString(),
         type: 'ai' as const,
-        content: "I'm sorry, I'm having trouble responding right now. Please try again.",
+        content: "I'm sorry, I'm having trouble processing your request right now. Please try again.",
         timestamp: new Date()
       };
-      setMessages(prev => [...prev, errorMessage]);
+
+      setMessages(prev => [...prev, errorMessageObj]);
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  // Handle saving the conversation
-  const handleSaveConversation = async () => {
-    try {
-      if (!selectedChild) {
-        console.error('No child selected');
-        toast({
-          title: 'Error',
-          description: 'Please select a student before saving.',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      if (!profile?.id) {
-        console.error('No profile ID found');
-        toast({
-          title: 'Error',
-          description: 'User profile not found. Please try logging in again.',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      // If this is a loaded conversation, update it instead of creating new
-      if (isLoadedConversation && currentConversationId) {
-        // Update existing conversation
-        const { error: conversationError } = await supabase
-          .from('conversations')
-          .update({
-            title: conversationTitle.trim() || loadedConversation?.title || 'Updated Conversation',
-            is_favorite: isFavorite
-          })
-          .eq('id', currentConversationId);
-
-        if (conversationError) {
-          console.error('Error updating conversation:', conversationError);
-          throw conversationError;
-        }
-
-        // Delete existing messages
-        const { error: deleteError } = await supabase
-          .from('messages')
-          .delete()
-          .eq('conversation_id', currentConversationId);
-
-        if (deleteError) {
-          console.error('Error deleting old messages:', deleteError);
-          throw deleteError;
-        }
-
-        // Insert updated messages
-        const messageInserts = messages.map(msg => ({
-          conversation_id: currentConversationId,
-          content: msg.content,
-          type: msg.type,
-          created_at: msg.timestamp.toISOString()
-        }));
-
-        const { error: messagesError } = await supabase
-          .from('messages')
-          .insert(messageInserts);
-
-        if (messagesError) {
-          console.error('Error saving updated messages:', messagesError);
-          throw messagesError;
-        }
-
-        toast({
-          title: 'Success',
-          description: 'Conversation updated successfully!',
-        });
-      } else {
-        // Create new conversation (existing code)
-        const title = conversationTitle.trim() || 
-          (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
-
-        const conversationData = {
-          child_id: selectedChild.id,
-          title,
-          is_favorite: isFavorite,
-          is_saved: true
-        };
-
-        console.log('Saving conversation with data:', conversationData);
-
-        const { data: conversation, error: conversationError } = await supabase
-          .from('conversations')
-          .insert(conversationData)
-          .select()
-          .single();
-
-        if (conversationError) {
-          console.error('Error saving conversation:', conversationError);
-          throw conversationError;
-        }
-
-        if (!conversation) {
-          console.error('No conversation data returned after insert');
-          throw new Error('No conversation data returned after insert');
-        }
-
-        console.log('Conversation saved successfully:', conversation);
-
-        const messageInserts = messages.map(msg => ({
-          conversation_id: conversation.id,
-          content: msg.content,
-          type: msg.type,
-          created_at: msg.timestamp.toISOString()
-        }));
-
-        console.log('Saving messages:', messageInserts);
-
-        const { error: messagesError } = await supabase
-          .from('messages')
-          .insert(messageInserts);
-
-        if (messagesError) {
-          console.error('Error saving messages:', messagesError);
-          throw messagesError;
-        }
-
-        console.log('Messages saved successfully');
-
-        toast({
-          title: 'Success',
-          description: 'Conversation saved successfully!',
-        });
-
-        onSaveConversation(conversation);
-      }
-
-      // Close the dialog and reset form
-      setShowSaveDialog(false);
-      setConversationTitle('');
-      setIsFavorite(false);
-    } catch (error) {
-      console.error('Error saving conversation:', error);
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'Failed to save conversation. Please try again.',
-        variant: 'destructive'
-      });
     }
   };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Generate AI context from documents
+  const generateDocumentContext = (): string => {
+    const allDocuments = [...conversationDocuments, ...documents];
+    
+    if (allDocuments.length === 0) return '';
+    
+    const documentContexts = allDocuments.map(doc => {
+      const content = doc.extracted_content || '';
+      const analysis = doc.ai_analysis ? JSON.stringify(doc.ai_analysis) : '';
+      return `Document: ${doc.file_name}\nContent: ${content}\nAnalysis: ${analysis}`;
+    }).join('\n\n');
+    
+    return `\n\nRelevant Documents:\n${documentContexts}`;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col">
@@ -601,7 +789,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
             <button
-              onClick={onBack}
+              onClick={handleBack}
               className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
               <ArrowLeft size={20} />
@@ -625,16 +813,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               )}
             </div>
           </div>
-          
-          {messages.length > 0 && (
-            <button
-              onClick={() => setShowSaveDialog(true)}
-              className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-            >
-              <Save size={16} />
-              {isLoadedConversation ? 'Update Conversation' : 'Save Conversation'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -699,6 +877,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           {/* Input Area */}
           <div className="border-t border-gray-200 p-4">
             <div className="flex gap-2">
+              <button
+                onClick={() => setShowDocumentUpload(true)}
+                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600"
+                title="Upload document to this conversation"
+              >
+                <Upload size={16} />
+                <span className="hidden sm:inline">Upload</span>
+              </button>
               <input
                 type="text"
                 value={inputMessage}
@@ -720,60 +906,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         </div>
       </div>
 
-      {/* Save Dialog */}
-      {showSaveDialog && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">
-              {isLoadedConversation ? 'Update Conversation' : 'Save Conversation'}
-            </h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-                  Title {!isLoadedConversation && '(optional)'}
-                </label>
-                <input
-                  id="title"
-                  type="text"
-                  value={conversationTitle}
-                  onChange={(e) => setConversationTitle(e.target.value)}
-                  placeholder={isLoadedConversation ? "Enter conversation title" : "Enter conversation title (auto-generated if empty)"}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  id="favorite"
-                  type="checkbox"
-                  checked={isFavorite}
-                  onChange={(e) => setIsFavorite(e.target.checked)}
-                  className="rounded border-gray-300 focus:ring-blue-500"
-                />
-                <label htmlFor="favorite" className="flex items-center gap-2 text-sm text-gray-700">
-                  <Star size={16} />
-                  Mark as favorite
-                </label>
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowSaveDialog(false)}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveConversation}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                  {isLoadedConversation ? 'Update' : 'Save'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Document Upload Dialog */}
+      {showDocumentUpload && (
+        <ConversationDocumentUpload 
+          conversationId={currentConversationId}
+          selectedChild={selectedChild}
+          onDocumentUploaded={handleDocumentUpload}
+          onClose={() => setShowDocumentUpload(false)}
+        />
       )}
     </div>
   );

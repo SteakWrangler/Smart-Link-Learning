@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
-import { SavedConversation, Child } from '../types';
+import { SavedConversation, Child, ConversationDocument } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 
@@ -21,6 +20,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [filterChild, setFilterChild] = useState<string>('all');
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
   const [conversations, setConversations] = useState<SavedConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -100,7 +100,8 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             timestamp: new Date(msg.created_at)
           })) : [],
           createdAt: new Date(conv.created_at),
-          isFavorite: conv.is_favorite || false
+          isFavorite: conv.is_favorite || false,
+          documents: [] as ConversationDocument[] // Add empty documents array for now
         };
       });
 
@@ -185,6 +186,12 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       return false;
     }
     return true;
+  }).sort((a, b) => {
+    if (sortBy === 'newest') {
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    } else {
+      return a.createdAt.getTime() - b.createdAt.getTime();
+    }
   });
 
   const formatDate = (date: Date) => {
@@ -211,7 +218,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
               Back
             </button>
             <h1 className="text-2xl font-bold text-gray-800">
-              Saved Conversations
+              Chat History
             </h1>
           </div>
         </div>
@@ -244,6 +251,14 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                 <option key={child.id} value={child.id}>{child.name}</option>
               ))}
             </select>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as 'newest' | 'oldest')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
             <button
               onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
               className={`flex items-center gap-2 px-3 py-2 rounded-lg font-medium transition-colors ${
@@ -267,7 +282,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           <div className="text-center text-red-600 py-8">{error}</div>
         ) : conversations.length === 0 ? (
           <div className="text-center text-gray-500 py-8">
-            No saved conversations yet. Click the save button in a conversation to save it.
+            No conversations yet. Start a new chat and it will be automatically saved here.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

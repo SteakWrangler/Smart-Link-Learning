@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users } from 'lucide-react';
+import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users, HelpCircle } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import { Child as DatabaseChild } from '../types/database';
 import ChildProfile from './ChildProfile';
 import AddChildForm from './AddChildForm';
 import ConversationHistory from './ConversationHistory';
 import ChatInterface from './ChatInterface';
-import DocumentManager from './DocumentManager';
 import CommunityForum from './CommunityForum';
+import FAQ from './FAQ';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -24,9 +24,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | undefined>();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'documents' | 'support'>('children');
+  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'support' | 'faq'>('children');
   const [showChat, setShowChat] = useState(false);
-  const [showDocuments, setShowDocuments] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
   const [showResourceModal, setShowResourceModal] = useState<string | null>(null);
@@ -732,6 +731,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     ];
   };
 
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out.",
+      });
+      
+      onBack();
+    } catch (error) {
+      console.error('Error signing out:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (showChat && selectedChild) {
     return (
       <ChatInterface
@@ -758,12 +778,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     );
   }
 
-  if (showDocuments) {
-    return (
-      <DocumentManager onClose={() => setShowDocuments(false)} />
-    );
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center">
@@ -776,19 +790,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ArrowLeft size={20} />
-              Back to Welcome
-            </button>
+        <div className="max-w-6xl mx-auto">
+          {/* Title and Back Button Row */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+              >
+                <ArrowLeft size={20} />
+                Back to Welcome
+              </button>
+            </div>
             <h1 className="text-2xl font-bold text-gray-800">Learning Dashboard</h1>
+            <div className="w-20"></div> {/* Spacer for balance */}
           </div>
           
-          <div className="flex gap-2">
+          {/* Navigation Tabs Row */}
+          <div className="flex justify-center gap-2">
             <button
               onClick={() => setActiveTab('children')}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${
@@ -808,18 +827,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               }`}
             >
               <MessageSquare size={16} className="inline mr-2" />
-              Saved Conversations
-            </button>
-            <button
-              onClick={() => setActiveTab('documents')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === 'documents'
-                  ? 'bg-blue-500 text-white'
-                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-              }`}
-            >
-              <FileText size={16} className="inline mr-2" />
-              Documents
+              Chat History
             </button>
             <button
               onClick={() => setActiveTab('support')}
@@ -833,7 +841,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               Parent Support
             </button>
             <button
-              onClick={onBack}
+              onClick={() => setActiveTab('faq')}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                activeTab === 'faq'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+            >
+              <HelpCircle size={16} className="inline mr-2" />
+              FAQ
+            </button>
+          </div>
+          
+          {/* Sign Out Button - Right Aligned */}
+          <div className="flex justify-end mt-2">
+            <button
+              onClick={handleSignOut}
               className="px-4 py-2 rounded-lg font-medium transition-colors text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200"
             >
               Sign Out
@@ -898,36 +921,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           />
         )}
 
-        {activeTab === 'documents' && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-gray-800">Document Manager</h2>
-              <button
-                onClick={() => setShowDocuments(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
-              >
-                <FileText size={20} />
-                Manage Documents
-              </button>
-            </div>
-            <div className="bg-white rounded-xl shadow-lg p-8">
-              <div className="text-center">
-                <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <h3 className="text-lg font-medium text-gray-800 mb-2">Upload and Manage Documents</h3>
-                <p className="text-gray-600 mb-4">
-                  Upload documents like failed tests, study guides, and homework to help create personalized learning plans.
-                </p>
-                <button
-                  onClick={() => setShowDocuments(true)}
-                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
-                >
-                  Open Document Manager
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
         {activeTab === 'support' && (
           <div className="bg-white rounded-xl shadow-lg p-8">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Parent Support Resources</h2>
@@ -987,6 +980,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === 'faq' && (
+          <FAQ />
         )}
       </div>
 
