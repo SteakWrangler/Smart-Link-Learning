@@ -350,10 +350,36 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
     fetchTopics(category.id);
   };
 
-  const handleTopicSelect = (topic: ForumTopic) => {
+  const handleTopicSelect = async (topic: ForumTopic) => {
     setSelectedTopic(topic);
     setViewMode('topic');
     fetchPosts(topic.id);
+    
+    // Increment view count when topic is viewed
+    try {
+      await (supabase as any)
+        .from('forum_topics')
+        .update({ 
+          view_count: topic.view_count + 1
+        })
+        .eq('id', topic.id);
+      
+      // Update the local state to reflect the new view count
+      setTopics(prevTopics => 
+        prevTopics.map(t => 
+          t.id === topic.id 
+            ? { ...t, view_count: t.view_count + 1 }
+            : t
+        )
+      );
+      
+      // Update the selected topic's view count as well
+      setSelectedTopic(prev => prev ? { ...prev, view_count: prev.view_count + 1 } : null);
+      
+    } catch (error) {
+      console.error('Error updating view count:', error);
+      // Don't show error to user as this is not critical functionality
+    }
   };
 
   const handleBackToCategories = () => {
