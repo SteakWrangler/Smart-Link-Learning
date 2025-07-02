@@ -197,7 +197,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Auto-save conversation when messages change
   useEffect(() => {
-    if (messages.length > 1 && selectedChild && profile?.id) {
+    console.log('Auto-save effect triggered. Messages count:', messages.length);
+    if (messages.length > 1 && selectedChild && profile?.id && hasUnsavedChanges) {
       const autoSaveConversation = async () => {
         try {
           // If this is a loaded conversation, update it
@@ -305,7 +306,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const timeoutId = setTimeout(autoSaveConversation, 2000);
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, selectedChild, profile?.id, isLoadedConversation, currentConversationId, conversationTitle, isFavorite, loadedConversation?.title]);
+  }, [messages, selectedChild, profile?.id, isLoadedConversation, currentConversationId, conversationTitle, isFavorite, loadedConversation?.title, hasUnsavedChanges]);
 
   // Handle back button - no save prompt needed
   const handleBack = () => {
@@ -742,13 +743,17 @@ The activity should immerse the student in the theme's world and make the learni
 
     // Add user message to chat
     const userMessageObj = {
-      id: Date.now().toString(),
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type: 'user' as const,
       content: userMessage,
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, userMessageObj]);
+    console.log('Adding user message:', userMessageObj);
+    setMessages(prev => {
+      console.log('Previous messages count:', prev.length);
+      return [...prev, userMessageObj];
+    });
     setHasUnsavedChanges(true);
 
     try {
@@ -757,25 +762,33 @@ The activity should immerse the student in the theme's world and make the learni
       
       // Add AI response to chat
       const aiMessageObj = {
-        id: (Date.now() + 1).toString(),
+        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: 'ai' as const,
         content: aiResponse,
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, aiMessageObj]);
+      console.log('Adding AI message:', aiMessageObj);
+      setMessages(prev => {
+        console.log('Previous messages count before AI:', prev.length);
+        return [...prev, aiMessageObj];
+      });
     } catch (error) {
       console.error('Error generating response:', error);
       
       // Add error message
       const errorMessageObj = {
-        id: (Date.now() + 1).toString(),
+        id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         type: 'ai' as const,
         content: "I'm sorry, I'm having trouble processing your request right now. Please try again.",
         timestamp: new Date()
       };
 
-      setMessages(prev => [...prev, errorMessageObj]);
+      console.log('Adding error message:', errorMessageObj);
+      setMessages(prev => {
+        console.log('Previous messages count before error:', prev.length);
+        return [...prev, errorMessageObj];
+      });
     } finally {
       setIsLoading(false);
     }
@@ -804,131 +817,59 @@ The activity should immerse the student in the theme's world and make the learni
   const isDownloadableContent = (content: string): boolean => {
     const lowerContent = content.toLowerCase();
     
-    // Comprehensive patterns for answer blanks and spaces
+    // More restrictive patterns - only look for actual answer blanks and educational content
     const answerBlankPatterns = [
-      // Basic blanks and spaces
-      /___+/g,                    // ___, _____, ______
-      /\[[\s_]*\]/g,             // [ ], [___], [    ]
-      /\([\s_]*\)/g,             // ( ), (___), (    )
-      /[\s_]{3,}/g,              // 3+ spaces or underscores
-      /\.{3,}/g,                 // ... or more dots
-      /-{3,}/g,                  // --- or more dashes
+      // Basic blanks and spaces (more restrictive)
+      /___{2,}/g,                   // _____, ______ (at least 4 underscores)
+      /\[[\s_]{3,}\]/g,            // [    ], [____] (at least 3 spaces/underscores)
+      /\([\s_]{3,}\)/g,             // (    ), (____) (at least 3 spaces/underscores)
       
-      // Answer prompts with blanks
-      /answer:?\s*[_\s\.\-]+/gi,     // Answer: ___, Answer ______, Answer ...
-      /your answer:?\s*[_\s\.\-]+/gi, // Your answer: ___, Your answer ______
-      /write your answer:?\s*[_\s\.\-]+/gi, // Write your answer: ___
-      /fill in:?\s*[_\s\.\-]+/gi,    // Fill in: ___, Fill in ______
-      /complete:?\s*[_\s\.\-]+/gi,   // Complete: ___, Complete ______
-      /write below:?\s*[_\s\.\-]+/gi, // Write below: ___
-      /answer below:?\s*[_\s\.\-]+/gi, // Answer below: ___
-      /response below:?\s*[_\s\.\-]+/gi, // Response below: ___
+      // Answer prompts with blanks (more specific)
+      /answer:?\s*[_\s]{3,}/gi,     // Answer: ___, Answer ______
+      /your answer:?\s*[_\s]{3,}/gi, // Your answer: ___, Your answer ______
+      /write your answer:?\s*[_\s]{3,}/gi, // Write your answer: ___
+      /fill in:?\s*[_\s]{3,}/gi,    // Fill in: ___, Fill in ______
+      /complete:?\s*[_\s]{3,}/gi,   // Complete: ___, Complete ______
       
-      // Multiple choice patterns
-      /circle\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s\.\-]+/gi, // Circle the correct answer: ___
-      /choose\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s\.\-]+/gi, // Choose the correct answer: ___
-      /select\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s\.\-]+/gi, // Select the correct answer: ___
-      /write\s+(?:the\s+)?letter:?\s*[_\s\.\-]+/gi, // Write the letter: ___
-      /mark\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s\.\-]+/gi, // Mark the correct answer: ___
-      /pick\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s\.\-]+/gi, // Pick the correct answer: ___
+      // Multiple choice patterns (more specific)
+      /circle\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s]{3,}/gi, // Circle the correct answer: ___
+      /choose\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s]{3,}/gi, // Choose the correct answer: ___
+      /select\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s]{3,}/gi, // Select the correct answer: ___
       
-      // Subject-specific patterns
-      /solve:?\s*[_\s\.\-]+/gi,      // Solve: ___
-      /calculate:?\s*[_\s\.\-]+/gi,  // Calculate: ___
-      /find:?\s*[_\s\.\-]+/gi,       // Find: ___
-      /write:?\s*[_\s\.\-]+/gi,      // Write: ___
-      /draw:?\s*[_\s\.\-]+/gi,       // Draw: ___
-      /label:?\s*[_\s\.\-]+/gi,      // Label: ___
-      /show:?\s*[_\s\.\-]+/gi,       // Show: ___
-      /explain:?\s*[_\s\.\-]+/gi,    // Explain: ___
-      /describe:?\s*[_\s\.\-]+/gi,   // Describe: ___
-      /list:?\s*[_\s\.\-]+/gi,       // List: ___
-      /name:?\s*[_\s\.\-]+/gi,       // Name: ___
-      /identify:?\s*[_\s\.\-]+/gi,   // Identify: ___
-      /match:?\s*[_\s\.\-]+/gi,      // Match: ___
-      /compare:?\s*[_\s\.\-]+/gi,    // Compare: ___
-      /contrast:?\s*[_\s\.\-]+/gi,   // Contrast: ___
-      
-      // Reading comprehension patterns
-      /reading\s+comprehension:?\s*[_\s\.\-]+/gi, // Reading comprehension: ___
-      /comprehension\s+question:?\s*[_\s\.\-]+/gi, // Comprehension question: ___
-      /reading\s+question:?\s*[_\s\.\-]+/gi, // Reading question: ___
-      /story\s+question:?\s*[_\s\.\-]+/gi, // Story question: ___
-      /passage\s+question:?\s*[_\s\.\-]+/gi, // Passage question: ___
-      
-      // Writing prompts
-      /essay\s+question:?\s*[_\s\.\-]+/gi, // Essay question: ___
-      /writing\s+prompt:?\s*[_\s\.\-]+/gi, // Writing prompt: ___
-      /response:?\s*[_\s\.\-]+/gi,   // Response: ___
-      /paragraph:?\s*[_\s\.\-]+/gi,  // Paragraph: ___
-      /sentence:?\s*[_\s\.\-]+/gi,   // Sentence: ___
-      /story:?\s*[_\s\.\-]+/gi,      // Story: ___
-      /letter:?\s*[_\s\.\-]+/gi,     // Letter: ___
-      /report:?\s*[_\s\.\-]+/gi,     // Report: ___
-      
-      // Science/experiment patterns
-      /hypothesis:?\s*[_\s\.\-]+/gi, // Hypothesis: ___
-      /observation:?\s*[_\s\.\-]+/gi, // Observation: ___
-      /conclusion:?\s*[_\s\.\-]+/gi, // Conclusion: ___
-      /prediction:?\s*[_\s\.\-]+/gi, // Prediction: ___
-      /experiment:?\s*[_\s\.\-]+/gi, // Experiment: ___
-      /results:?\s*[_\s\.\-]+/gi,    // Results: ___
-      /data:?\s*[_\s\.\-]+/gi,       // Data: ___
-      /analysis:?\s*[_\s\.\-]+/gi,   // Analysis: ___
-      
-      // Math-specific patterns
-      /show\s+your\s+work:?\s*[_\s\.\-]+/gi, // Show your work: ___
-      /work\s+space:?\s*[_\s\.\-]+/gi, // Work space: ___
-      /equation:?\s*[_\s\.\-]+/gi,   // Equation: ___
-      /formula:?\s*[_\s\.\-]+/gi,    // Formula: ___
-      /solution:?\s*[_\s\.\-]+/gi,   // Solution: ___
-      /steps:?\s*[_\s\.\-]+/gi,      // Steps: ___
-      /method:?\s*[_\s\.\-]+/gi,     // Method: ___
-      
-      // General educational patterns
-      /question:?\s*[_\s\.\-]+/gi,   // Question: ___
-      /problem:?\s*[_\s\.\-]+/gi,    // Problem: ___
-      /activity:?\s*[_\s\.\-]+/gi,   // Activity: ___
-      /exercise:?\s*[_\s\.\-]+/gi,   // Exercise: ___
-      /assignment:?\s*[_\s\.\-]+/gi, // Assignment: ___
-      /task:?\s*[_\s\.\-]+/gi,       // Task: ___
-      /challenge:?\s*[_\s\.\-]+/gi,  // Challenge: ___
-      /puzzle:?\s*[_\s\.\-]+/gi,     // Puzzle: ___
-      /game:?\s*[_\s\.\-]+/gi,       // Game: ___
-      
-      // Numbered items with blanks
-      /\d+\.\s*[^_]*[_\s\.\-]{3,}/g, // 1. What is 2+2? ___
-      /\d+\)\s*[^_]*[_\s\.\-]{3,}/g, // 1) What is 2+2? ___
-      /\d+\.\s*[^_]*\s*answer:?\s*[_\s\.\-]+/gi, // 1. What is 2+2? Answer: ___
-      /\d+\)\s*[^_]*\s*answer:?\s*[_\s\.\-]+/gi, // 1) What is 2+2? Answer: ___
+      // Numbered items with blanks (more specific)
+      /\d+\.\s*[^_]*[_\s]{4,}/g,    // 1. What is 2+2? _____
+      /\d+\)\s*[^_]*[_\s]{4,}/g,    // 1) What is 2+2? _____
+      /\d+\.\s*[^_]*\s*answer:?\s*[_\s]{3,}/gi, // 1. What is 2+2? Answer: ___
+      /\d+\)\s*[^_]*\s*answer:?\s*[_\s]{3,}/gi, // 1) What is 2+2? Answer: ___
       
       // Multiple choice with letters
-      /[a-d]\)\s*[^_]*\s*answer:?\s*[_\s\.\-]+/gi, // A) Option 1 B) Option 2 Answer: ___
-      /[a-d]\)\s*[^_]*\s*choose:?\s*[_\s\.\-]+/gi, // A) Option 1 B) Option 2 Choose: ___
-      /[a-d]\)\s*[^_]*\s*select:?\s*[_\s\.\-]+/gi, // A) Option 1 B) Option 2 Select: ___
+      /[a-d]\)\s*[^_]*\s*answer:?\s*[_\s]{3,}/gi, // A) Option 1 B) Option 2 Answer: ___
       
-      // Instructions with blanks
-      /instructions:?\s*[^_]*[_\s\.\-]{3,}/gi, // Instructions: Complete the following ___ 
-      /directions:?\s*[^_]*[_\s\.\-]{3,}/gi, // Directions: Fill in the blanks ___
-      /steps:?\s*[^_]*[_\s\.\-]{3,}/gi, // Steps: Follow these ___ 
-      
-      // Generic answer spaces
-      /your\s+response:?\s*[_\s\.\-]+/gi, // Your response: ___
-      /your\s+answer:?\s*[_\s\.\-]+/gi, // Your answer: ___
-      /your\s+work:?\s*[_\s\.\-]+/gi, // Your work: ___
-      /your\s+thinking:?\s*[_\s\.\-]+/gi, // Your thinking: ___
-      /your\s+explanation:?\s*[_\s\.\-]+/gi, // Your explanation: ___
-      
-      // Blank lines that suggest writing space
-      /\n\s*\n\s*\n/g, // Multiple blank lines suggesting writing space
-      /\n\s*[_\s\.\-]{5,}\s*\n/g, // Lines of blanks suggesting writing space
+      // Subject-specific patterns (more specific)
+      /solve:?\s*[_\s]{3,}/gi,      // Solve: ___
+      /calculate:?\s*[_\s]{3,}/gi,  // Calculate: ___
+      /show\s+your\s+work:?\s*[_\s]{3,}/gi, // Show your work: ___
+      /work\s+space:?\s*[_\s]{3,}/gi, // Work space: ___
     ];
     
     // Check if any answer blank patterns are found
     const hasAnswerBlanks = answerBlankPatterns.some(pattern => pattern.test(content));
     
     // Must have substantial content (not just a brief response)
-    const hasSubstantialContent = content.length > 50;
+    const hasSubstantialContent = content.length > 100;
+    
+    // Must have educational content indicators
+    const hasEducationalContent = (
+      /\d+\.\s/.test(content) || // Numbered questions
+      /[a-d]\)\s/.test(content) || // Multiple choice options
+      /question:?\s/i.test(content) || // Question prompts
+      /problem:?\s/i.test(content) || // Problem prompts
+      /worksheet/i.test(content) || // Worksheet content
+      /quiz/i.test(content) || // Quiz content
+      /test/i.test(content) || // Test content
+      /activity/i.test(content) || // Activity content
+      /exercise/i.test(content) // Exercise content
+    );
     
     // Must not be just a conversation response or prompt
     const isNotJustConversation = !(
@@ -947,10 +888,21 @@ The activity should immerse the student in the theme's world and make the learni
       lowerContent.includes('create a') ||
       lowerContent.includes('give me') ||
       lowerContent.includes('i need') ||
-      lowerContent.includes('could you')
+      lowerContent.includes('could you') ||
+      lowerContent.includes('sure!') ||
+      lowerContent.includes('of course!') ||
+      lowerContent.includes('absolutely!') ||
+      lowerContent.includes('i\'d be happy') ||
+      lowerContent.includes('i\'ll help') ||
+      lowerContent.includes('here\'s') ||
+      lowerContent.includes('here is') ||
+      lowerContent.includes('let me create') ||
+      lowerContent.includes('i\'ll create') ||
+      lowerContent.includes('i\'ll make') ||
+      lowerContent.includes('i\'ll generate')
     );
     
-    return hasAnswerBlanks && hasSubstantialContent && isNotJustConversation;
+    return hasAnswerBlanks && hasSubstantialContent && hasEducationalContent && isNotJustConversation;
   };
 
   // Generate a title for the downloadable content
@@ -971,16 +923,7 @@ The activity should immerse the student in the theme's world and make the learni
     return title;
   };
 
-  // Debug function to test content detection (remove in production)
-  const debugContentDetection = (content: string) => {
-    console.log('Content detection debug:', {
-      content: content.substring(0, 100) + '...',
-      length: content.length,
-      hasNumbers: /\d+\.\s/.test(content),
-      hasBlanks: /___|______|blank|answer:?\s*_/.test(content.toLowerCase()),
-      isDownloadable: isDownloadableContent(content)
-    });
-  };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col">
@@ -1056,11 +999,7 @@ The activity should immerse the student in the theme's world and make the learni
                     <p className="whitespace-pre-wrap">{message.content}</p>
                     
                     {/* Download button for AI messages with downloadable content */}
-                    {message.type === 'ai' && (() => {
-                      // Debug logging (remove in production)
-                      debugContentDetection(message.content);
-                      return isDownloadableContent(message.content);
-                    })() && (
+                    {message.type === 'ai' && isDownloadableContent(message.content) && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <DownloadOptions
                           content={message.content}
