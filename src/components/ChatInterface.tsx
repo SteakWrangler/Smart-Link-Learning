@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Send, Star, FileText, Upload, X } from 'lucide-react';
+import { ArrowLeft, Send, Star, FileText, Upload, X, Download } from 'lucide-react';
 import { Child, SavedConversation, ConversationDocument } from '../types';
 import { DocumentData } from '../types/database';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +10,8 @@ import ConversationDocumentUpload from '@/components/ConversationDocumentUpload'
 import type { Tables } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { Paperclip } from 'lucide-react';
+import DownloadOptions from '@/components/DownloadOptions';
+import { fileGenerationService } from '@/services/fileGenerationService';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -359,6 +361,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     greeting += `• "Look at the test I uploaded and tell me what ${learnerName} got wrong"\n`;
     greeting += `• "Create practice problems based on the uploaded test"\n\n`;
     
+    greeting += `📥 **Download Content**\n`;
+    greeting += `• "Create a worksheet for ${learnerName} to practice"\n`;
+    greeting += `• "Make a practice test about dinosaurs"\n`;
+    greeting += `• "Generate an activity sheet about space"\n`;
+    greeting += `• Look for the download button below AI responses to save as PDF!\n\n`;
+    
     // Age-appropriate examples with specific subjects and themes
     if (ageGroup === 'early-elementary' || ageGroup === 'elementary') {
       const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
@@ -461,7 +469,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
     
     // Build comprehensive context about the learner
-    let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. `;
+    let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. When you create worksheets, practice tests, activities, or other educational content, parents can download it as a PDF file using the download button that will appear below your response. `;
     
     // Add child-specific context
     if (selectedChild) {
@@ -782,6 +790,44 @@ The activity should immerse the student in the theme's world and make the learni
     return `\n\nRelevant Documents:\n${documentContexts}`;
   };
 
+  // Check if a message contains downloadable content
+  const isDownloadableContent = (content: string): boolean => {
+    const lowerContent = content.toLowerCase();
+    return (
+      lowerContent.includes('worksheet') ||
+      lowerContent.includes('practice test') ||
+      lowerContent.includes('practice problems') ||
+      lowerContent.includes('activity') ||
+      lowerContent.includes('game') ||
+      lowerContent.includes('exercise') ||
+      lowerContent.includes('problems') ||
+      lowerContent.includes('questions') ||
+      lowerContent.includes('summary') ||
+      lowerContent.includes('review') ||
+      lowerContent.includes('notes') ||
+      lowerContent.includes('lesson') ||
+      lowerContent.includes('assignment')
+    );
+  };
+
+  // Generate a title for the downloadable content
+  const generateDownloadTitle = (content: string, learnerName: string): string => {
+    const detectedType = fileGenerationService.detectFileType(content);
+    const detectedMetadata = fileGenerationService.extractMetadata(content);
+    
+    let title = `${detectedType.replace('-', ' ')} for ${learnerName}`;
+    
+    if (detectedMetadata.subject) {
+      title = `${detectedMetadata.subject} ${title}`;
+    }
+    
+    if (detectedMetadata.theme) {
+      title = `${detectedMetadata.theme} ${title}`;
+    }
+    
+    return title;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col">
       {/* Header */}
@@ -854,6 +900,20 @@ The activity should immerse the student in the theme's world and make the learni
                     }`}
                   >
                     <p className="whitespace-pre-wrap">{message.content}</p>
+                    
+                    {/* Download button for AI messages with downloadable content */}
+                    {message.type === 'ai' && isDownloadableContent(message.content) && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <DownloadOptions
+                          content={message.content}
+                          title={generateDownloadTitle(message.content, learnerName)}
+                          subject={selectedCategories?.subject}
+                          grade={selectedCategories?.ageGroup}
+                          className="w-full"
+                        />
+                      </div>
+                    )}
+                    
                     <p className="text-xs opacity-70 mt-2">
                       {message.timestamp.toLocaleTimeString()}
                     </p>
