@@ -923,17 +923,17 @@ The activity should immerse the student in the theme's world and make the learni
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex flex-col">
       {/* Header */}
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4 flex-shrink-0">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <div className="max-w-4xl mx-auto flex items-center justify-between w-full">
+          <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
             <button
               onClick={handleBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+              className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-gray-800 transition-colors flex-shrink-0"
             >
-              <ArrowLeft size={20} />
-              Back
+              <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Back</span>
             </button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-800">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">
                 {isLoadedConversation ? `Conversation: ${loadedConversation?.title}` : `Learning with ${learnerName}`}
               </h1>
               {/* Hide categories display to avoid cluttered UI - data still passed to AI for context */}
@@ -945,7 +945,8 @@ The activity should immerse the student in the theme's world and make the learni
               {documents.length > 0 && (
                 <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
                   <FileText size={12} />
-                  {documents.length} document{documents.length !== 1 ? 's' : ''} available for analysis
+                  <span className="hidden sm:inline">{documents.length} document{documents.length !== 1 ? 's' : ''} available for analysis</span>
+                  <span className="sm:hidden">{documents.length} doc{documents.length !== 1 ? 's' : ''}</span>
                 </p>
               )}
             </div>
@@ -954,16 +955,16 @@ The activity should immerse the student in the theme's world and make the learni
       </div>
 
       {/* Chat Content */}
-      <div className="flex-1 max-w-4xl mx-auto w-full p-6 flex flex-col">
+      <div className="flex-1 max-w-4xl mx-auto w-full p-4 sm:p-6 flex flex-col">
         {/* Messages Area */}
         <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 mb-4 overflow-hidden flex flex-col">
-          <div className="flex-1 p-6 overflow-y-auto space-y-4">
+          <div className="flex-1 p-4 sm:p-6 overflow-y-auto space-y-4">
             {messages.length === 0 ? (
-              <div className="text-center text-gray-500 mt-12">
-                <p className="text-lg mb-2">Let's start learning together! 🌟</p>
-                <p>I'm here to help {learnerName} with personalized lessons and activities.</p>
+              <div className="text-center text-gray-500 mt-8 sm:mt-12">
+                <p className="text-base sm:text-lg mb-2">Let's start learning together! 🌟</p>
+                <p className="text-sm sm:text-base">I'm here to help {learnerName} with personalized lessons and activities.</p>
                 {documents.length > 0 && (
-                  <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+                  <div className="mt-4 p-3 sm:p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800 font-medium mb-2">
                       📁 I can see you have {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
                     </p>
@@ -972,9 +973,9 @@ The activity should immerse the student in the theme's world and make the learni
                     </p>
                   </div>
                 )}
-                <div className="mt-4 text-sm text-gray-400">
+                <div className="mt-4 text-xs sm:text-sm text-gray-400">
                   <p>Try saying something like:</p>
-                  <p>"Check out the failed test I uploaded" or "Look at the test and see what he got wrong"</p>
+                  <p className="text-xs">"Check out the failed test I uploaded" or "Look at the test and see what he got wrong"</p>
                 </div>
               </div>
             ) : (
@@ -984,13 +985,13 @@ The activity should immerse the student in the theme's world and make the learni
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-lg p-4 ${
+                    className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-3 sm:p-4 ${
                       message.type === 'user'
                         ? 'bg-blue-500 text-white'
                         : 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap">{message.content}</p>
+                    <p className="whitespace-pre-wrap text-sm sm:text-base break-words">{message.content}</p>
                     
                     {/* Download button for AI messages with downloadable content */}
                     {message.type === 'ai' && isDownloadableContent(message.content) && (
@@ -1014,10 +1015,10 @@ The activity should immerse the student in the theme's world and make the learni
             )}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
+                <div className="bg-gray-100 rounded-lg p-3 sm:p-4 max-w-[85%] sm:max-w-[80%]">
                   <div className="flex items-center gap-2">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
-                    <span className="text-gray-600">Processing documents and analyzing content...</span>
+                    <span className="text-gray-600 text-sm sm:text-base">Processing documents and analyzing content...</span>
                   </div>
                 </div>
               </div>
@@ -1026,31 +1027,31 @@ The activity should immerse the student in the theme's world and make the learni
           </div>
 
           {/* Input Area */}
-          <div className="border-t border-gray-200 p-4">
+          <div className="border-t border-gray-200 p-3 sm:p-4">
             <div className="flex gap-2">
               <button
                 onClick={() => setShowDocumentUpload(true)}
-                className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-600 flex-shrink-0"
                 title="Upload document to this conversation"
               >
-                <Upload size={16} />
-                <span className="hidden sm:inline">Upload</span>
+                <Upload size={14} className="sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline text-sm">Upload</span>
               </button>
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
                 placeholder="Type your message..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm sm:text-base"
                 onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                 disabled={isLoading}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isLoading}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white p-2 rounded-lg transition-colors"
+                className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 text-white p-2 rounded-lg transition-colors flex-shrink-0"
               >
-                <Send size={20} />
+                <Send size={18} className="sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>

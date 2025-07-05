@@ -7,6 +7,7 @@ import ChatInterface from './ChatInterface';
 import ConversationHistory from './ConversationHistory';
 import CategorySelector from './CategorySelector';
 import WelcomeSection from './WelcomeSection';
+import FeatureDetail from './FeatureDetail';
 import Auth from './Auth';
 import { Child, SavedConversation } from '../types';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,7 @@ const AuthenticatedApp: React.FC = () => {
   const { user, profile, loading } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history'>('welcome');
+  const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history' | 'feature-detail'>('welcome');
   const [showAuth, setShowAuth] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState({
     subject: '',
@@ -24,6 +25,7 @@ const AuthenticatedApp: React.FC = () => {
     challenge: ''
   });
   const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
+  const [selectedFeature, setSelectedFeature] = useState<string>('');
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -169,6 +171,16 @@ const AuthenticatedApp: React.FC = () => {
     }
   };
 
+  const handleFeatureClick = (featureId: string) => {
+    setSelectedFeature(featureId);
+    setCurrentView('feature-detail');
+  };
+
+  const handleBackFromFeature = () => {
+    setCurrentView('welcome');
+    setSelectedFeature('');
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -181,11 +193,28 @@ const AuthenticatedApp: React.FC = () => {
     }} />;
   }
 
+  // Show feature detail screen
+  if (currentView === 'feature-detail') {
+    return (
+      <FeatureDetail
+        featureId={selectedFeature}
+        onBack={handleBackFromFeature}
+        onGetStarted={() => {
+          if (user) {
+            setCurrentView('dashboard');
+          } else {
+            setShowAuth(true);
+          }
+        }}
+      />
+    );
+  }
+
   // Show welcome screen for all users (authenticated and unauthenticated)
   if (currentView === 'welcome') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
-        <div className="max-w-6xl mx-auto">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 sm:p-6">
+        <div className="max-w-6xl mx-auto w-full">
           <WelcomeSection 
             isAuthenticated={!!user}
             user={user}
@@ -200,6 +229,7 @@ const AuthenticatedApp: React.FC = () => {
               }
             }}
             onSignOut={handleSignOut}
+            onFeatureClick={handleFeatureClick}
           />
         </div>
       </div>

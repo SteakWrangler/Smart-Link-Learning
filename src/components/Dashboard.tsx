@@ -792,25 +792,26 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
       <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 p-4">
         <div className="max-w-6xl mx-auto">
           {/* Title and Back Button Row */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2 sm:gap-4">
               <button
                 onClick={onBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+                className="flex items-center gap-1 sm:gap-2 text-gray-600 hover:text-gray-800 transition-colors text-sm sm:text-base"
               >
-                <ArrowLeft size={20} />
-                Back to Welcome
+                <ArrowLeft size={18} className="sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Back to Welcome</span>
+                <span className="sm:hidden">Back</span>
               </button>
             </div>
-            <h1 className="text-2xl font-bold text-gray-800">Learning Dashboard</h1>
-            <div className="w-20"></div> {/* Spacer for balance */}
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-800 text-center flex-1">Learning Dashboard</h1>
+            <div className="w-16 sm:w-20"></div> {/* Spacer for balance */}
           </div>
           
           {/* Navigation Tabs Row */}
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center gap-1 sm:gap-2 flex-wrap">
             <button
               onClick={() => setActiveTab('children')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'children'
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
@@ -820,35 +821,37 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
             </button>
             <button
               onClick={() => setActiveTab('conversations')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'conversations'
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              <MessageSquare size={16} className="inline mr-2" />
-              Chat History
+              <MessageSquare size={14} className="inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Chat History</span>
+              <span className="sm:hidden">History</span>
             </button>
             <button
               onClick={() => setActiveTab('support')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'support'
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              <LifeBuoy size={16} className="inline mr-2" />
-              Parent Support
+              <LifeBuoy size={14} className="inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Parent Support</span>
+              <span className="sm:hidden">Support</span>
             </button>
             <button
               onClick={() => setActiveTab('faq')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'faq'
                   ? 'bg-blue-500 text-white'
                   : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
               }`}
             >
-              <HelpCircle size={16} className="inline mr-2" />
+              <HelpCircle size={14} className="inline mr-1 sm:mr-2" />
               FAQ
             </button>
           </div>
@@ -857,7 +860,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
           <div className="flex justify-end mt-2">
             <button
               onClick={handleSignOut}
-              className="px-4 py-2 rounded-lg font-medium transition-colors text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200"
+              className="px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 text-sm sm:text-base"
             >
               Sign Out
             </button>
@@ -866,38 +869,39 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
       </div>
 
       {/* Content */}
-      <div className="max-w-6xl mx-auto p-6">
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 w-full">
         {activeTab === 'children' && (
           <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Your Students</h2>
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Your Students</h2>
               <button
                 onClick={() => setShowAddChild(true)}
-                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200"
+                className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-3 sm:px-4 py-2 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base"
               >
-                <Plus size={20} />
-                Add Student
+                <Plus size={18} className="sm:w-5 sm:h-5" />
+                <span className="hidden sm:inline">Add Student</span>
+                <span className="sm:hidden">Add</span>
               </button>
             </div>
 
             {children.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Plus size={32} className="text-gray-400" />
+              <div className="text-center py-8 sm:py-12">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Plus size={28} className="text-gray-400 sm:w-8 sm:h-8" />
                 </div>
-                <h3 className="text-lg font-medium text-gray-800 mb-2">No students added yet</h3>
-                <p className="text-gray-600 mb-4">
+                <h3 className="text-base sm:text-lg font-medium text-gray-800 mb-2">No students added yet</h3>
+                <p className="text-gray-600 mb-4 text-sm sm:text-base">
                   Add your first student to start creating personalized lesson plans
                 </p>
                 <button
                   onClick={() => setShowAddChild(true)}
-                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200"
+                  className="bg-gradient-to-r from-blue-500 to-green-500 hover:from-blue-600 hover:to-green-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 text-sm sm:text-base"
                 >
                   Add Your First Student
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {children.map(child => (
                   <ChildProfile
                     key={child.id}
