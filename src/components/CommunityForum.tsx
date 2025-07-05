@@ -274,9 +274,15 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
 
       // Format the topics data with proper author names
       const formattedTopics: ForumTopic[] = topics?.map((topic: any) => {
-        const authorName = topic.profiles 
+        let authorName = topic.profiles 
           ? `${topic.profiles.first_name || ''} ${topic.profiles.last_name || ''}`.trim()
           : 'Unknown User';
+        
+        // Check if the author has anonymous posting enabled
+        // TODO: Uncomment after migration is applied
+        // if (topic.profiles?.is_anonymous_in_forum) {
+        //   authorName = 'Anonymous User';
+        // }
         
         return {
           id: topic.id,
@@ -326,9 +332,15 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       if (error) throw error;
 
       const formattedPosts = posts.map(post => {
-        const authorName = post.profiles 
+        let authorName = post.profiles 
           ? `${post.profiles.first_name || ''} ${post.profiles.last_name || ''}`.trim()
           : 'Unknown User';
+        
+        // Check if the author has anonymous posting enabled
+        // TODO: Uncomment after migration is applied
+        // if (post.profiles?.is_anonymous_in_forum) {
+        //   authorName = 'Anonymous User';
+        // }
         
         return {
           ...post,

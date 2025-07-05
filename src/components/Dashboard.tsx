@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users, HelpCircle } from 'lucide-react';
+import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users, HelpCircle, Settings as SettingsIcon } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import { Child as DatabaseChild } from '../types/database';
 import ChildProfile from './ChildProfile';
@@ -8,6 +8,7 @@ import ConversationHistory from './ConversationHistory';
 import ChatInterface from './ChatInterface';
 import CommunityForum from './CommunityForum';
 import FAQ from './FAQ';
+import Settings from './Settings';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -25,7 +26,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | undefined>();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'support' | 'faq'>('children');
+  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'support' | 'faq' | 'settings'>('children');
   const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
@@ -43,8 +44,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
 
   // Set initial tab if provided
   useEffect(() => {
-    if (initialTab && ['children', 'conversations', 'support', 'faq'].includes(initialTab)) {
-      setActiveTab(initialTab as 'children' | 'conversations' | 'support' | 'faq');
+    if (initialTab && ['children', 'conversations', 'support', 'faq', 'settings'].includes(initialTab)) {
+      setActiveTab(initialTab as 'children' | 'conversations' | 'support' | 'faq' | 'settings');
     }
   }, [initialTab]);
 
@@ -862,6 +863,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
               <HelpCircle size={14} className="inline mr-1 sm:mr-2" />
               FAQ
             </button>
+            <button
+              onClick={() => setActiveTab('settings')}
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
+                activeTab === 'settings'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+            >
+              <SettingsIcon size={14} className="inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Settings</span>
+              <span className="sm:hidden">Settings</span>
+            </button>
           </div>
           
           {/* Sign Out Button - Right Aligned */}
@@ -996,6 +1009,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
 
         {activeTab === 'faq' && (
           <FAQ />
+        )}
+
+        {activeTab === 'settings' && (
+          <Settings 
+            profile={profile}
+            onBack={() => setActiveTab('children')}
+          />
         )}
       </div>
 

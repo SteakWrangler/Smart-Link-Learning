@@ -3,7 +3,20 @@ export interface Profile {
   email: string;
   first_name?: string;
   last_name?: string;
+  username?: string;
   user_type: string;
+  is_anonymous_in_forum?: boolean;
+  email_notifications?: boolean;
+  forum_notifications?: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSettings {
+  id: string;
+  user_id: string;
+  setting_key: string;
+  setting_value?: string;
   created_at: string;
   updated_at: string;
 }

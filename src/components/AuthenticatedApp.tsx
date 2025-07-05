@@ -200,7 +200,8 @@ const AuthenticatedApp: React.FC = () => {
       'ai-interactive-learning': 'conversations',
       'parent-support': 'support',
       'personalized-learning-setup': 'children',
-      'chat-history': 'conversations'
+      'chat-history': 'conversations',
+      'settings': 'settings'
     };
     return featureTabMap[featureId] || 'children';
   };
