@@ -199,7 +199,7 @@ const AuthenticatedApp: React.FC = () => {
     const featureTabMap: Record<string, string> = {
       'ai-interactive-learning': 'conversations',
       'parent-support': 'support',
-      'personalized-learning-setup': 'support',
+      'personalized-learning-setup': 'children',
       'chat-history': 'conversations'
     };
     return featureTabMap[featureId] || 'children';
@@ -262,7 +262,9 @@ const AuthenticatedApp: React.FC = () => {
             onGetStarted={() => {
               if (user) {
                 setCurrentView('dashboard');
+                setRedirectToTab('children'); // Default to children tab for main Get Started
               } else {
+                setRedirectToTab('children'); // Default to children tab for main Get Started
                 setShowAuth(true);
               }
             }}

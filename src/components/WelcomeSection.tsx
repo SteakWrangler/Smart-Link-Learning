@@ -84,20 +84,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
     return colorMap[color] || colorMap.blue;
   };
 
-  const getFeatureTab = (featureId: string) => {
-    switch (featureId) {
-      case 'ai-interactive-learning':
-        return 'ai-learning';
-      case 'parent-support':
-        return 'parent-support';
-      case 'personalized-learning-setup':
-        return 'learning-challenges';
-      case 'chat-history':
-        return 'conversations';
-      default:
-        return 'ai-learning';
-    }
-  };
+
 
   return (
     <div className="space-y-8">
