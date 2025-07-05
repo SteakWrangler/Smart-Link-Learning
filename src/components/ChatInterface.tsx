@@ -46,6 +46,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const initialGreetingAdded = useRef(false);
 
   // Conversation context tracking
   const [conversationContext, setConversationContext] = useState({
@@ -69,12 +70,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     
     if (loadedConversation && loadedConversation.messages) {
       console.log('Loading conversation messages:', loadedConversation.messages);
+      console.log('Setting messages to:', loadedConversation.messages.length, 'messages');
       setMessages(loadedConversation.messages);
       setConversationTitle(loadedConversation.title);
       setIsFavorite(loadedConversation.isFavorite || false);
       setIsLoadedConversation(true);
       setCurrentConversationId(loadedConversation.id);
       setHasUnsavedChanges(false);
+      initialGreetingAdded.current = true; // Don't add greeting for loaded conversations
       console.log('Conversation loaded successfully');
     } else if (!loadedConversation) {
       // Reset to new conversation state
@@ -85,6 +88,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setIsLoadedConversation(false);
       setCurrentConversationId(null);
       setHasUnsavedChanges(false);
+      initialGreetingAdded.current = false; // Reset for new conversations
     }
   }, [loadedConversation]);
 
@@ -93,6 +97,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       fetchDocuments();
     }
   }, [profile, selectedChild]);
+
+
 
   // Fetch documents from Supabase
   const fetchDocuments = async () => {
@@ -197,7 +203,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Auto-save conversation when messages change
   useEffect(() => {
-    console.log('Auto-save effect triggered. Messages count:', messages.length);
     if (messages.length > 1 && selectedChild && profile?.id && hasUnsavedChanges) {
       const autoSaveConversation = async () => {
         try {
@@ -443,7 +448,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Add initial AI greeting when chat loads (only for new conversations)
   useEffect(() => {
-    if (messages.length === 0 && !loadedConversation) {
+    if (messages.length === 0 && !loadedConversation && !initialGreetingAdded.current) {
       const greeting = generateInitialGreeting();
       const initialMessage = {
         id: 'initial-greeting',
@@ -452,8 +457,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         timestamp: new Date()
       };
       setMessages([initialMessage]);
+      initialGreetingAdded.current = true;
     }
-  }, [selectedChild, documents, loadedConversation]);
+  }, [selectedChild, documents.length, loadedConversation]);
 
   // Generate context-aware response using OpenAI API
   const generateContextAwareResponse = async (userMessage: string): Promise<string> => {
@@ -749,11 +755,7 @@ The activity should immerse the student in the theme's world and make the learni
       timestamp: new Date()
     };
 
-    console.log('Adding user message:', userMessageObj);
-    setMessages(prev => {
-      console.log('Previous messages count:', prev.length);
-      return [...prev, userMessageObj];
-    });
+    setMessages(prev => [...prev, userMessageObj]);
     setHasUnsavedChanges(true);
 
     try {
@@ -768,11 +770,7 @@ The activity should immerse the student in the theme's world and make the learni
         timestamp: new Date()
       };
 
-      console.log('Adding AI message:', aiMessageObj);
-      setMessages(prev => {
-        console.log('Previous messages count before AI:', prev.length);
-        return [...prev, aiMessageObj];
-      });
+      setMessages(prev => [...prev, aiMessageObj]);
     } catch (error) {
       console.error('Error generating response:', error);
       
@@ -784,11 +782,7 @@ The activity should immerse the student in the theme's world and make the learni
         timestamp: new Date()
       };
 
-      console.log('Adding error message:', errorMessageObj);
-      setMessages(prev => {
-        console.log('Previous messages count before error:', prev.length);
-        return [...prev, errorMessageObj];
-      });
+      setMessages(prev => [...prev, errorMessageObj]);
     } finally {
       setIsLoading(false);
     }
