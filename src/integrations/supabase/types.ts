@@ -131,6 +131,42 @@ export type Database = {
           },
         ]
       }
+      conversation_documents: {
+        Row: {
+          conversation_id: string
+          created_at: string | null
+          document_id: string
+          id: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string | null
+          document_id: string
+          id?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string | null
+          document_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_documents_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversation_documents_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversation_tags: {
         Row: {
           conversation_id: string
@@ -314,8 +350,6 @@ export type Database = {
           parent_post_id: string | null
           topic_id: string | null
           updated_at: string | null
-          view_count: number | null
-          reply_count: number | null
         }
         Insert: {
           author_id?: string | null
@@ -326,8 +360,6 @@ export type Database = {
           parent_post_id?: string | null
           topic_id?: string | null
           updated_at?: string | null
-          view_count?: number | null
-          reply_count?: number | null
         }
         Update: {
           author_id?: string | null
@@ -338,8 +370,6 @@ export type Database = {
           parent_post_id?: string | null
           topic_id?: string | null
           updated_at?: string | null
-          view_count?: number | null
-          reply_count?: number | null
         }
         Relationships: [
           {
@@ -461,29 +491,41 @@ export type Database = {
         Row: {
           created_at: string
           email: string
+          email_notifications: boolean | null
           first_name: string | null
+          forum_notifications: boolean | null
           id: string
+          is_anonymous_in_forum: boolean | null
           last_name: string | null
           updated_at: string
           user_type: string
+          username: string | null
         }
         Insert: {
           created_at?: string
           email: string
+          email_notifications?: boolean | null
           first_name?: string | null
+          forum_notifications?: boolean | null
           id: string
+          is_anonymous_in_forum?: boolean | null
           last_name?: string | null
           updated_at?: string
           user_type: string
+          username?: string | null
         }
         Update: {
           created_at?: string
           email?: string
+          email_notifications?: boolean | null
           first_name?: string | null
+          forum_notifications?: boolean | null
           id?: string
+          is_anonymous_in_forum?: boolean | null
           last_name?: string | null
           updated_at?: string
           user_type?: string
+          username?: string | null
         }
         Relationships: []
       }
@@ -504,6 +546,41 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      user_settings: {
+        Row: {
+          created_at: string
+          id: string
+          setting_key: string
+          setting_value: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          setting_key: string
+          setting_value?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          setting_key?: string
+          setting_value?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

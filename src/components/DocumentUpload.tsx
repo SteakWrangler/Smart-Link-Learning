@@ -9,6 +9,13 @@ import { FileInput } from '@/components/ui/file-input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { 
+  sanitizeFileDescription, 
+  validateFileType, 
+  validateFileSize,
+  createSafeErrorMessage,
+  checkRateLimit
+} from '@/utils/securityUtils';
 import type { Child, Subject } from '@/types/database';
 
 interface DocumentUploadProps {
@@ -16,6 +23,10 @@ interface DocumentUploadProps {
   subjects: Subject[];
   onUploadComplete: () => void;
 }
+
+// Define allowed file types for security
+const ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({
   children,
@@ -31,6 +42,44 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const { profile } = useAuth();
   const { toast } = useToast();
 
+  const validateFile = (file: File): string | null => {
+    // Validate file type
+    if (!validateFileType(file.name, ALLOWED_FILE_TYPES)) {
+      return `File type not allowed. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`;
+    }
+
+    // Validate file size
+    if (!validateFileSize(file.size, MAX_FILE_SIZE)) {
+      return `File size too large. Maximum size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
+    }
+
+    // Additional security checks for PDF files
+    if (file.type === 'application/pdf' && file.size < 100) {
+      return 'Invalid PDF file detected';
+    }
+
+    return null;
+  };
+
+  const handleFileChange = (file: File | null) => {
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+
+    const validationError = validateFile(file);
+    if (validationError) {
+      toast({
+        title: "File Validation Error",
+        description: validationError,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -38,6 +87,27 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       toast({
         title: "Error",
         description: "Please select a file to upload",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Rate limiting check
+    if (!checkRateLimit(`upload_${profile.id}`, 5, 60000)) {
+      toast({
+        title: "Rate Limit Exceeded",
+        description: "Too many upload attempts. Please wait a minute before trying again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Final file validation
+    const validationError = validateFile(selectedFile);
+    if (validationError) {
+      toast({
+        title: "File Validation Error",
+        description: validationError,
         variant: "destructive",
       });
       return;
@@ -58,6 +128,9 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
       if (uploadError) throw uploadError;
 
+      // Sanitize description input
+      const sanitizedDescription = sanitizeFileDescription(description);
+
       // Create document record
       const documentData = {
         user_id: profile.id,
@@ -67,7 +140,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         file_size: selectedFile.size,
         file_type: selectedFile.type,
         document_type: documentType,
-        description: description || null,
+        description: sanitizedDescription || null,
         subject: subject || null,
       };
 
@@ -96,7 +169,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
             console.log('PDF processing completed with issues:', result.error);
             toast({
               title: "Upload successful with note",
-              description: `File uploaded successfully, but analysis had issues: ${result.error}`,
+              description: "File uploaded successfully, but content analysis had issues.",
               variant: "default",
             });
           } else {
@@ -130,9 +203,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
     } catch (error: any) {
       console.error('Upload error:', error);
+      const safeErrorMessage = createSafeErrorMessage(error);
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload document",
+        description: safeErrorMessage,
         variant: "destructive",
       });
     } finally {
@@ -146,8 +220,13 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         <Label htmlFor="file">Choose File</Label>
         <FileInput
           id="file"
-          onChange={(file) => setSelectedFile(file)}
+          onChange={handleFileChange}
         />
+        {selectedFile && (
+          <p className="text-sm text-gray-600 mt-1">
+            Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+          </p>
+        )}
       </div>
 
       <div>
@@ -203,10 +282,14 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
         <Label htmlFor="description">Description</Label>
         <Textarea
           id="description"
-          placeholder="Document description"
+          placeholder="Document description (max 500 characters)"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => setDescription(e.target.value.substring(0, 500))}
+          maxLength={500}
         />
+        <p className="text-xs text-gray-500 mt-1">
+          {description.length}/500 characters
+        </p>
       </div>
 
       <Button type="submit" disabled={uploading || !selectedFile}>

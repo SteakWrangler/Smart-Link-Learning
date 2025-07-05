@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Upload, FileText, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -5,6 +6,13 @@ import { FileInput } from '@/components/ui/file-input';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
+import { 
+  sanitizeFileDescription, 
+  validateFileType, 
+  validateFileSize,
+  createSafeErrorMessage,
+  checkRateLimit
+} from '@/utils/securityUtils';
 import type { Tables } from '@/types/supabase';
 
 interface ConversationDocumentUploadProps {
@@ -13,6 +21,11 @@ interface ConversationDocumentUploadProps {
   onDocumentUploaded: (documents: Tables<'documents'>[]) => void;
   onClose: () => void;
 }
+
+// Define allowed file types for security
+const ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MAX_FILES_PER_UPLOAD = 5; // Limit number of files per upload
 
 const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
   conversationId,
@@ -27,9 +40,80 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const { toast } = useToast();
 
+  const validateFile = (file: File): string | null => {
+    // Validate file type
+    if (!validateFileType(file.name, ALLOWED_FILE_TYPES)) {
+      return `File type not allowed. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`;
+    }
+
+    // Validate file size
+    if (!validateFileSize(file.size, MAX_FILE_SIZE)) {
+      return `File size too large. Maximum size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
+    }
+
+    // Additional security checks for PDF files
+    if (file.type === 'application/pdf' && file.size < 100) {
+      return 'Invalid PDF file detected';
+    }
+
+    return null;
+  };
+
+  const handleFilesChange = (files: File | File[] | null) => {
+    if (!files) {
+      setSelectedFiles([]);
+      return;
+    }
+
+    const fileArray = Array.isArray(files) ? files : [files];
+    
+    // Limit number of files
+    if (fileArray.length > MAX_FILES_PER_UPLOAD) {
+      toast({
+        title: "Too Many Files",
+        description: `Maximum ${MAX_FILES_PER_UPLOAD} files allowed per upload`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate each file
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    for (const file of fileArray) {
+      const validationError = validateFile(file);
+      if (validationError) {
+        errors.push(`${file.name}: ${validationError}`);
+      } else {
+        validFiles.push(file);
+      }
+    }
+
+    if (errors.length > 0) {
+      toast({
+        title: "File Validation Errors",
+        description: errors.join('; '),
+        variant: "destructive",
+      });
+    }
+
+    setSelectedFiles(validFiles);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedFiles.length === 0) return;
+
+    // Rate limiting check
+    if (!checkRateLimit(`conversation_upload_${profile?.id}`, 3, 60000)) {
+      toast({
+        title: "Rate Limit Exceeded",
+        description: "Too many upload attempts. Please wait a minute before trying again.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUploading(true);
     const uploadedDocuments: Tables<'documents'>[] = [];
@@ -41,6 +125,12 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
         
         try {
           setUploadProgress(prev => ({ ...prev, [fileKey]: 10 }));
+
+          // Final file validation
+          const validationError = validateFile(selectedFile);
+          if (validationError) {
+            throw new Error(validationError);
+          }
 
           // Create unique file path
           const fileExtension = selectedFile.name.split('.').pop();
@@ -58,6 +148,9 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
           setUploadProgress(prev => ({ ...prev, [fileKey]: 50 }));
 
+          // Sanitize description input
+          const sanitizedDescription = sanitizeFileDescription(description);
+
           // Create document record
           const documentRecord = {
             user_id: profile.id,
@@ -67,7 +160,7 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
             file_size: selectedFile.size,
             file_type: selectedFile.type,
             document_type: 'other' as const,
-            description: description || null,
+            description: sanitizedDescription || null,
             subject: null,
           };
 
@@ -141,7 +234,8 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
         } catch (error: any) {
           console.error(`Upload error for ${selectedFile.name}:`, error);
-          errors.push(`${selectedFile.name}: ${error.message || "Failed to upload"}`);
+          const safeErrorMessage = createSafeErrorMessage(error);
+          errors.push(`${selectedFile.name}: ${safeErrorMessage}`);
         }
       }
 
@@ -177,9 +271,10 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
     } catch (error: any) {
       console.error('Upload error:', error);
+      const safeErrorMessage = createSafeErrorMessage(error);
       toast({
         title: "Upload failed",
-        description: error.message || "Failed to upload documents",
+        description: safeErrorMessage,
         variant: "destructive",
       });
     } finally {
@@ -206,26 +301,18 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Choose Files (Multiple files allowed)
+              Choose Files (Max {MAX_FILES_PER_UPLOAD} files, {MAX_FILE_SIZE / (1024 * 1024)}MB each)
             </label>
             <FileInput
               multiple={true}
-              onChange={(files) => {
-                if (Array.isArray(files)) {
-                  setSelectedFiles(files);
-                } else if (files) {
-                  setSelectedFiles([files]);
-                } else {
-                  setSelectedFiles([]);
-                }
-              }}
+              onChange={handleFilesChange}
             />
             {selectedFiles.length > 0 && (
               <div className="space-y-2 mt-2">
                 {selectedFiles.map((file, index) => (
                   <div key={`${file.name}-${index}`} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                     <span className="text-sm text-gray-600 truncate flex-1">
-                      {file.name}
+                      {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
                     </span>
                     {uploadProgress[`${file.name}-${index}`] !== undefined && (
                       <div className="ml-2 w-16 bg-gray-200 rounded-full h-2">
@@ -243,15 +330,19 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description (optional - applies to all files)
+              Description (optional - applies to all files, max 500 characters)
             </label>
             <textarea
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => setDescription(e.target.value.substring(0, 500))}
               placeholder="What are these documents about?"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               rows={3}
+              maxLength={500}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              {description.length}/500 characters
+            </p>
           </div>
 
           <div className="flex gap-3">
@@ -286,4 +377,4 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
   );
 };
 
-export default ConversationDocumentUpload; 
+export default ConversationDocumentUpload;
