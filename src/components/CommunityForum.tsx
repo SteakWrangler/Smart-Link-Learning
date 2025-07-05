@@ -432,30 +432,15 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Add the post to the current posts list
       setPosts(prevPosts => [...prevPosts, formattedPost]);
       
-      // Update the local state to reflect the new post count
-      const newPostCount = posts.length + 1;
-      
-      // Update topic post count in database
+      // Update topic post count
       await (supabase as any)
         .from('forum_topics')
         .update({ 
-          post_count: newPostCount,
+          post_count: posts.length + 1,
           last_post_at: new Date().toISOString(),
           last_post_author_name: authorName
         })
         .eq('id', selectedTopic.id);
-      
-      // Update the local state to reflect the new post count
-      setTopics(prevTopics => 
-        prevTopics.map(t => 
-          t.id === selectedTopic.id 
-            ? { ...t, post_count: newPostCount, last_post_at: new Date().toISOString(), last_post_author_name: authorName }
-            : t
-        )
-      );
-      
-      // Update the selected topic's post count as well
-      setSelectedTopic(prev => prev ? { ...prev, post_count: newPostCount, last_post_at: new Date().toISOString(), last_post_author_name: authorName } : null);
       
       // Clear the form
       setNewPostContent('');
@@ -618,29 +603,14 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Remove from local state
       setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
       
-      // Update the local state to reflect the new post count
-      const newPostCount = Math.max(0, posts.length - 1);
-      
-      // Update topic post count in database
+      // Update topic post count
       if (selectedTopic) {
         await (supabase as any)
           .from('forum_topics')
           .update({ 
-            post_count: newPostCount
+            post_count: posts.length - 1
           })
           .eq('id', selectedTopic.id);
-        
-        // Update the local state to reflect the new post count
-        setTopics(prevTopics => 
-          prevTopics.map(t => 
-            t.id === selectedTopic.id 
-              ? { ...t, post_count: newPostCount }
-              : t
-          )
-        );
-        
-        // Update the selected topic's post count as well
-        setSelectedTopic(prev => prev ? { ...prev, post_count: newPostCount } : null);
       }
       
       toast({
