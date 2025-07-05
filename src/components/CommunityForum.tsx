@@ -432,15 +432,30 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Add the post to the current posts list
       setPosts(prevPosts => [...prevPosts, formattedPost]);
       
-      // Update topic post count
+      // Get the actual post count from database
+      const { count: postCount, error: countError } = await (supabase as any)
+        .from('forum_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', selectedTopic.id);
+
+      if (countError) {
+        console.error('Error getting post count:', countError);
+      }
+
+      // Update topic post count with actual database count
       await (supabase as any)
         .from('forum_topics')
         .update({ 
-          post_count: posts.length + 1,
+          post_count: postCount || 0,
           last_post_at: new Date().toISOString(),
           last_post_author_name: authorName
         })
         .eq('id', selectedTopic.id);
+      
+      // Refresh the topics list to show updated counts
+      if (selectedCategory) {
+        await fetchTopics(selectedCategory.id);
+      }
       
       // Clear the form
       setNewPostContent('');
@@ -603,14 +618,29 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Remove from local state
       setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
       
-      // Update topic post count
+      // Get the actual post count from database after deletion
+      const { count: postCount, error: countError } = await (supabase as any)
+        .from('forum_posts')
+        .select('*', { count: 'exact', head: true })
+        .eq('topic_id', selectedTopic?.id);
+
+      if (countError) {
+        console.error('Error getting post count:', countError);
+      }
+
+      // Update topic post count with actual database count
       if (selectedTopic) {
         await (supabase as any)
           .from('forum_topics')
           .update({ 
-            post_count: posts.length - 1
+            post_count: postCount || 0
           })
           .eq('id', selectedTopic.id);
+        
+        // Refresh the topics list to show updated counts
+        if (selectedCategory) {
+          await fetchTopics(selectedCategory.id);
+        }
       }
       
       toast({
