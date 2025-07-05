@@ -187,10 +187,16 @@ const AuthenticatedApp: React.FC = () => {
 
   // Show auth screen if user is not authenticated and showAuth is true
   if (!user && showAuth) {
-    return <Auth onAuthSuccess={() => {
-      setShowAuth(false);
-      setCurrentView('dashboard');
-    }} />;
+    return <Auth 
+      onAuthSuccess={() => {
+        setShowAuth(false);
+        setCurrentView('dashboard');
+      }}
+      onBack={() => {
+        setShowAuth(false);
+        setCurrentView('welcome');
+      }}
+    />;
   }
 
   // Show feature detail screen

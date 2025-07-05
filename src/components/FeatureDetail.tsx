@@ -28,7 +28,8 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
         'Creates custom worksheets and activities based on their interests',
         'Provides step-by-step guidance for complex problems',
         'Offers alternative explanations when concepts aren\'t clear'
-      ]
+      ],
+      ctaText: 'Ready to give your child personalized AI-powered learning?'
     },
     'parent-support': {
       title: 'Parent Support',
@@ -48,7 +49,8 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
         'Community forum for sharing experiences and advice',
         'Resource library with educational strategies and tips',
         'Direct access to learning specialists and support'
-      ]
+      ],
+      ctaText: 'Ready to get the support you need to help your child succeed?'
     },
     'learning-challenges': {
       title: 'Learning Challenges Support',
@@ -68,7 +70,8 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
         'Step-by-step problem-solving approaches',
         'Multi-sensory activities for better retention',
         'Flexible pacing to accommodate different processing speeds'
-      ]
+      ],
+      ctaText: 'Ready to discover learning strategies that work for your child?'
     },
     'interactive-conversations': {
       title: 'Interactive Learning',
@@ -88,7 +91,8 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
         'Real-time answers to "why" questions',
         'Encouraging feedback that builds confidence',
         'Connecting abstract concepts to real-world examples'
-      ]
+      ],
+      ctaText: 'Ready to make learning an engaging conversation for your child?'
     }
   };
 
@@ -176,7 +180,7 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
           {/* CTA */}
           <div className="text-center pt-6 border-t border-gray-200">
             <p className="text-gray-600 mb-4 text-sm sm:text-base">
-              Ready to experience {feature.title.toLowerCase()} for your child?
+              {feature.ctaText}
             </p>
             <Button
               onClick={onGetStarted}
