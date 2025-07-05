@@ -350,6 +350,8 @@ export type Database = {
           parent_post_id: string | null
           topic_id: string | null
           updated_at: string | null
+          view_count: number | null
+          reply_count: number | null
         }
         Insert: {
           author_id?: string | null
@@ -360,6 +362,8 @@ export type Database = {
           parent_post_id?: string | null
           topic_id?: string | null
           updated_at?: string | null
+          view_count?: number | null
+          reply_count?: number | null
         }
         Update: {
           author_id?: string | null
@@ -370,6 +374,8 @@ export type Database = {
           parent_post_id?: string | null
           topic_id?: string | null
           updated_at?: string | null
+          view_count?: number | null
+          reply_count?: number | null
         }
         Relationships: [
           {

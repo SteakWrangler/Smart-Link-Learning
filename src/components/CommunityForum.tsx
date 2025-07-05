@@ -115,6 +115,8 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
             content TEXT NOT NULL,
             author_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
             parent_post_id UUID REFERENCES forum_posts(id) ON DELETE CASCADE,
+            view_count INTEGER DEFAULT 0,
+            reply_count INTEGER DEFAULT 0,
             is_edited BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
             updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -331,8 +333,8 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         return {
           ...post,
           author_name: authorName || 'Unknown User',
-          view_count: (post as any).view_count || 0,
-          reply_count: (post as any).reply_count || 0
+          view_count: post.view_count || 0,
+          reply_count: post.reply_count || 0
         };
       });
 
