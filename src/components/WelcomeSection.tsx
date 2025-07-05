@@ -145,31 +145,42 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       </div>
 
       {/* Features Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mt-8 sm:mt-12">
-        {features.map((feature) => {
-          const IconComponent = feature.icon;
-          return (
-            <button
-              key={feature.id}
-              onClick={() => onFeatureClick?.(feature.id)}
-              className="text-center p-4 sm:p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group"
-            >
-              <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 transition-colors ${getColorClasses(feature.color)}`}>
-                <IconComponent className="w-6 h-6 sm:w-8 sm:h-8" />
-              </div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
-                {feature.title}
-              </h3>
-              <p className="text-gray-600 text-xs sm:text-sm mb-3">
-                {feature.description}
-              </p>
-              <div className="flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-xs sm:text-sm font-medium">Learn More</span>
-                <ArrowRight size={14} className="ml-1" />
-              </div>
-            </button>
-          );
-        })}
+      <div className="space-y-6">
+        <div className="text-center">
+          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
+            Explore Our Learning Capabilities
+          </h2>
+          <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
+            Discover how our AI-powered platform can support your child's unique learning journey
+          </p>
+        </div>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          {features.map((feature) => {
+            const IconComponent = feature.icon;
+            return (
+              <button
+                key={feature.id}
+                onClick={() => onFeatureClick?.(feature.id)}
+                className="text-center p-4 sm:p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group"
+              >
+                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 transition-colors ${getColorClasses(feature.color)}`}>
+                  <IconComponent className="w-6 h-6 sm:w-8 sm:h-8" />
+                </div>
+                <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
+                  {feature.title}
+                </h3>
+                <p className="text-gray-600 text-xs sm:text-sm mb-3">
+                  {feature.description}
+                </p>
+                <div className="flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="text-xs sm:text-sm font-medium">Learn More</span>
+                  <ArrowRight size={14} className="ml-1" />
+                </div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

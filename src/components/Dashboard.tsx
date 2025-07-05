@@ -14,9 +14,10 @@ import { useToast } from '@/hooks/use-toast';
 
 interface DashboardProps {
   onBack: () => void;
+  initialTab?: string;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
   const { profile } = useAuth();
   const { toast } = useToast();
   const [children, setChildren] = useState<Child[]>([]);
@@ -39,6 +40,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack }) => {
   } | null>(null);
   const [showChatInterface, setShowChatInterface] = useState(false);
   const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
+
+  // Set initial tab if provided
+  useEffect(() => {
+    if (initialTab && ['children', 'conversations', 'support', 'faq'].includes(initialTab)) {
+      setActiveTab(initialTab as 'children' | 'conversations' | 'support' | 'faq');
+    }
+  }, [initialTab]);
 
   useEffect(() => {
     if (profile) {

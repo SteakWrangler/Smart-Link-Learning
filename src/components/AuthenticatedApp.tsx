@@ -26,6 +26,18 @@ const AuthenticatedApp: React.FC = () => {
   });
   const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<string>('');
+  const [redirectToTab, setRedirectToTab] = useState<string>('');
+
+  // Clear redirect tab after it's been used
+  useEffect(() => {
+    if (redirectToTab && currentView === 'dashboard') {
+      // Clear the redirect tab after a short delay to ensure it's been applied
+      const timer = setTimeout(() => {
+        setRedirectToTab('');
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [redirectToTab, currentView]);
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -179,6 +191,18 @@ const AuthenticatedApp: React.FC = () => {
   const handleBackFromFeature = () => {
     setCurrentView('welcome');
     setSelectedFeature('');
+    setRedirectToTab('');
+  };
+
+  // Map features to dashboard tabs
+  const getFeatureRedirectTab = (featureId: string): string => {
+    const featureTabMap: Record<string, string> = {
+      'ai-learning': 'conversations',
+      'parent-support': 'support',
+      'learning-challenges': 'support',
+      'interactive-conversations': 'conversations'
+    };
+    return featureTabMap[featureId] || 'children';
   };
 
   if (loading) {
@@ -190,11 +214,17 @@ const AuthenticatedApp: React.FC = () => {
     return <Auth 
       onAuthSuccess={() => {
         setShowAuth(false);
-        setCurrentView('dashboard');
+        if (redirectToTab) {
+          setCurrentView('dashboard');
+          // The dashboard will handle the tab redirect
+        } else {
+          setCurrentView('dashboard');
+        }
       }}
       onBack={() => {
         setShowAuth(false);
         setCurrentView('welcome');
+        setRedirectToTab('');
       }}
     />;
   }
@@ -208,7 +238,9 @@ const AuthenticatedApp: React.FC = () => {
         onGetStarted={() => {
           if (user) {
             setCurrentView('dashboard');
+            setRedirectToTab(getFeatureRedirectTab(selectedFeature));
           } else {
+            setRedirectToTab(getFeatureRedirectTab(selectedFeature));
             setShowAuth(true);
           }
         }}
@@ -248,6 +280,7 @@ const AuthenticatedApp: React.FC = () => {
         {currentView === 'dashboard' && (
           <Dashboard 
             onBack={() => setCurrentView('welcome')}
+            initialTab={redirectToTab}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
