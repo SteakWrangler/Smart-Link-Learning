@@ -432,30 +432,30 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Add the post to the current posts list
       setPosts(prevPosts => [...prevPosts, formattedPost]);
       
-      // Get the actual post count from database
-      const { count: postCount, error: countError } = await (supabase as any)
-        .from('forum_posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('topic_id', selectedTopic.id);
-
-      if (countError) {
-        console.error('Error getting post count:', countError);
-      }
-
-      // Update topic post count with actual database count
+      // Update the local state to reflect the new post count
+      const newPostCount = posts.length + 1;
+      
+      // Update topic post count in database
       await (supabase as any)
         .from('forum_topics')
         .update({ 
-          post_count: postCount || 0,
+          post_count: newPostCount,
           last_post_at: new Date().toISOString(),
           last_post_author_name: authorName
         })
         .eq('id', selectedTopic.id);
       
-      // Refresh the topics list to show updated counts
-      if (selectedCategory) {
-        await fetchTopics(selectedCategory.id);
-      }
+      // Update the local state to reflect the new post count
+      setTopics(prevTopics => 
+        prevTopics.map(t => 
+          t.id === selectedTopic.id 
+            ? { ...t, post_count: newPostCount, last_post_at: new Date().toISOString(), last_post_author_name: authorName }
+            : t
+        )
+      );
+      
+      // Update the selected topic's post count as well
+      setSelectedTopic(prev => prev ? { ...prev, post_count: newPostCount, last_post_at: new Date().toISOString(), last_post_author_name: authorName } : null);
       
       // Clear the form
       setNewPostContent('');
@@ -618,29 +618,29 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Remove from local state
       setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
       
-      // Get the actual post count from database after deletion
-      const { count: postCount, error: countError } = await (supabase as any)
-        .from('forum_posts')
-        .select('*', { count: 'exact', head: true })
-        .eq('topic_id', selectedTopic?.id);
-
-      if (countError) {
-        console.error('Error getting post count:', countError);
-      }
-
-      // Update topic post count with actual database count
+      // Update the local state to reflect the new post count
+      const newPostCount = Math.max(0, posts.length - 1);
+      
+      // Update topic post count in database
       if (selectedTopic) {
         await (supabase as any)
           .from('forum_topics')
           .update({ 
-            post_count: postCount || 0
+            post_count: newPostCount
           })
           .eq('id', selectedTopic.id);
         
-        // Refresh the topics list to show updated counts
-        if (selectedCategory) {
-          await fetchTopics(selectedCategory.id);
-        }
+        // Update the local state to reflect the new post count
+        setTopics(prevTopics => 
+          prevTopics.map(t => 
+            t.id === selectedTopic.id 
+              ? { ...t, post_count: newPostCount }
+              : t
+          )
+        );
+        
+        // Update the selected topic's post count as well
+        setSelectedTopic(prev => prev ? { ...prev, post_count: newPostCount } : null);
       }
       
       toast({
