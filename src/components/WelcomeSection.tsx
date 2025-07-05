@@ -1,6 +1,6 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Users, Brain, MessageCircle, ArrowRight } from 'lucide-react';
+import { BookOpen, Users, Brain, MessageCircle, ArrowRight, Star, MessageSquare } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@/types/database';
 
@@ -45,10 +45,10 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 
   const features = [
     {
-      id: 'ai-learning',
+      id: 'ai-interactive-learning',
       icon: Brain,
-      title: 'AI-Powered Learning',
-      description: 'Personalized AI assistance that adapts to your child\'s unique learning style and pace',
+      title: 'AI Interactive Learning',
+      description: 'Personalized AI conversations and activities that adapt to your child\'s unique learning style',
       color: 'purple'
     },
     {
@@ -59,17 +59,17 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       color: 'green'
     },
     {
-      id: 'learning-challenges',
+      id: 'personalized-learning-setup',
       icon: BookOpen,
-      title: 'Learning Challenges Support',
-      description: 'Specialized support for ADHD, dyslexia, and other learning differences',
+      title: 'Personalized Learning Setup',
+      description: 'Create your child\'s learning profile to unlock personalized educational experiences',
       color: 'blue'
     },
     {
-      id: 'interactive-conversations',
-      icon: MessageCircle,
-      title: 'Interactive Learning',
-      description: 'Engaging conversations and activities that make learning fun and effective',
+      id: 'chat-history',
+      icon: MessageSquare,
+      title: 'Chat History',
+      description: 'Review and continue previous learning conversations with your child',
       color: 'orange'
     }
   ];
@@ -82,6 +82,21 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       orange: 'bg-orange-100 text-orange-600 hover:bg-orange-200'
     };
     return colorMap[color] || colorMap.blue;
+  };
+
+  const getFeatureTab = (featureId: string) => {
+    switch (featureId) {
+      case 'ai-interactive-learning':
+        return 'ai-learning';
+      case 'parent-support':
+        return 'parent-support';
+      case 'personalized-learning-setup':
+        return 'learning-challenges';
+      case 'chat-history':
+        return 'conversations';
+      default:
+        return 'ai-learning';
+    }
   };
 
   return (

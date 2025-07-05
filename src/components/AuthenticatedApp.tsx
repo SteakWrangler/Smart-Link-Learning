@@ -197,10 +197,10 @@ const AuthenticatedApp: React.FC = () => {
   // Map features to dashboard tabs
   const getFeatureRedirectTab = (featureId: string): string => {
     const featureTabMap: Record<string, string> = {
-      'ai-learning': 'conversations',
+      'ai-interactive-learning': 'conversations',
       'parent-support': 'support',
-      'learning-challenges': 'support',
-      'interactive-conversations': 'conversations'
+      'personalized-learning-setup': 'support',
+      'chat-history': 'conversations'
     };
     return featureTabMap[featureId] || 'children';
   };

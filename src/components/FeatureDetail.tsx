@@ -10,24 +10,24 @@ interface FeatureDetailProps {
 
 const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetStarted }) => {
   const features = {
-    'ai-learning': {
-      title: 'AI-Powered Learning',
-      subtitle: 'Personalized learning experiences that adapt to your child',
+    'ai-interactive-learning': {
+      title: 'AI Interactive Learning',
+      subtitle: 'Personalized AI conversations and activities that adapt to your child',
       icon: Brain,
       color: 'purple',
-      description: 'Our advanced AI technology creates personalized learning experiences that adapt to your child\'s unique needs, learning style, and pace.',
+      description: 'Our advanced AI technology creates personalized learning experiences that adapt to your child\'s unique needs, learning style, and pace through engaging conversations and interactive activities.',
       benefits: [
         'Adapts to your child\'s learning style and pace',
         'Creates personalized lesson plans and activities',
         'Provides real-time feedback and support',
-        'Tracks progress and adjusts difficulty automatically',
-        'Makes learning engaging and fun'
+        'Engages in natural conversations about learning',
+        'Makes learning fun through interactive experiences'
       ],
       examples: [
         'AI analyzes your child\'s responses to understand their strengths and challenges',
         'Creates custom worksheets and activities based on their interests',
-        'Provides step-by-step guidance for complex problems',
-        'Offers alternative explanations when concepts aren\'t clear'
+        'Engages in natural conversations about complex topics',
+        'Provides step-by-step guidance for complex problems'
       ],
       ctaText: 'Ready to give your child personalized AI-powered learning?'
     },
@@ -52,47 +52,47 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
       ],
       ctaText: 'Ready to get the support you need to help your child succeed?'
     },
-    'learning-challenges': {
-      title: 'Learning Challenges Support',
-      subtitle: 'Specialized support for ADHD, dyslexia, and other learning differences',
+    'personalized-learning-setup': {
+      title: 'Personalized Learning Setup',
+      subtitle: 'Create your child\'s learning profile to unlock personalized experiences',
       icon: BookOpen,
       color: 'blue',
-      description: 'We provide specialized support and strategies for children with ADHD, dyslexia, processing delays, and other learning differences.',
+      description: 'Set up your child\'s learning profile to unlock personalized educational experiences tailored to their unique needs, interests, and learning style.',
       benefits: [
-        'Specialized strategies for different learning challenges',
-        'Multi-sensory learning approaches',
-        'Breakdown of complex concepts into manageable steps',
-        'Patience and repetition when needed',
-        'Celebration of different learning styles'
+        'Create detailed learning profiles for each child',
+        'Track subjects, age groups, and learning challenges',
+        'Generate personalized learning recommendations',
+        'Adapt content to individual learning preferences',
+        'Support for various learning differences and needs'
       ],
       examples: [
-        'Visual aids and diagrams for complex concepts',
-        'Step-by-step problem-solving approaches',
-        'Multi-sensory activities for better retention',
-        'Flexible pacing to accommodate different processing speeds'
+        'Set up profiles with specific subjects and age groups',
+        'Configure learning challenges and support needs',
+        'Generate personalized lesson plans and activities',
+        'Track progress across different learning areas'
       ],
-      ctaText: 'Ready to discover learning strategies that work for your child?'
+      ctaText: 'Ready to create a personalized learning profile for your child?'
     },
-    'interactive-conversations': {
-      title: 'Interactive Learning',
-      subtitle: 'Engaging conversations and activities that make learning fun',
+    'chat-history': {
+      title: 'Chat History',
+      subtitle: 'Review and continue previous learning conversations with your child',
       icon: MessageCircle,
       color: 'orange',
-      description: 'Learning becomes an engaging conversation with our interactive AI that responds to your child\'s questions, provides encouragement, and makes education exciting.',
+      description: 'Access and review all your previous learning conversations with your child. Continue where you left off, revisit important concepts, and track your child\'s learning progress over time.',
       benefits: [
-        'Conversational learning that feels natural and engaging',
-        'Immediate answers to questions and curiosities',
-        'Encouraging and positive reinforcement',
-        'Real-world examples and applications',
-        'Adaptive difficulty based on understanding'
+        'Review and continue previous learning sessions',
+        'Track learning progress over time',
+        'Revisit important concepts and explanations',
+        'Save favorite conversations for future reference',
+        'Search through past conversations by topic or date'
       ],
       examples: [
-        'Natural conversations about complex topics',
-        'Real-time answers to "why" questions',
-        'Encouraging feedback that builds confidence',
-        'Connecting abstract concepts to real-world examples'
+        'Continue a math lesson from last week',
+        'Review a science explanation your child found helpful',
+        'Find previous practice problems and activities',
+        'Track how your child\'s understanding has evolved'
       ],
-      ctaText: 'Ready to make learning an engaging conversation for your child?'
+      ctaText: 'Ready to review and continue your child\'s learning journey?'
     }
   };
 
