@@ -23,7 +23,7 @@ CREATE TABLE public.forum_topics (
   view_count INTEGER DEFAULT 0,
   post_count INTEGER DEFAULT 0,
   last_post_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  last_post_author_id UUID REFERENCES public.profiles(id),
+  last_post_author_name TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -34,6 +34,9 @@ CREATE TABLE public.forum_posts (
   topic_id UUID REFERENCES public.forum_topics(id) ON DELETE CASCADE,
   author_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
   content TEXT NOT NULL,
+  parent_post_id UUID REFERENCES public.forum_posts(id) ON DELETE CASCADE,
+  view_count INTEGER DEFAULT 0,
+  reply_count INTEGER DEFAULT 0,
   is_edited BOOLEAN DEFAULT FALSE,
   edited_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -102,7 +105,7 @@ BEGIN
   SET 
     post_count = (SELECT COUNT(*) FROM public.forum_posts WHERE topic_id = NEW.topic_id),
     last_post_at = NEW.created_at,
-    last_post_author_id = NEW.author_id,
+    last_post_author_name = NEW.author_name,
     updated_at = NOW()
   WHERE id = NEW.topic_id;
   
@@ -134,9 +137,9 @@ BEGIN
       (SELECT created_at FROM public.forum_posts WHERE topic_id = OLD.topic_id ORDER BY created_at DESC LIMIT 1),
       created_at
     ),
-    last_post_author_id = COALESCE(
-      (SELECT author_id FROM public.forum_posts WHERE topic_id = OLD.topic_id ORDER BY created_at DESC LIMIT 1),
-      author_id
+    last_post_author_name = COALESCE(
+      (SELECT author_name FROM public.forum_posts WHERE topic_id = OLD.topic_id ORDER BY created_at DESC LIMIT 1),
+      author_name
     )
   WHERE id = OLD.topic_id;
   

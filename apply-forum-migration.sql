@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS forum_posts (
   content TEXT NOT NULL,
   author_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
   parent_post_id UUID REFERENCES forum_posts(id) ON DELETE CASCADE,
+  view_count INTEGER DEFAULT 0,
+  reply_count INTEGER DEFAULT 0,
   is_edited BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()

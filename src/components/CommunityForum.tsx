@@ -39,6 +39,8 @@ interface ForumPost {
   content: string;
   author_id: string;
   author_name?: string;
+  view_count: number;
+  reply_count: number;
   created_at: string;
   updated_at: string;
   is_edited: boolean;
@@ -63,6 +65,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
   const [newTopicTitle, setNewTopicTitle] = useState('');
   const [newTopicDescription, setNewTopicDescription] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
+  const [replyingToPost, setReplyingToPost] = useState<ForumPost | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{topicId: string, title: string} | null>(null);
 
   useEffect(() => {
@@ -327,7 +330,9 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         
         return {
           ...post,
-          author_name: authorName || 'Unknown User'
+          author_name: authorName || 'Unknown User',
+          view_count: (post as any).view_count || 0,
+          reply_count: (post as any).reply_count || 0
         };
       });
 
@@ -357,10 +362,13 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
     
     // Increment view count when topic is viewed
     try {
+      const newViewCount = topic.view_count + 1;
+      
+      // Update database
       await (supabase as any)
         .from('forum_topics')
         .update({ 
-          view_count: topic.view_count + 1
+          view_count: newViewCount
         })
         .eq('id', topic.id);
       
@@ -368,13 +376,13 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       setTopics(prevTopics => 
         prevTopics.map(t => 
           t.id === topic.id 
-            ? { ...t, view_count: t.view_count + 1 }
+            ? { ...t, view_count: newViewCount }
             : t
         )
       );
       
       // Update the selected topic's view count as well
-      setSelectedTopic(prev => prev ? { ...prev, view_count: prev.view_count + 1 } : null);
+      setSelectedTopic(prev => prev ? { ...prev, view_count: newViewCount } : null);
       
     } catch (error) {
       console.error('Error updating view count:', error);
@@ -406,6 +414,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
           topic_id: selectedTopic.id,
           content: newPostContent.trim(),
           author_id: profile.id,
+          parent_post_id: replyingToPost?.id || null,
           is_edited: false
         })
         .select(`
@@ -424,6 +433,8 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         content: newPost.content,
         author_id: newPost.author_id,
         author_name: authorName,
+        view_count: 0,
+        reply_count: 0,
         created_at: newPost.created_at,
         updated_at: newPost.updated_at,
         is_edited: newPost.is_edited
@@ -432,23 +443,61 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Add the post to the current posts list
       setPosts(prevPosts => [...prevPosts, formattedPost]);
       
-      // Update topic post count
-      await (supabase as any)
-        .from('forum_topics')
-        .update({ 
-          post_count: posts.length + 1,
-          last_post_at: new Date().toISOString(),
-          last_post_author_name: authorName
-        })
-        .eq('id', selectedTopic.id);
+      // If this is a reply to a specific post, update the parent post's reply count
+      if (replyingToPost) {
+        const newReplyCount = replyingToPost.reply_count + 1;
+        
+        // Update database
+        await (supabase as any)
+          .from('forum_posts')
+          .update({ 
+            reply_count: newReplyCount
+          })
+          .eq('id', replyingToPost.id);
+        
+        // Update local state
+        setPosts(prevPosts => 
+          prevPosts.map(p => 
+            p.id === replyingToPost.id 
+              ? { ...p, reply_count: newReplyCount }
+              : p
+          )
+        );
+      }
       
-      // Clear the form
+      // Clear the form and replying state
       setNewPostContent('');
+      setReplyingToPost(null);
+      
+      // Refetch the topic to get updated post count from database triggers
+      const { data: updatedTopic, error: topicError } = await (supabase as any)
+        .from('forum_topics')
+        .select('*')
+        .eq('id', selectedTopic.id)
+        .single();
+      
+      if (!topicError && updatedTopic) {
+        // Update local topic state with fresh data from database
+        setTopics(prevTopics => 
+          prevTopics.map(t => 
+            t.id === selectedTopic.id 
+              ? { ...t, post_count: updatedTopic.post_count, last_post_at: updatedTopic.last_post_at }
+              : t
+          )
+        );
+        
+        // Update selected topic state
+        setSelectedTopic(prev => prev ? { 
+          ...prev, 
+          post_count: updatedTopic.post_count, 
+          last_post_at: updatedTopic.last_post_at 
+        } : null);
+      }
       
       // Show success message
       toast({
         title: "Success",
-        description: "Your post has been added!",
+        description: replyingToPost ? "Your reply has been added!" : "Your post has been added!",
       });
       
     } catch (error) {
@@ -603,14 +652,31 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       // Remove from local state
       setPosts(prevPosts => prevPosts.filter(p => p.id !== postId));
       
-      // Update topic post count
+      // Refetch the topic to get updated post count from database triggers
       if (selectedTopic) {
-        await (supabase as any)
+        const { data: updatedTopic, error: topicError } = await (supabase as any)
           .from('forum_topics')
-          .update({ 
-            post_count: posts.length - 1
-          })
-          .eq('id', selectedTopic.id);
+          .select('*')
+          .eq('id', selectedTopic.id)
+          .single();
+        
+        if (!topicError && updatedTopic) {
+          // Update local topic state with fresh data from database
+          setTopics(prevTopics => 
+            prevTopics.map(t => 
+              t.id === selectedTopic.id 
+                ? { ...t, post_count: updatedTopic.post_count, last_post_at: updatedTopic.last_post_at }
+                : t
+            )
+          );
+          
+          // Update selected topic state
+          setSelectedTopic(prev => prev ? { 
+            ...prev, 
+            post_count: updatedTopic.post_count, 
+            last_post_at: updatedTopic.last_post_at 
+          } : null);
+        }
       }
       
       toast({
@@ -625,6 +691,42 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         description: "Failed to delete post. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePostView = async (post: ForumPost) => {
+    try {
+      const newViewCount = post.view_count + 1;
+      
+      // Update database
+      await (supabase as any)
+        .from('forum_posts')
+        .update({ 
+          view_count: newViewCount
+        })
+        .eq('id', post.id);
+      
+      // Update local state
+      setPosts(prevPosts => 
+        prevPosts.map(p => 
+          p.id === post.id 
+            ? { ...p, view_count: newViewCount }
+            : p
+        )
+      );
+      
+    } catch (error) {
+      console.error('Error updating post view count:', error);
+    }
+  };
+
+  const handleReplyToPost = async (post: ForumPost) => {
+    setReplyingToPost(post);
+    setNewPostContent(`@${post.author_name} `);
+    // Focus the reply form
+    const textarea = document.querySelector('textarea[placeholder="Share your thoughts..."]') as HTMLTextAreaElement;
+    if (textarea) {
+      textarea.focus();
     }
   };
 
@@ -930,13 +1032,49 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
                     <div className="prose prose-sm max-w-none">
                       <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
                     </div>
+                    
+                    {/* Post stats and actions */}
+                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Eye size={12} />
+                          {post.view_count} views
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <MessageSquare size={12} />
+                          {post.reply_count} replies
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePostView(post)}
+                          className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
+                        >
+                          View
+                        </button>
+                        <button
+                          onClick={() => handleReplyToPost(post)}
+                          className="text-xs text-green-500 hover:text-green-700 transition-colors"
+                        >
+                          Reply
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
 
               {/* Reply form */}
               <div className="bg-white border border-gray-200 rounded-lg p-4">
-                <h4 className="font-semibold text-gray-800 mb-3">Reply to this topic</h4>
+                <h4 className="font-semibold text-gray-800 mb-3">
+                  {replyingToPost ? `Reply to ${replyingToPost.author_name}` : 'Reply to this topic'}
+                </h4>
+                {replyingToPost && (
+                  <div className="mb-3 p-2 bg-gray-50 rounded text-sm text-gray-600">
+                    Replying to: "{replyingToPost.content.substring(0, 100)}..."
+                  </div>
+                )}
                 <textarea
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
@@ -944,13 +1082,24 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
                   className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
                   rows={4}
                 />
-                <div className="flex justify-end mt-3">
+                <div className="flex justify-between mt-3">
+                  {replyingToPost && (
+                    <button
+                      onClick={() => {
+                        setReplyingToPost(null);
+                        setNewPostContent('');
+                      }}
+                      className="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                    >
+                      Cancel Reply
+                    </button>
+                  )}
                   <button
                     onClick={handleSubmitPost}
                     disabled={!newPostContent.trim()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors ml-auto"
                   >
-                    Post Reply
+                    {replyingToPost ? 'Post Reply' : 'Post Reply'}
                   </button>
                 </div>
               </div>
