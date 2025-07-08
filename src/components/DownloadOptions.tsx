@@ -25,7 +25,9 @@ const DownloadOptions: React.FC<DownloadOptionsProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedFormat, setSelectedFormat] = useState<'pdf' | 'txt'>('pdf');
-  const [includeAnswers, setIncludeAnswers] = useState(false);
+  const [includeAnswers, setIncludeAnswers] = useState(true);
+  const [dropdownPosition, setDropdownPosition] = useState<'bottom' | 'top'>('bottom');
+  const [dropdownAlignment, setDropdownAlignment] = useState<'left' | 'right'>('left');
   const { toast } = useToast();
 
   const handleDownload = async (format: 'pdf' | 'txt') => {
@@ -45,13 +47,14 @@ const DownloadOptions: React.FC<DownloadOptionsProps> = ({
       const detectedType = type || fileGenerationService.detectFileType(content);
       const detectedMetadata = fileGenerationService.extractMetadata(content);
       
+      // Use the exact same content that was displayed on screen
       const options: FileGenerationOptions = {
         title: title || `Generated ${detectedType.replace('-', ' ')}`,
-        content: content,
+        content: content, // Use the full content as displayed
         type: detectedType,
         subject: subject || detectedMetadata.subject,
         grade: grade || detectedMetadata.grade,
-        theme: theme || detectedMetadata.theme,
+        theme: theme || detectedMetadata.theme, // Only use theme if explicitly provided
         includeAnswers: includeAnswers,
         format: format
       };
@@ -90,10 +93,36 @@ const DownloadOptions: React.FC<DownloadOptionsProps> = ({
   const detectedType = type || fileGenerationService.detectFileType(content);
   const detectedMetadata = fileGenerationService.extractMetadata(content);
 
+  const handleToggleDropdown = () => {
+    if (!isOpen) {
+      // Check if there's enough space below the button
+      const button = document.querySelector('[data-download-button]') as HTMLElement;
+      if (button) {
+        const rect = button.getBoundingClientRect();
+        const windowHeight = window.innerHeight;
+        const windowWidth = window.innerWidth;
+        const spaceBelow = windowHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const spaceLeft = rect.left;
+        const spaceRight = windowWidth - rect.right;
+        const dropdownHeight = 300; // Approximate height of dropdown
+        const dropdownWidth = 256; // w-64 = 16rem = 256px
+        
+        // Determine vertical position
+        setDropdownPosition(spaceBelow < dropdownHeight && spaceAbove > dropdownHeight ? 'top' : 'bottom');
+        
+        // Determine horizontal alignment
+        setDropdownAlignment(spaceRight < dropdownWidth && spaceLeft > dropdownWidth ? 'right' : 'left');
+      }
+    }
+    setIsOpen(!isOpen);
+  };
+
   return (
     <div className={`relative ${className}`}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        data-download-button
+        onClick={handleToggleDropdown}
         disabled={isGenerating || !content.trim()}
         className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         title="Download options"
@@ -108,7 +137,15 @@ const DownloadOptions: React.FC<DownloadOptionsProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
+        <div className={`absolute w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto ${
+          dropdownPosition === 'bottom' 
+            ? 'top-full mt-2' 
+            : 'bottom-full mb-2'
+        } ${
+          dropdownAlignment === 'left' 
+            ? 'left-0' 
+            : 'right-0'
+        }`}>
           <div className="p-4">
             <h3 className="font-semibold text-gray-800 mb-3">Download Options</h3>
             
@@ -155,8 +192,11 @@ const DownloadOptions: React.FC<DownloadOptionsProps> = ({
                     onChange={(e) => setIncludeAnswers(e.target.checked)}
                     className="text-blue-500"
                   />
-                  <span className="text-sm">Include answer key (if available)</span>
+                  <span className="text-sm">Include answer key (separate page in PDF)</span>
                 </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Answer keys will be on a separate page to keep them hidden from students
+                </p>
               </div>
             )}
 
@@ -167,8 +207,9 @@ const DownloadOptions: React.FC<DownloadOptionsProps> = ({
                 {detectedMetadata.subject && (
                   <div><strong>Subject:</strong> {detectedMetadata.subject}</div>
                 )}
-                {detectedMetadata.theme && (
-                  <div><strong>Theme:</strong> {detectedMetadata.theme}</div>
+                {/* Only show theme if it was explicitly provided */}
+                {theme && (
+                  <div><strong>Theme:</strong> {theme}</div>
                 )}
               </div>
             </div>

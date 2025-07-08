@@ -18,7 +18,7 @@ import type { Tables } from '@/types/supabase';
 interface ConversationDocumentUploadProps {
   conversationId: string;
   selectedChild: any;
-  onDocumentUploaded: (documents: Tables<'documents'>[]) => void;
+  onDocumentUploaded: (documents: Tables<'documents'>[]) => Promise<void>;
   onClose: () => void;
 }
 
@@ -174,15 +174,17 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
           setUploadProgress(prev => ({ ...prev, [fileKey]: 70 }));
 
-          // Link document to conversation
-          const { error: linkError } = await supabase
-            .from('conversation_documents')
-            .insert({
-              conversation_id: conversationId,
-              document_id: document.id
-            });
+          // Link document to conversation (only if conversation exists)
+          if (conversationId) {
+            const { error: linkError } = await supabase
+              .from('conversation_documents')
+              .insert({
+                conversation_id: conversationId,
+                document_id: document.id
+              });
 
-          if (linkError) throw linkError;
+            if (linkError) throw linkError;
+          }
 
           setUploadProgress(prev => ({ ...prev, [fileKey]: 85 }));
 
@@ -234,26 +236,56 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
         } catch (error: any) {
           console.error(`Upload error for ${selectedFile.name}:`, error);
-          const safeErrorMessage = createSafeErrorMessage(error);
-          errors.push(`${selectedFile.name}: ${safeErrorMessage}`);
+          
+          // Provide more specific error messages for common issues
+          let errorMessage = createSafeErrorMessage(error);
+          
+          if (error?.code === '42501') {
+            errorMessage = 'Permission denied. Please try refreshing the page and uploading again.';
+          } else if (error?.message?.includes('row-level security policy')) {
+            errorMessage = 'Security policy error. Please try uploading again.';
+          } else if (error?.message?.includes('conversation_documents')) {
+            errorMessage = 'Unable to link document to conversation. Please try again.';
+          }
+          
+          errors.push(`${selectedFile.name}: ${errorMessage}`);
         }
       }
 
       // Show results
       if (uploadedDocuments.length > 0) {
-        onDocumentUploaded(uploadedDocuments);
-        
-        if (errors.length > 0) {
+        try {
+          await onDocumentUploaded(uploadedDocuments);
+          
+          if (errors.length > 0) {
+            toast({
+              title: "Upload completed with some issues",
+              description: `${uploadedDocuments.length} files uploaded successfully. ${errors.length} files failed.`,
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Upload successful",
+              description: `${uploadedDocuments.length} file${uploadedDocuments.length > 1 ? 's' : ''} uploaded to this conversation`,
+            });
+          }
+          
+          // Reset form and close only on success
+          setSelectedFiles([]);
+          setDescription('');
+          setUploadProgress({});
+          onClose();
+        } catch (error) {
+          console.error('Error in document upload callback:', error);
           toast({
-            title: "Upload completed with some issues",
-            description: `${uploadedDocuments.length} files uploaded successfully. ${errors.length} files failed.`,
+            title: "Upload completed with issues",
+            description: "Files uploaded but there was an issue processing them.",
             variant: "default",
           });
-        } else {
-          toast({
-            title: "Upload successful",
-            description: `${uploadedDocuments.length} file${uploadedDocuments.length > 1 ? 's' : ''} uploaded to this conversation`,
-          });
+          setSelectedFiles([]);
+          setDescription('');
+          setUploadProgress({});
+          onClose();
         }
       } else {
         toast({
@@ -261,13 +293,8 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
           description: "All files failed to upload. Please try again.",
           variant: "destructive",
         });
+        // Don't close on complete failure - let user try again
       }
-
-      // Reset form and close
-      setSelectedFiles([]);
-      setDescription('');
-      setUploadProgress({});
-      onClose();
 
     } catch (error: any) {
       console.error('Upload error:', error);
@@ -277,6 +304,7 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
         description: safeErrorMessage,
         variant: "destructive",
       });
+      // Don't close on error - let user try again
     } finally {
       setUploading(false);
       setUploadProgress({});

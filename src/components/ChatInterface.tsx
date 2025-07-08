@@ -7,11 +7,13 @@ import { useAuth } from '@/hooks/useAuth';
 import { generateChatResponse, ChatMessage } from '@/utils/openaiClient';
 import { toast } from '@/components/ui/use-toast';
 import ConversationDocumentUpload from '@/components/ConversationDocumentUpload';
+import DocumentListModal from '@/components/DocumentListModal';
 import type { Tables } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { Paperclip } from 'lucide-react';
 import DownloadOptions from '@/components/DownloadOptions';
 import { fileGenerationService } from '@/services/fileGenerationService';
+import DownloadableContent from '@/components/DownloadableContent';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -44,7 +46,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [isLoadedConversation, setIsLoadedConversation] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
+  const [showDocumentList, setShowDocumentList] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const initialGreetingAdded = useRef(false);
 
@@ -71,6 +75,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (loadedConversation && loadedConversation.messages) {
       console.log('Loading conversation messages:', loadedConversation.messages);
       console.log('Setting messages to:', loadedConversation.messages.length, 'messages');
+      setIsLoadingConversation(true);
       setMessages(loadedConversation.messages);
       setConversationTitle(loadedConversation.title);
       setIsFavorite(loadedConversation.isFavorite || false);
@@ -79,9 +84,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setHasUnsavedChanges(false);
       initialGreetingAdded.current = true; // Don't add greeting for loaded conversations
       console.log('Conversation loaded successfully');
+      // Small delay to ensure state is set before allowing auto-save
+      setTimeout(() => setIsLoadingConversation(false), 100);
     } else if (!loadedConversation) {
       // Reset to new conversation state
       console.log('Resetting to new conversation');
+      setIsLoadingConversation(true);
       setMessages([]);
       setConversationTitle('');
       setIsFavorite(false);
@@ -89,6 +97,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       setCurrentConversationId(null);
       setHasUnsavedChanges(false);
       initialGreetingAdded.current = false; // Reset for new conversations
+      setTimeout(() => setIsLoadingConversation(false), 100);
     }
   }, [loadedConversation]);
 
@@ -188,22 +197,118 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Load conversation documents when conversation changes
   useEffect(() => {
+    console.log('Conversation ID changed:', currentConversationId);
     if (currentConversationId) {
+      console.log('Fetching documents for conversation:', currentConversationId);
       fetchConversationDocuments();
-    } else {
+    } else if (!isLoadedConversation) {
+      // Only clear documents if we're not in a loaded conversation
+      // This prevents clearing documents during auto-save operations
+      console.log('Clearing conversation documents - no conversation ID and not loaded conversation');
       setConversationDocuments([]);
     }
-  }, [currentConversationId]);
+  }, [currentConversationId, isLoadedConversation]);
 
   // Handle document upload to conversation
-  const handleDocumentUpload = (documents: Tables<'documents'>[]) => {
-    setConversationDocuments(prev => [...prev, ...documents]);
+  const handleDocumentUpload = async (documents: Tables<'documents'>[]) => {
+    console.log('Document upload handler called with:', documents.length, 'documents');
+    console.log('Current conversation documents before:', conversationDocuments.length);
+    
+    setConversationDocuments(prev => {
+      const newDocs = [...prev, ...documents];
+      console.log('New conversation documents count:', newDocs.length);
+      return newDocs;
+    });
     setHasUnsavedChanges(true);
+
+    // Temporarily disable auto-save during document upload processing
+    setIsLoadingConversation(true);
+
+    // Add user message showing the upload
+    const uploadMessage = documents.length === 1 
+      ? `Uploaded: ${documents[0].file_name}`
+      : `Uploaded ${documents.length} documents: ${documents.map(doc => doc.file_name).join(', ')}`;
+
+    const userMessageObj = {
+      id: `upload-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'user' as const,
+      content: uploadMessage,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => {
+      console.log('Adding upload message, current messages:', prev.length);
+      return [...prev, userMessageObj];
+    });
+    setHasUnsavedChanges(true);
+
+    // Generate automatic response for uploaded documents
+    try {
+      const response = await generateDocumentUploadResponse(documents);
+      
+      const aiMessageObj = {
+        id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        type: 'ai' as const,
+        content: response,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => {
+        console.log('Adding AI response message, current messages:', prev.length);
+        return [...prev, aiMessageObj];
+      });
+      setHasUnsavedChanges(true);
+    } catch (error) {
+      console.error('Error generating document upload response:', error);
+    } finally {
+      // Re-enable auto-save after document upload processing is complete
+      setTimeout(() => setIsLoadingConversation(false), 500);
+    }
+  };
+
+  // Generate response for uploaded documents
+  const generateDocumentUploadResponse = async (documents: Tables<'documents'>[]): Promise<string> => {
+    // Build document context
+    const documentContext = documents.map(doc => {
+      const content = doc.extracted_content || '';
+      const analysis = doc.ai_analysis ? JSON.stringify(doc.ai_analysis) : '';
+      return `Document: ${doc.file_name}\nContent: ${content}\nAnalysis: ${analysis}`;
+    }).join('\n\n');
+
+    const systemPrompt = `You are ${learnerName}'s AI learning assistant. The user has uploaded documents.
+
+Uploaded documents:
+${documentContext}
+
+Provide a helpful response that:
+1. Acknowledges each uploaded document by name
+2. Confirms that you have received the documents
+3. Briefly summarizes what you can see in the documents (if content is available)
+4. Gives 3-4 specific examples of what you can help with, such as:
+   - "I can analyze this test and identify areas for improvement"
+   - "I can create practice problems based on this content"
+   - "I can explain any concepts that need clarification"
+   - "I can generate additional worksheets or activities"
+5. Ask what they'd like to do with the documents
+
+Keep the response friendly and encouraging. If the document content isn't available yet, acknowledge the upload and ask what they'd like to do with it.`;
+
+    return await callLLMAPI(systemPrompt, []);
   };
 
   // Auto-save conversation when messages change
   useEffect(() => {
-    if (messages.length > 1 && selectedChild && profile?.id && hasUnsavedChanges) {
+    console.log('Auto-save effect triggered:', {
+      messagesLength: messages.length,
+      hasSelectedChild: !!selectedChild,
+      hasProfile: !!profile?.id,
+      hasUnsavedChanges,
+      currentConversationId,
+      isLoadedConversation,
+      isLoadingConversation
+    });
+    
+    if (messages.length > 1 && selectedChild && profile?.id && hasUnsavedChanges && !isLoadingConversation) {
       const autoSaveConversation = async () => {
         try {
           // If this is a loaded conversation, update it
@@ -297,7 +402,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               return;
             }
 
-            console.log('New conversation auto-saved successfully');
+            console.log('New conversation auto-saved successfully with ID:', conversation.id);
             setCurrentConversationId(conversation.id);
             setIsLoadedConversation(true);
             setHasUnsavedChanges(false);
@@ -311,7 +416,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       const timeoutId = setTimeout(autoSaveConversation, 2000);
       return () => clearTimeout(timeoutId);
     }
-  }, [messages, selectedChild, profile?.id, isLoadedConversation, currentConversationId, conversationTitle, isFavorite, loadedConversation?.title, hasUnsavedChanges]);
+  }, [messages, selectedChild, profile?.id, isLoadedConversation, conversationTitle, isFavorite, loadedConversation?.title, hasUnsavedChanges, isLoadingConversation]);
 
   // Handle back button - no save prompt needed
   const handleBack = () => {
@@ -371,7 +476,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     greeting += `• "Create a worksheet for ${learnerName} to practice"\n`;
     greeting += `• "Make a practice test about dinosaurs"\n`;
     greeting += `• "Generate an activity sheet about space"\n`;
-    greeting += `• When I create actual content (worksheets, tests, activities), you'll see a download button to save as PDF!\n\n`;
+    greeting += `• When I create educational content (worksheets, tests, activities), you'll see a download button to save as PDF!\n\n`;
     
     // Age-appropriate examples with specific subjects and themes
     if (ageGroup === 'early-elementary' || ageGroup === 'elementary') {
@@ -476,17 +581,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     });
     
     // Build comprehensive context about the learner
-    let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. When you generate actual educational content like worksheets, practice tests, activities, or structured learning materials (not just prompts or requests), parents can download it as a PDF file using the download button that will appear below your response. 
+    let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. 
 
-IMPORTANT: When creating worksheets, practice problems, quizzes, or any content meant to be printed and worked on, ALWAYS include blank spaces for answers (using ___, [ ], or similar patterns). This applies to all subjects and problem types:
-- Math problems: "5 + 3 = ___" or "Solve: ___"
-- Reading comprehension: "Answer: ___" or "Your answer: ______"
-- Multiple choice: "Write the letter of your answer: ___"
-- Writing prompts: "Write your response below: ___"
-- Science experiments: "Hypothesis: ___" or "Observation: ___"
-- Any other educational content that requires student input
+IMPORTANT DOWNLOAD INSTRUCTIONS:
+When you create actual educational content that should be downloadable (worksheets, practice tests, activities, etc.), include the special marker "DOWNLOADABLE_CONTENT_START" at the beginning and "DOWNLOADABLE_CONTENT_END" at the end of your response. This tells the system to show a download button.
 
-This ensures the content can be properly detected as downloadable material.`;
+Examples of content that should be downloadable:
+- Worksheets with problems and answer spaces
+- Practice tests with questions and answer keys
+- Activities with instructions and materials lists
+- Educational games with rules and printables
+- Structured learning materials meant to be printed
+
+Examples of content that should NOT be downloadable:
+- General explanations or advice
+- Conversational responses
+- Brief acknowledgments
+- Prompts or requests
+
+When creating downloadable content:
+1. ALWAYS include blank spaces for answers (using ___, [ ], or similar patterns)
+2. ALWAYS include an answer key section at the bottom with the format:
+   [ANSWER_KEY_START]
+   1. [answer]
+   2. [answer]
+   etc.
+   [ANSWER_KEY_END]
+3. Structure it clearly for printing
+
+CRITICAL: NEVER create download links or URLs in your responses. The download functionality is handled automatically by the system when you use the DOWNLOADABLE_CONTENT markers. Do not include phrases like "you can download the PDF below" or create any links. Simply provide the educational content with the markers and the system will automatically show the download option.`;
     
     // Add child-specific context
     if (selectedChild) {
@@ -807,96 +930,23 @@ The activity should immerse the student in the theme's world and make the learni
     return `\n\nRelevant Documents:\n${documentContexts}`;
   };
 
-  // Check if a message contains downloadable content based on answer blanks
-  const isDownloadableContent = (content: string): boolean => {
-    const lowerContent = content.toLowerCase();
+  // Check if a message contains downloadable content based on AI markers
+  const isDownloadableContent = (content: string, messageIndex?: number): boolean => {
+    // First, check if this is the initial greeting message (should never be downloadable)
+    if (messageIndex === 0 || content.includes('Let\'s start learning together') || content.includes('I\'m here to help')) {
+      return false;
+    }
     
-    // More restrictive patterns - only look for actual answer blanks and educational content
-    const answerBlankPatterns = [
-      // Basic blanks and spaces (more restrictive)
-      /___{2,}/g,                   // _____, ______ (at least 4 underscores)
-      /\[[\s_]{3,}\]/g,            // [    ], [____] (at least 3 spaces/underscores)
-      /\([\s_]{3,}\)/g,             // (    ), (____) (at least 3 spaces/underscores)
-      
-      // Answer prompts with blanks (more specific)
-      /answer:?\s*[_\s]{3,}/gi,     // Answer: ___, Answer ______
-      /your answer:?\s*[_\s]{3,}/gi, // Your answer: ___, Your answer ______
-      /write your answer:?\s*[_\s]{3,}/gi, // Write your answer: ___
-      /fill in:?\s*[_\s]{3,}/gi,    // Fill in: ___, Fill in ______
-      /complete:?\s*[_\s]{3,}/gi,   // Complete: ___, Complete ______
-      
-      // Multiple choice patterns (more specific)
-      /circle\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s]{3,}/gi, // Circle the correct answer: ___
-      /choose\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s]{3,}/gi, // Choose the correct answer: ___
-      /select\s+(?:the\s+)?(?:correct\s+)?answer:?\s*[_\s]{3,}/gi, // Select the correct answer: ___
-      
-      // Numbered items with blanks (more specific)
-      /\d+\.\s*[^_]*[_\s]{4,}/g,    // 1. What is 2+2? _____
-      /\d+\)\s*[^_]*[_\s]{4,}/g,    // 1) What is 2+2? _____
-      /\d+\.\s*[^_]*\s*answer:?\s*[_\s]{3,}/gi, // 1. What is 2+2? Answer: ___
-      /\d+\)\s*[^_]*\s*answer:?\s*[_\s]{3,}/gi, // 1) What is 2+2? Answer: ___
-      
-      // Multiple choice with letters
-      /[a-d]\)\s*[^_]*\s*answer:?\s*[_\s]{3,}/gi, // A) Option 1 B) Option 2 Answer: ___
-      
-      // Subject-specific patterns (more specific)
-      /solve:?\s*[_\s]{3,}/gi,      // Solve: ___
-      /calculate:?\s*[_\s]{3,}/gi,  // Calculate: ___
-      /show\s+your\s+work:?\s*[_\s]{3,}/gi, // Show your work: ___
-      /work\s+space:?\s*[_\s]{3,}/gi, // Work space: ___
-    ];
+    // Check if the AI has marked this content as downloadable using the special markers
+    const hasDownloadableMarkers = content.includes('DOWNLOADABLE_CONTENT_START') && content.includes('DOWNLOADABLE_CONTENT_END');
     
-    // Check if any answer blank patterns are found
-    const hasAnswerBlanks = answerBlankPatterns.some(pattern => pattern.test(content));
+    if (hasDownloadableMarkers) {
+      console.log('Download detected: AI marked content as downloadable');
+      return true;
+    }
     
-    // Must have substantial content (not just a brief response)
-    const hasSubstantialContent = content.length > 100;
-    
-    // Must have educational content indicators
-    const hasEducationalContent = (
-      /\d+\.\s/.test(content) || // Numbered questions
-      /[a-d]\)\s/.test(content) || // Multiple choice options
-      /question:?\s/i.test(content) || // Question prompts
-      /problem:?\s/i.test(content) || // Problem prompts
-      /worksheet/i.test(content) || // Worksheet content
-      /quiz/i.test(content) || // Quiz content
-      /test/i.test(content) || // Test content
-      /activity/i.test(content) || // Activity content
-      /exercise/i.test(content) // Exercise content
-    );
-    
-    // Must not be just a conversation response or prompt
-    const isNotJustConversation = !(
-      lowerContent.includes('that sounds great') ||
-      lowerContent.includes('i understand') ||
-      lowerContent.includes('let me help') ||
-      lowerContent.includes('here are some') ||
-      lowerContent.includes('you can try') ||
-      lowerContent.includes('some suggestions') ||
-      lowerContent.includes('here are a few') ||
-      lowerContent.includes('can you') ||
-      lowerContent.includes('please create') ||
-      lowerContent.includes('i would like') ||
-      lowerContent.includes('make me') ||
-      lowerContent.includes('generate') ||
-      lowerContent.includes('create a') ||
-      lowerContent.includes('give me') ||
-      lowerContent.includes('i need') ||
-      lowerContent.includes('could you') ||
-      lowerContent.includes('sure!') ||
-      lowerContent.includes('of course!') ||
-      lowerContent.includes('absolutely!') ||
-      lowerContent.includes('i\'d be happy') ||
-      lowerContent.includes('i\'ll help') ||
-      lowerContent.includes('here\'s') ||
-      lowerContent.includes('here is') ||
-      lowerContent.includes('let me create') ||
-      lowerContent.includes('i\'ll create') ||
-      lowerContent.includes('i\'ll make') ||
-      lowerContent.includes('i\'ll generate')
-    );
-    
-    return hasAnswerBlanks && hasSubstantialContent && hasEducationalContent && isNotJustConversation;
+    // If no markers are found, the content is not downloadable
+    return false;
   };
 
   // Generate a title for the downloadable content
@@ -904,14 +954,23 @@ The activity should immerse the student in the theme's world and make the learni
     const detectedType = fileGenerationService.detectFileType(content);
     const detectedMetadata = fileGenerationService.extractMetadata(content);
     
-    let title = `${detectedType.replace('-', ' ')} for ${learnerName}`;
+    // Start with a simple title and capitalize properly
+    let title = `${detectedType.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())} for ${learnerName}`;
     
-    if (detectedMetadata.subject) {
-      title = `${detectedMetadata.subject} ${title}`;
+    // Only add subject if it's explicitly mentioned in the content
+    if (detectedMetadata.subject && content.toLowerCase().includes(detectedMetadata.subject.toLowerCase())) {
+      const capitalizedSubject = detectedMetadata.subject.charAt(0).toUpperCase() + detectedMetadata.subject.slice(1);
+      title = `${capitalizedSubject} ${title}`;
     }
     
-    if (detectedMetadata.theme) {
-      title = `${detectedMetadata.theme} ${title}`;
+    // Only add theme if it's explicitly mentioned in the content and not just a random word
+    if (detectedMetadata.theme && content.toLowerCase().includes(detectedMetadata.theme.toLowerCase())) {
+      // Check if the theme is actually part of the content structure, not just a random word
+      const themePattern = new RegExp(`\\b${detectedMetadata.theme}\\b`, 'i');
+      if (themePattern.test(content)) {
+        const capitalizedTheme = detectedMetadata.theme.charAt(0).toUpperCase() + detectedMetadata.theme.slice(1);
+        title = `${capitalizedTheme} ${title}`;
+      }
     }
     
     return title;
@@ -942,12 +1001,19 @@ The activity should immerse the student in the theme's world and make the learni
                   {selectedCategories?.subject} • {selectedCategories?.ageGroup} • {selectedCategories?.challenge}
                 </p>
               )} */}
-              {documents.length > 0 && (
-                <p className="text-xs text-blue-600 flex items-center gap-1 mt-1">
+              {conversationDocuments.length > 0 && (
+                <button 
+                  onClick={() => setShowDocumentList(true)}
+                  className="text-xs text-blue-600 flex items-center gap-1 mt-1 hover:text-blue-800 hover:underline cursor-pointer"
+                >
                   <FileText size={12} />
-                  <span className="hidden sm:inline">{documents.length} document{documents.length !== 1 ? 's' : ''} available for analysis</span>
-                  <span className="sm:hidden">{documents.length} doc{documents.length !== 1 ? 's' : ''}</span>
-                </p>
+                  <span className="hidden sm:inline">
+                    {conversationDocuments.length} document{conversationDocuments.length !== 1 ? 's' : ''} in this conversation (click to view)
+                  </span>
+                  <span className="sm:hidden">
+                    {conversationDocuments.length} doc{conversationDocuments.length !== 1 ? 's' : ''}
+                  </span>
+                </button>
               )}
             </div>
           </div>
@@ -963,10 +1029,10 @@ The activity should immerse the student in the theme's world and make the learni
               <div className="text-center text-gray-500 mt-8 sm:mt-12">
                 <p className="text-base sm:text-lg mb-2">Let's start learning together! 🌟</p>
                 <p className="text-sm sm:text-base">I'm here to help {learnerName} with personalized lessons and activities.</p>
-                {documents.length > 0 && (
+                {(documents.length > 0 || conversationDocuments.length > 0) && (
                   <div className="mt-4 p-3 sm:p-4 bg-blue-50 rounded-lg">
                     <p className="text-sm text-blue-800 font-medium mb-2">
-                      📁 I can see you have {documents.length} document{documents.length !== 1 ? 's' : ''} uploaded
+                      📁 I can see you have {conversationDocuments.length > 0 ? conversationDocuments.length : documents.length} document{(conversationDocuments.length > 0 ? conversationDocuments.length : documents.length) !== 1 ? 's' : ''} {conversationDocuments.length > 0 ? 'in this conversation' : 'uploaded'}
                     </p>
                     <p className="text-xs text-blue-600">
                       Ask me to analyze them or create activities based on the content!
@@ -991,14 +1057,32 @@ The activity should immerse the student in the theme's world and make the learni
                         : 'bg-gray-100 text-gray-800'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap text-sm sm:text-base break-words">{message.content}</p>
+                    <DownloadableContent
+                      content={message.content
+                        .replace('DOWNLOADABLE_CONTENT_START', '')
+                        .replace('DOWNLOADABLE_CONTENT_END', '')
+                        .trim()}
+                    />
                     
                     {/* Download button for AI messages with downloadable content */}
-                    {message.type === 'ai' && isDownloadableContent(message.content) && (
+                    {message.type === 'ai' && (() => {
+                      const messageIndex = messages.findIndex(m => m.id === message.id);
+                      const isDownloadable = isDownloadableContent(message.content, messageIndex);
+                      if (isDownloadable) {
+                        console.log('Showing download options for message:', message.content.substring(0, 100) + '...');
+                      }
+                      return isDownloadable;
+                    })() && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <DownloadOptions
-                          content={message.content}
-                          title={generateDownloadTitle(message.content, learnerName)}
+                          content={message.content
+                            .replace('DOWNLOADABLE_CONTENT_START', '')
+                            .replace('DOWNLOADABLE_CONTENT_END', '')
+                            .trim()}
+                          title={generateDownloadTitle(message.content
+                            .replace('DOWNLOADABLE_CONTENT_START', '')
+                            .replace('DOWNLOADABLE_CONTENT_END', '')
+                            .trim(), learnerName)}
                           subject={selectedCategories?.subject}
                           grade={selectedCategories?.ageGroup}
                           className="w-full"
@@ -1065,6 +1149,14 @@ The activity should immerse the student in the theme's world and make the learni
           selectedChild={selectedChild}
           onDocumentUploaded={handleDocumentUpload}
           onClose={() => setShowDocumentUpload(false)}
+        />
+      )}
+
+      {/* Document List Modal */}
+      {showDocumentList && (
+        <DocumentListModal
+          documents={conversationDocuments}
+          onClose={() => setShowDocumentList(false)}
         />
       )}
     </div>
