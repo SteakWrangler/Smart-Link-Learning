@@ -87,7 +87,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
 
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-12">
       {/* Header with Auth Buttons */}
       <div className="flex justify-between items-start">
         <div></div> {/* Empty div for spacing */}
@@ -128,56 +128,66 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="text-center space-y-4">
-        <h1 className="text-2xl sm:text-4xl font-bold text-gray-800">
-          Welcome to Joyful Learner
+      {/* Hero Section - Now More Prominent */}
+      <div className="text-center space-y-6 max-w-4xl mx-auto">
+        <h1 className="text-3xl sm:text-5xl font-bold text-gray-800 leading-tight">
+          Welcome to Learning Lift
         </h1>
-        <p className="text-base sm:text-xl text-gray-600 max-w-2xl mx-auto px-4">
-          Empowering every child to learn with joy through personalized AI assistance
-          that adapts to their unique needs and learning style.
-        </p>
+        <div className="space-y-4 text-lg sm:text-xl text-gray-700 leading-relaxed">
+          <p>
+            Unlock the full potential of AI-powered education with lightning-fast content generation that adapts to any number of students.
+          </p>
+          <p>
+            Our platform serves teachers, parents, and tutors with personalized learning plans, worksheets, activities, and ongoing guidance - all created in seconds based on your input.
+          </p>
+          <p>
+            Every student gets unique, high-quality educational content that adapts to their specific needs, learning style, and pace.
+          </p>
+          <p>
+            Experience education where speed meets personalization, and every learner receives the guidance they need to thrive.
+          </p>
+        </div>
         <Button 
           onClick={onGetStarted}
           size="lg" 
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-2 sm:py-3 text-base sm:text-lg"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-8 sm:px-10 py-3 sm:py-4 text-lg sm:text-xl font-semibold"
         >
           Get Started
         </Button>
       </div>
 
-      {/* Features Grid */}
-      <div className="space-y-6">
+      {/* Features Section - Now Less Prominent */}
+      <div className="space-y-6 pt-8 border-t border-gray-200">
         <div className="text-center">
-          <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-2">
-            Explore Our Learning Capabilities
+          <h2 className="text-lg sm:text-xl font-medium text-gray-700 mb-2">
+            Explore Our Features
           </h2>
-          <p className="text-gray-600 text-sm sm:text-base max-w-2xl mx-auto">
-            Discover how our AI-powered platform can support your child's unique learning journey
+          <p className="text-gray-500 text-sm sm:text-base max-w-2xl mx-auto">
+            Learn more about how our platform can support your educational needs
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {features.map((feature) => {
             const IconComponent = feature.icon;
             return (
               <button
                 key={feature.id}
                 onClick={() => onFeatureClick?.(feature.id)}
-                className="text-center p-4 sm:p-6 bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group"
+                className="text-center p-3 sm:p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-200 border border-gray-200 hover:border-gray-300 cursor-pointer group"
               >
-                <div className={`w-12 h-12 sm:w-16 sm:h-16 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4 transition-colors ${getColorClasses(feature.color)}`}>
-                  <IconComponent className="w-6 h-6 sm:w-8 sm:h-8" />
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center mx-auto mb-2 sm:mb-3 transition-colors ${getColorClasses(feature.color)}`}>
+                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-2 group-hover:text-blue-600 transition-colors">
+                <h3 className="text-sm sm:text-base font-medium text-gray-800 mb-1 group-hover:text-blue-600 transition-colors">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 text-xs sm:text-sm mb-3">
+                <p className="text-gray-600 text-xs sm:text-sm mb-2">
                   {feature.description}
                 </p>
                 <div className="flex items-center justify-center text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="text-xs sm:text-sm font-medium">Learn More</span>
-                  <ArrowRight size={14} className="ml-1" />
+                  <span className="text-xs font-medium">Learn More</span>
+                  <ArrowRight size={12} className="ml-1" />
                 </div>
               </button>
             );

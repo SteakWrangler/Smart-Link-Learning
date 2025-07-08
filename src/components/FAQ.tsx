@@ -13,8 +13,8 @@ const FAQ: React.FC = () => {
 
   const faqData: FAQItem[] = [
     {
-      question: "What is Joyful Learner and what can it do for my child?",
-      answer: "Joyful Learner is an AI-powered learning platform that creates personalized educational experiences for your child. It can:",
+      question: "What is Learning Lift and what can it do for my child?",
+      answer: "Learning Lift is an AI-powered learning platform that creates personalized educational experiences for your child. It can:",
       listItems: [
         "Generate custom lesson plans based on your child's age, subjects, and learning challenges",
         "Provide interactive conversations that adapt to your child's learning style",
@@ -24,8 +24,8 @@ const FAQ: React.FC = () => {
       ]
     },
     {
-      question: "How can I get the most out of Joyful Learner's features?",
-      answer: "Here are the key ways to leverage Joyful Learner's capabilities:",
+      question: "How can I get the most out of Learning Lift's features?",
+      answer: "Here are the key ways to leverage Learning Lift's capabilities:",
       listItems: [
         "Document Upload: Upload your child's failed tests, homework, or study guides to help the AI understand exactly where they need help",
         "Parent Support Section: Access resources and connect with other parents facing similar challenges",
@@ -35,7 +35,7 @@ const FAQ: React.FC = () => {
       ]
     },
     {
-      question: "How does Joyful Learner protect my child's information?",
+      question: "How does Learning Lift protect my child's information?",
       answer: "We take privacy seriously and have implemented several security measures:",
       listItems: [
         "Row Level Security: All data is protected by database-level security policies that ensure users can only access their own information",
@@ -46,7 +46,7 @@ const FAQ: React.FC = () => {
       ]
     },
     {
-      question: "How does Joyful Learner help children with learning differences?",
+      question: "How does Learning Lift help children with learning differences?",
       answer: "The AI is specifically designed to work with children who have various learning challenges and differences. It adapts its teaching style, pace, and approach based on your child's specific needs. The platform provides:",
       listItems: [
         "Shorter, more focused learning sessions for children with attention challenges",
@@ -57,8 +57,8 @@ const FAQ: React.FC = () => {
       ]
     },
     {
-      question: "What devices work with Joyful Learner and how do I access my saved content?",
-      answer: "Joyful Learner works on any device with a web browser - computers, tablets, and phones. All your conversations, student profiles, and documents are automatically saved and accessible from any device. You can view your saved conversations in the 'Saved Conversations' tab and manage documents in the 'Documents' section."
+      question: "What devices work with Learning Lift and how do I access my saved content?",
+      answer: "Learning Lift works on any device with a web browser - computers, tablets, and phones. All your conversations, student profiles, and documents are automatically saved and accessible from any device. You can view your saved conversations in the 'Saved Conversations' tab and manage documents in the 'Documents' section."
     },
     {
       question: "Where can I get help if I have questions or need support?",
@@ -88,7 +88,7 @@ const FAQ: React.FC = () => {
           <h2 className="text-3xl font-bold text-gray-800">Frequently Asked Questions</h2>
         </div>
         <p className="text-gray-600 text-lg">
-          Find answers to common questions about Joyful Learner
+          Find answers to common questions about Learning Lift
         </p>
       </div>
 
