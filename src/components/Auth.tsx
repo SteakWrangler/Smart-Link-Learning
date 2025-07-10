@@ -22,6 +22,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [errors, setErrors] = useState<{[key: string]: string}>({});
+  const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
+  const [topErrorMessage, setTopErrorMessage] = useState<string>('');
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
@@ -32,9 +34,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     setFirstName('');
     setLastName('');
     setErrors({});
+    setHasAttemptedSubmit(false);
+    setTopErrorMessage('');
   };
 
   const validateSignInForm = () => {
+    setHasAttemptedSubmit(true);
     const newErrors: {[key: string]: string} = {};
     
     if (!email.trim()) {
@@ -46,10 +51,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     }
     
     setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      setTopErrorMessage('Please fill in all required fields marked with *');
+    } else {
+      setTopErrorMessage('');
+    }
+    
     return Object.keys(newErrors).length === 0;
   };
 
   const validateSignUpForm = () => {
+    setHasAttemptedSubmit(true);
     const newErrors: {[key: string]: string} = {};
     
     if (!firstName.trim()) {
@@ -75,20 +88,18 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     }
     
     setErrors(newErrors);
+    
+    if (Object.keys(newErrors).length > 0) {
+      if (newErrors.confirmPassword === 'Passwords do not match') {
+        setTopErrorMessage('Passwords do not match');
+      } else {
+        setTopErrorMessage('Please fill in all required fields marked with *');
+      }
+    } else {
+      setTopErrorMessage('');
+    }
+    
     return Object.keys(newErrors).length === 0;
-  };
-
-  const hasMissingFields = () => {
-    const missingFields = [];
-    
-    // Check for missing required fields (not password mismatch)
-    if (!firstName.trim()) missingFields.push('first name');
-    if (!lastName.trim()) missingFields.push('last name');
-    if (!email.trim()) missingFields.push('email');
-    if (!password.trim()) missingFields.push('password');
-    if (!confirmPassword.trim()) missingFields.push('password confirmation');
-    
-    return missingFields.length > 0;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -154,19 +165,17 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
       
       onAuthSuccess();
     } catch (error: any) {
-      let errorMessage = error.message;
+      // Clear any form validation errors since this is an auth error
+      setErrors({});
+      setHasAttemptedSubmit(false);
       
-      if (error.message.includes('Invalid login credentials')) {
-        errorMessage = "Invalid email or password. Please check your credentials and try again.";
-      } else if (error.message.includes('Email not confirmed')) {
+      let errorMessage = "Incorrect email or password";
+      
+      if (error.message.includes('Email not confirmed')) {
         errorMessage = "Please check your email and confirm your account before signing in.";
       }
       
-      toast({
-        title: "Sign In Error",
-        description: errorMessage,
-        variant: "destructive",
-      });
+      setTopErrorMessage(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -202,11 +211,11 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
               </TabsList>
               
               <TabsContent value="signin" className="space-y-4">
-                {hasMissingFields() && (
+                {topErrorMessage && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                     <div className="flex items-center text-red-700">
                       <AlertCircle className="mr-2" size={16} />
-                      <span className="text-sm font-medium">Please fill in all required fields marked with *</span>
+                      <span className="text-sm font-medium">{topErrorMessage}</span>
                     </div>
                   </div>
                 )}
@@ -221,9 +230,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className={errors.email ? "border-red-500" : ""}
+                      className={errors.email && hasAttemptedSubmit ? "border-red-500" : ""}
                     />
-                    {errors.email && (
+                    {errors.email && hasAttemptedSubmit && (
                       <p className="text-sm text-red-500 mt-1 flex items-center">
                         <AlertCircle className="mr-1" size={16} />
                         {errors.email}
@@ -240,9 +249,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className={errors.password ? "border-red-500" : ""}
+                      className={errors.password && hasAttemptedSubmit ? "border-red-500" : ""}
                     />
-                    {errors.password && (
+                    {errors.password && hasAttemptedSubmit && (
                       <p className="text-sm text-red-500 mt-1 flex items-center">
                         <AlertCircle className="mr-1" size={16} />
                         {errors.password}
@@ -259,11 +268,11 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4">
-                {hasMissingFields() && (
+                {topErrorMessage && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
                     <div className="flex items-center text-red-700">
                       <AlertCircle className="mr-2" size={16} />
-                      <span className="text-sm font-medium">Please fill in all required fields marked with *</span>
+                      <span className="text-sm font-medium">{topErrorMessage}</span>
                     </div>
                   </div>
                 )}
@@ -278,9 +287,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
-                        className={errors.firstName ? "border-red-500" : ""}
+                        className={errors.firstName && hasAttemptedSubmit ? "border-red-500" : ""}
                       />
-                      {errors.firstName && (
+                      {errors.firstName && hasAttemptedSubmit && (
                         <p className="text-sm text-red-500 mt-1 flex items-center">
                           <AlertCircle className="mr-1" size={16} />
                           {errors.firstName}
@@ -296,9 +305,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
-                        className={errors.lastName ? "border-red-500" : ""}
+                        className={errors.lastName && hasAttemptedSubmit ? "border-red-500" : ""}
                       />
-                      {errors.lastName && (
+                      {errors.lastName && hasAttemptedSubmit && (
                         <p className="text-sm text-red-500 mt-1 flex items-center">
                           <AlertCircle className="mr-1" size={16} />
                           {errors.lastName}
@@ -317,9 +326,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
-                      className={errors.email ? "border-red-500" : ""}
+                      className={errors.email && hasAttemptedSubmit ? "border-red-500" : ""}
                     />
-                    {errors.email && (
+                    {errors.email && hasAttemptedSubmit && (
                       <p className="text-sm text-red-500 mt-1 flex items-center">
                         <AlertCircle className="mr-1" size={16} />
                         {errors.email}
@@ -337,9 +346,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
-                      className={errors.password ? "border-red-500" : ""}
+                      className={errors.password && hasAttemptedSubmit ? "border-red-500" : ""}
                     />
-                    {errors.password && (
+                    {errors.password && hasAttemptedSubmit && (
                       <p className="text-sm text-red-500 mt-1 flex items-center">
                         <AlertCircle className="mr-1" size={16} />
                         {errors.password}
@@ -357,9 +366,9 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
-                      className={errors.confirmPassword ? "border-red-500" : ""}
+                      className={errors.confirmPassword && hasAttemptedSubmit ? "border-red-500" : ""}
                     />
-                    {errors.confirmPassword && (
+                    {errors.confirmPassword && hasAttemptedSubmit && (
                       <p className="text-sm text-red-500 mt-1 flex items-center">
                         <AlertCircle className="mr-1" size={16} />
                         {errors.confirmPassword}
