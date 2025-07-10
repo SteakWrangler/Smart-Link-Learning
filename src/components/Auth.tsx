@@ -6,9 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import UserDisplay from './UserDisplay';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -22,6 +21,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [errors, setErrors] = useState<{[key: string]: string}>({});
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
@@ -31,30 +31,83 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     setConfirmPassword('');
     setFirstName('');
     setLastName('');
+    setErrors({});
+  };
+
+  const validateSignInForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    }
+    
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateSignUpForm = () => {
+    const newErrors: {[key: string]: string} = {};
+    
+    if (!firstName.trim()) {
+      newErrors.firstName = 'First name is required';
+    }
+    
+    if (!lastName.trim()) {
+      newErrors.lastName = 'Last name is required';
+    }
+    
+    if (!email.trim()) {
+      newErrors.email = 'Email is required';
+    }
+    
+    if (!password.trim()) {
+      newErrors.password = 'Password is required';
+    }
+    
+    if (!confirmPassword.trim()) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (password !== confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const hasMissingFields = () => {
+    const missingFields = [];
+    
+    // Check for missing required fields (not password mismatch)
+    if (!firstName.trim()) missingFields.push('first name');
+    if (!lastName.trim()) missingFields.push('last name');
+    if (!email.trim()) missingFields.push('email');
+    if (!password.trim()) missingFields.push('password');
+    if (!confirmPassword.trim()) missingFields.push('password confirmation');
+    
+    return missingFields.length > 0;
   };
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateSignUpForm()) {
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
-      // Validate password confirmation
-      if (password !== confirmPassword) {
-        toast({
-          title: "Password Mismatch",
-          description: "Passwords do not match. Please make sure both passwords are identical.",
-          variant: "destructive",
-        });
-        return;
-      }
-
       const { error } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
-            first_name: firstName,
-            last_name: lastName,
+            first_name: firstName.trim(),
+            last_name: lastName.trim(),
           },
           emailRedirectTo: `${window.location.origin}/`,
         },
@@ -79,11 +132,16 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateSignInForm()) {
+      return;
+    }
+    
     setIsLoading(true);
 
     try {
       const { error } = await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -114,31 +172,22 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     }
   };
 
+  const hasErrors = Object.keys(errors).length > 0;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
       <div className="w-full max-w-md">
-        {/* Header with User Display */}
-        <div className="flex justify-between items-start mb-4">
-          <div>
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors text-sm"
-              >
-                <ArrowLeft size={16} />
-                Back to Features
-              </button>
-            )}
-          </div>
-          <UserDisplay
-            key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
-            isAuthenticated={!!user}
-            user={user}
-            profile={profile}
-            onSignIn={() => {}} // No-op since we're already in auth screen
-            onSignUp={() => {}} // No-op since we're already in auth screen
-            onSignOut={() => {}} // No-op since we're already in auth screen
-          />
+        {/* Header with Back Button */}
+        <div className="mb-4">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors text-sm"
+            >
+              <ArrowLeft size={16} />
+              Back to Features
+            </button>
+          )}
         </div>
         
         <Card>
@@ -153,26 +202,52 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
               </TabsList>
               
               <TabsContent value="signin" className="space-y-4">
+                {hasMissingFields() && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-red-700">
+                      <AlertCircle className="mr-2" size={16} />
+                      <span className="text-sm font-medium">Please fill in all required fields marked with *</span>
+                    </div>
+                  </div>
+                )}
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                    <Label htmlFor="signin-email" className="flex items-center">
+                      Email <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="signin-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className={errors.email ? "border-red-500" : ""}
                     />
+                    {errors.email && (
+                      <p className="text-sm text-red-500 mt-1 flex items-center">
+                        <AlertCircle className="mr-1" size={16} />
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <Label htmlFor="signin-password" className="flex items-center">
+                      Password <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="signin-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className={errors.password ? "border-red-500" : ""}
                     />
+                    {errors.password && (
+                      <p className="text-sm text-red-500 mt-1 flex items-center">
+                        <AlertCircle className="mr-1" size={16} />
+                        {errors.password}
+                      </p>
+                    )}
                   </div>
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing In...' : 'Sign In'}
@@ -184,59 +259,112 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
               </TabsContent>
               
               <TabsContent value="signup" className="space-y-4">
+                {hasMissingFields() && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-4">
+                    <div className="flex items-center text-red-700">
+                      <AlertCircle className="mr-2" size={16} />
+                      <span className="text-sm font-medium">Please fill in all required fields marked with *</span>
+                    </div>
+                  </div>
+                )}
                 <form onSubmit={handleSignUp} className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="first-name">First Name</Label>
+                      <Label htmlFor="first-name" className="flex items-center">
+                        First Name <span className="text-red-500 ml-1">*</span>
+                      </Label>
                       <Input
                         id="first-name"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
                         required
+                        className={errors.firstName ? "border-red-500" : ""}
                       />
+                      {errors.firstName && (
+                        <p className="text-sm text-red-500 mt-1 flex items-center">
+                          <AlertCircle className="mr-1" size={16} />
+                          {errors.firstName}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="last-name">Last Name</Label>
+                      <Label htmlFor="last-name" className="flex items-center">
+                        Last Name <span className="text-red-500 ml-1">*</span>
+                      </Label>
                       <Input
                         id="last-name"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
                         required
+                        className={errors.lastName ? "border-red-500" : ""}
                       />
+                      {errors.lastName && (
+                        <p className="text-sm text-red-500 mt-1 flex items-center">
+                          <AlertCircle className="mr-1" size={16} />
+                          {errors.lastName}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email" className="flex items-center">
+                      Email <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="signup-email"
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className={errors.email ? "border-red-500" : ""}
                     />
+                    {errors.email && (
+                      <p className="text-sm text-red-500 mt-1 flex items-center">
+                        <AlertCircle className="mr-1" size={16} />
+                        {errors.email}
+                      </p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                    <Label htmlFor="signup-password" className="flex items-center">
+                      Password <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="signup-password"
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className={errors.password ? "border-red-500" : ""}
                     />
+                    {errors.password && (
+                      <p className="text-sm text-red-500 mt-1 flex items-center">
+                        <AlertCircle className="mr-1" size={16} />
+                        {errors.password}
+                      </p>
+                    )}
                   </div>
                   
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Label htmlFor="confirm-password" className="flex items-center">
+                      Confirm Password <span className="text-red-500 ml-1">*</span>
+                    </Label>
                     <Input
                       id="confirm-password"
                       type="password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       required
+                      className={errors.confirmPassword ? "border-red-500" : ""}
                     />
+                    {errors.confirmPassword && (
+                      <p className="text-sm text-red-500 mt-1 flex items-center">
+                        <AlertCircle className="mr-1" size={16} />
+                        {errors.confirmPassword}
+                      </p>
+                    )}
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
