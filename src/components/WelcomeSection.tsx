@@ -4,11 +4,9 @@ import { BookOpen, Users, Brain, MessageCircle, ArrowRight, Star, MessageSquare 
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@/types/database';
 import UserDisplay from './UserDisplay';
+import { useAuth } from '@/hooks/useAuth';
 
 interface WelcomeSectionProps {
-  isAuthenticated: boolean;
-  user: User | null;
-  profile: Profile | null;
   onSignIn: () => void;
   onSignUp: () => void;
   onGetStarted: () => void;
@@ -17,15 +15,14 @@ interface WelcomeSectionProps {
 }
 
 const WelcomeSection: React.FC<WelcomeSectionProps> = ({ 
-  isAuthenticated, 
-  user, 
-  profile,
   onSignIn, 
   onSignUp, 
   onGetStarted,
   onSignOut,
   onFeatureClick
 }) => {
+  const { user, profile } = useAuth();
+  const isAuthenticated = !!user;
 
 
   const features = [

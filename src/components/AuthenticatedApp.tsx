@@ -255,9 +255,6 @@ const AuthenticatedApp: React.FC = () => {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 sm:p-6">
         <div className="max-w-6xl mx-auto w-full">
           <WelcomeSection 
-            isAuthenticated={!!user}
-            user={user}
-            profile={profile}
             onSignIn={() => setShowAuth(true)}
             onSignUp={() => setShowAuth(true)}
             onGetStarted={() => {
