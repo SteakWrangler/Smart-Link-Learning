@@ -7,13 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Child, Subject, Challenge } from '@/types/database';
 import ChatInterface from './ChatInterface';
 import DocumentManager from './DocumentManager';
+import UserDisplay from './UserDisplay';
 
 interface StudentDashboardProps {
   onBack: () => void;
 }
 
 const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [studentChild, setStudentChild] = useState<Child | null>(null);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [challenges, setChallenges] = useState<Challenge[]>([]);
@@ -142,14 +143,25 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ onBack }) => {
             </button>
             <h1 className="text-2xl font-bold text-gray-800">My Learning Dashboard</h1>
           </div>
-          <Button
-            onClick={() => setShowDocuments(true)}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <FileText size={16} />
-            My Documents
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button
+              onClick={() => setShowDocuments(true)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <FileText size={16} />
+              My Documents
+            </Button>
+            <UserDisplay
+              key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
+              isAuthenticated={!!user}
+              user={user}
+              profile={profile}
+              onSignIn={() => {}} // No-op since we're already authenticated
+              onSignUp={() => {}} // No-op since we're already authenticated
+              onSignOut={() => {}} // No-op since this is handled by parent
+            />
+          </div>
         </div>
       </div>
 

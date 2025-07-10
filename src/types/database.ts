@@ -3,7 +3,6 @@ export interface Profile {
   email: string;
   first_name?: string;
   last_name?: string;
-  username?: string;
   user_type: string;
   is_anonymous_in_forum?: boolean;
   email_notifications?: boolean;

@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, Eye
 import { Profile } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 
 interface SettingsProps {
@@ -12,6 +13,7 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   const { toast } = useToast();
+  const { fetchProfile, setProfile } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -21,7 +23,6 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   const [formData, setFormData] = useState({
     first_name: profile.first_name || '',
     last_name: profile.last_name || '',
-    username: profile.username || '',
     is_anonymous_in_forum: profile.is_anonymous_in_forum || false,
     email_notifications: profile.email_notifications !== false, // Default to true
     forum_notifications: profile.forum_notifications !== false, // Default to true
@@ -50,12 +51,26 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   const handleSaveProfile = async () => {
     setLoading(true);
     try {
+      // Optimistic update - update the UI immediately
+      const updatedProfile = {
+        ...profile,
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        is_anonymous_in_forum: formData.is_anonymous_in_forum,
+        email_notifications: formData.email_notifications,
+        forum_notifications: formData.forum_notifications,
+        updated_at: new Date().toISOString(),
+      };
+      
+      // Update the profile state immediately for instant UI feedback
+      setProfile(updatedProfile);
+
+      // Then update the database
       const { error } = await supabase
         .from('profiles')
         .update({
           first_name: formData.first_name,
           last_name: formData.last_name,
-          username: formData.username,
           is_anonymous_in_forum: formData.is_anonymous_in_forum,
           email_notifications: formData.email_notifications,
           forum_notifications: formData.forum_notifications,
@@ -64,12 +79,19 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
 
       if (error) throw error;
 
+      // Fetch the latest profile to ensure consistency
+      await fetchProfile(profile.id);
+
       toast({
         title: "Profile Updated",
         description: "Your profile has been successfully updated.",
       });
     } catch (error) {
       console.error('Error updating profile:', error);
+      
+      // Revert the optimistic update on error
+      setProfile(profile);
+      
       toast({
         title: "Error",
         description: "Failed to update profile. Please try again.",
@@ -234,18 +256,6 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
                   type="text"
                   value={formData.last_name}
                   onChange={(e) => handleInputChange('last_name', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => handleInputChange('username', e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>

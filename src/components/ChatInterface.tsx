@@ -14,6 +14,7 @@ import { Paperclip } from 'lucide-react';
 import DownloadOptions from '@/components/DownloadOptions';
 import { fileGenerationService } from '@/services/fileGenerationService';
 import DownloadableContent from '@/components/DownloadableContent';
+import UserDisplay from './UserDisplay';
 
 interface ChatInterfaceProps {
   selectedCategories: {
@@ -34,7 +35,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onSaveConversation,
   loadedConversation
 }) => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const [messages, setMessages] = useState<Array<{ id: string; type: 'user' | 'ai'; content: string; timestamp: Date }>>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1017,6 +1018,15 @@ The activity should immerse the student in the theme's world and make the learni
               )}
             </div>
           </div>
+          <UserDisplay
+            key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
+            isAuthenticated={!!user}
+            user={user}
+            profile={profile}
+            onSignIn={() => {}} // No-op since we're already authenticated
+            onSignUp={() => {}} // No-op since we're already authenticated
+            onSignOut={() => {}} // No-op since this is handled by parent
+          />
         </div>
       </div>
 

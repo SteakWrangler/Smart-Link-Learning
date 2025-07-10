@@ -46,7 +46,13 @@ export const useAuth = () => {
 
       if (error) throw error;
       
+      // Immediately update the profile state
       setProfile(data);
+      
+      // Force a re-render by briefly setting loading to true
+      setLoading(true);
+      setTimeout(() => setLoading(false), 10);
+      
     } catch (error) {
       console.error('Error fetching profile:', error);
     } finally {
@@ -63,5 +69,7 @@ export const useAuth = () => {
     profile,
     loading,
     signOut,
+    fetchProfile,
+    setProfile,
   };
 };

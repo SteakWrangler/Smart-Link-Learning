@@ -7,6 +7,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import UserDisplay from './UserDisplay';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -21,6 +23,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const { toast } = useToast();
+  const { user, profile } = useAuth();
 
   const clearForm = () => {
     setEmail('');
@@ -114,18 +117,29 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
       <div className="w-full max-w-md">
-        {/* Back Button */}
-        {onBack && (
-          <div className="mb-4">
-            <button
-              onClick={onBack}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors text-sm"
-            >
-              <ArrowLeft size={16} />
-              Back to Features
-            </button>
+        {/* Header with User Display */}
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors text-sm"
+              >
+                <ArrowLeft size={16} />
+                Back to Features
+              </button>
+            )}
           </div>
-        )}
+          <UserDisplay
+            key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
+            isAuthenticated={!!user}
+            user={user}
+            profile={profile}
+            onSignIn={() => {}} // No-op since we're already in auth screen
+            onSignUp={() => {}} // No-op since we're already in auth screen
+            onSignOut={() => {}} // No-op since we're already in auth screen
+          />
+        </div>
         
         <Card>
           <CardHeader>

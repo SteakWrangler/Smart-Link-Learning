@@ -12,6 +12,7 @@ import Settings from './Settings';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import UserDisplay from './UserDisplay';
 
 interface DashboardProps {
   onBack: () => void;
@@ -19,7 +20,7 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
-  const { profile } = useAuth();
+  const { profile, user } = useAuth();
   const { toast } = useToast();
   const [children, setChildren] = useState<Child[]>([]);
   const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
@@ -877,14 +878,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
             </button>
           </div>
           
-          {/* Sign Out Button - Right Aligned */}
+          {/* User Display - Right Aligned */}
           <div className="flex justify-end mt-2">
-            <button
-              onClick={handleSignOut}
-              className="px-3 sm:px-4 py-2 rounded-lg font-medium transition-colors text-red-600 hover:text-red-800 hover:bg-red-50 border border-red-200 text-sm sm:text-base"
-            >
-              Sign Out
-            </button>
+            <UserDisplay
+              key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
+              isAuthenticated={!!user}
+              user={user}
+              profile={profile}
+              onSignIn={() => {}} // No-op since we're already authenticated
+              onSignUp={() => {}} // No-op since we're already authenticated
+              onSignOut={handleSignOut}
+            />
           </div>
         </div>
       </div>

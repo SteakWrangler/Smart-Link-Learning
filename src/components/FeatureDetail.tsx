@@ -1,6 +1,8 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Brain, Users, BookOpen, MessageCircle, CheckCircle, Star, Lightbulb } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import UserDisplay from './UserDisplay';
 
 interface FeatureDetailProps {
   featureId: string;
@@ -9,6 +11,7 @@ interface FeatureDetailProps {
 }
 
 const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetStarted }) => {
+  const { user, profile } = useAuth();
   const features = {
     'ai-interactive-learning': {
       title: 'AI Interactive Learning',
@@ -113,7 +116,7 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 sm:p-6">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className="flex items-center justify-between mb-8">
           <button
             onClick={onBack}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
@@ -122,6 +125,15 @@ const FeatureDetail: React.FC<FeatureDetailProps> = ({ featureId, onBack, onGetS
             <span className="hidden sm:inline">Back to Features</span>
             <span className="sm:hidden">Back</span>
           </button>
+          <UserDisplay
+            key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
+            isAuthenticated={!!user}
+            user={user}
+            profile={profile}
+            onSignIn={() => {}} // No-op since this is handled by parent
+            onSignUp={() => {}} // No-op since this is handled by parent
+            onSignOut={() => {}} // No-op since this is handled by parent
+          />
         </div>
 
         {/* Feature Content */}

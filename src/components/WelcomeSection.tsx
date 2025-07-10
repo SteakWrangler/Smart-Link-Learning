@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { BookOpen, Users, Brain, MessageCircle, ArrowRight, Star, MessageSquare } from 'lucide-react';
 import { User } from '@supabase/supabase-js';
 import { Profile } from '@/types/database';
+import UserDisplay from './UserDisplay';
 
 interface WelcomeSectionProps {
   isAuthenticated: boolean;
@@ -25,23 +26,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
   onSignOut,
   onFeatureClick
 }) => {
-  // Get user's display name
-  const getUserDisplayName = () => {
-    if (!profile) return user?.email || 'User';
-    
-    const firstName = profile.first_name || '';
-    const lastName = profile.last_name || '';
-    
-    if (firstName && lastName) {
-      return `${firstName} ${lastName}`;
-    } else if (firstName) {
-      return firstName;
-    } else if (lastName) {
-      return lastName;
-    } else {
-      return user?.email || 'User';
-    }
-  };
+
 
   const features = [
     {
@@ -91,41 +76,15 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       {/* Header with Auth Buttons */}
       <div className="flex justify-between items-start">
         <div></div> {/* Empty div for spacing */}
-        <div className="flex flex-col items-end gap-2">
-          {isAuthenticated ? (
-            <>
-              <div className="text-xs sm:text-sm text-gray-600 text-right">
-                Signed in as {getUserDisplayName()}
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onSignOut}
-                className="text-xs sm:text-sm"
-              >
-                Sign Out
-              </Button>
-            </>
-          ) : (
-            <div className="flex gap-1 sm:gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={onSignIn}
-                className="text-xs sm:text-sm"
-              >
-                Sign In
-              </Button>
-              <Button 
-                size="sm" 
-                onClick={onSignUp}
-                className="text-xs sm:text-sm"
-              >
-                Sign Up
-              </Button>
-            </div>
-          )}
-        </div>
+        <UserDisplay
+          key={profile ? `${profile.id}-${profile.updated_at}` : 'no-profile'}
+          isAuthenticated={isAuthenticated}
+          user={user}
+          profile={profile}
+          onSignIn={onSignIn}
+          onSignUp={onSignUp}
+          onSignOut={onSignOut}
+        />
       </div>
 
       {/* Hero Section - Now More Prominent */}
