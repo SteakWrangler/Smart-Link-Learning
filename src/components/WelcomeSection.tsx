@@ -87,7 +87,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       {/* Hero Section - Now More Prominent */}
       <div className="text-center space-y-6 max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-5xl font-bold text-gray-800 leading-tight">
-          Welcome to Learning Lift
+          Welcome to Smart Link Learning
         </h1>
         <div className="space-y-4 text-lg sm:text-xl text-gray-700 leading-relaxed">
           <p>

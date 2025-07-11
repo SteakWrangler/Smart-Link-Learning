@@ -201,7 +201,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
         
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Welcome to Learning Lift</CardTitle>
+            <CardTitle className="text-2xl text-center">Welcome to Smart Link Learning</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full" onValueChange={clearForm}>
