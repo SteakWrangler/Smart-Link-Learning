@@ -135,8 +135,17 @@ const FAQ: React.FC = () => {
         <p className="text-gray-600 mb-4">
           Still have questions? We're here to help!
         </p>
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 mb-4">
           Check out the Parent Support section for additional resources and community discussions.
+        </p>
+        <p className="text-sm text-gray-500">
+          Need additional help? Contact our team at{' '}
+          <a 
+            href="mailto:LinkSmartTechLLC@gmail.com" 
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            LinkSmartTechLLC@gmail.com
+          </a>
         </p>
       </div>
     </div>

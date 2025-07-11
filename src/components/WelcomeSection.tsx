@@ -150,6 +150,19 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
           })}
         </div>
       </div>
+      
+      {/* Footer Contact Information */}
+      <div className="text-center pt-8 border-t border-gray-200">
+        <p className="text-xs text-gray-500">
+          Need help? Contact our team at{' '}
+          <a 
+            href="mailto:LinkSmartTechLLC@gmail.com" 
+            className="text-blue-600 hover:text-blue-800 underline"
+          >
+            LinkSmartTechLLC@gmail.com
+          </a>
+        </p>
+      </div>
     </div>
   );
 };
