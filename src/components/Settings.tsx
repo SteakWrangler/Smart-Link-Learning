@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, EyeOff } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, EyeOff, Check } from 'lucide-react';
 import { Profile } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
+import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
 interface SettingsProps {
   profile: Profile;
@@ -40,6 +41,9 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
     new_email: '',
     password: '',
   });
+
+  // Delete account states
+  const [deletePassword, setDeletePassword] = useState('');
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData(prev => ({
@@ -103,6 +107,29 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   };
 
   const handleChangePassword = async () => {
+    // Validate that current password is provided
+    if (!passwordData.current_password.trim()) {
+      toast({
+        title: "Error",
+        description: "Current password is required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate new password requirements
+    if (passwordData.new_password.trim()) {
+      const passwordValidation = validatePassword(passwordData.new_password);
+      if (!passwordValidation.isValid) {
+        toast({
+          title: "Password Requirements Not Met",
+          description: passwordValidation.errors.join(', '),
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     if (passwordData.new_password !== passwordData.confirm_password) {
       toast({
         title: "Error",
@@ -114,6 +141,22 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
 
     setLoading(true);
     try {
+      // First, verify the current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: passwordData.current_password,
+      });
+
+      if (signInError) {
+        toast({
+          title: "Error",
+          description: "Current password is incorrect.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If current password is correct, update to new password
       const { error } = await supabase.auth.updateUser({
         password: passwordData.new_password
       });
@@ -144,8 +187,44 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   };
 
   const handleChangeEmail = async () => {
+    // Validate that password is provided
+    if (!emailData.password.trim()) {
+      toast({
+        title: "Error",
+        description: "Password is required to change email.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate email format
+    if (!emailData.new_email.trim() || !emailData.new_email.includes('@')) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      // First, verify the current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: emailData.password,
+      });
+
+      if (signInError) {
+        toast({
+          title: "Error",
+          description: "Password is incorrect.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If password is correct, update email
       const { error } = await supabase.auth.updateUser({
         email: emailData.new_email
       });
@@ -175,12 +254,90 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   };
 
   const handleDeleteAccount = async () => {
+    // Validate that password is provided
+    if (!deletePassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Password is required to delete your account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Delete all user data first
+      // First, verify the current password by attempting to sign in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: deletePassword,
+      });
+
+      if (signInError) {
+        toast({
+          title: "Error",
+          description: "Password is incorrect.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // If password is correct, mark the account as deleted
+      // This will prevent the user from logging in while preserving the auth account
+      
+      // Delete user documents
+      const { error: documentsError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('user_id', profile.id);
+
+      if (documentsError) {
+        console.error('Error deleting user documents:', documentsError);
+        // Continue with deletion even if documents deletion fails
+      }
+
+      // Delete user conversations and messages
+      const { error: conversationsError } = await supabase
+        .from('conversations')
+        .delete()
+        .eq('parent_id', profile.id);
+
+      if (conversationsError) {
+        console.error('Error deleting user conversations:', conversationsError);
+        // Continue with deletion even if conversations deletion fails
+      }
+
+      // Delete forum posts and topics
+      const { error: forumPostsError } = await supabase
+        .from('forum_posts')
+        .delete()
+        .eq('author_id', profile.id);
+
+      if (forumPostsError) {
+        console.error('Error deleting forum posts:', forumPostsError);
+        // Continue with deletion even if forum posts deletion fails
+      }
+
+      const { error: forumTopicsError } = await supabase
+        .from('forum_topics')
+        .delete()
+        .eq('author_id', profile.id);
+
+      if (forumTopicsError) {
+        console.error('Error deleting forum topics:', forumTopicsError);
+        // Continue with deletion even if forum topics deletion fails
+      }
+
+      // Mark the profile as deleted instead of deleting it
       const { error: profileError } = await supabase
         .from('profiles')
-        .delete()
+        .update({ 
+          deleted_at: new Date().toISOString(),
+          first_name: '',
+          last_name: '',
+          email_notifications: false,
+          forum_notifications: false,
+          is_anonymous_in_forum: false
+        })
         .eq('id', profile.id);
 
       if (profileError) throw profileError;
@@ -190,7 +347,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
 
       toast({
         title: "Account Deleted",
-        description: "Your account has been successfully deleted.",
+        description: "Your account has been deleted. You will be signed out and will need to create a new account to use the app again.",
       });
     } catch (error) {
       console.error('Error deleting account:', error);
@@ -202,6 +359,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
     } finally {
       setLoading(false);
       setShowDeleteConfirm(false);
+      setDeletePassword('');
     }
   };
 
@@ -409,6 +567,33 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
                   onChange={(e) => setPasswordData(prev => ({ ...prev, new_password: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                
+                {/* Password Requirements */}
+                {passwordData.new_password && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                    <div className="space-y-1">
+                      {(() => {
+                        const validation = validatePassword(passwordData.new_password);
+                        return getPasswordRequirementsList().map((requirement, index) => {
+                          const isMet = Object.values(validation.requirements)[index];
+                          return (
+                            <div key={index} className="flex items-center text-xs">
+                              {isMet ? (
+                                <Check className="mr-2 text-green-500" size={14} />
+                              ) : (
+                                <X className="mr-2 text-red-500" size={14} />
+                              )}
+                              <span className={isMet ? "text-green-700" : "text-red-700"}>
+                                {requirement}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
               </div>
               
               <div>
@@ -509,9 +694,27 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
               Are you sure you want to delete your account? This action cannot be undone and will permanently remove all your data.
             </p>
             
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter your password to confirm
+                </label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Enter your current password"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
             <div className="flex gap-3">
               <Button
-                onClick={() => setShowDeleteConfirm(false)}
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setDeletePassword('');
+                }}
                 variant="outline"
                 className="flex-1"
               >

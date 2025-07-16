@@ -274,22 +274,22 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
 
       // Format the topics data with proper author names
       const formattedTopics: ForumTopic[] = topics?.map((topic: any) => {
-        let authorName = topic.profiles 
-          ? `${topic.profiles.first_name || ''} ${topic.profiles.last_name || ''}`.trim()
-          : 'Unknown User';
+        let authorName = 'Unknown User';
         
-        // Check if the author has anonymous posting enabled
-        // TODO: Uncomment after migration is applied
-        // if (topic.profiles?.is_anonymous_in_forum) {
-        //   authorName = 'Anonymous User';
-        // }
+        // For topics, we'll use the stored last_post_author_name which should already
+        // handle anonymous posting correctly from the database trigger
+        if (topic.last_post_author_name) {
+          authorName = topic.last_post_author_name;
+        } else if (topic.profiles) {
+          authorName = `${topic.profiles.first_name || ''} ${topic.profiles.last_name || ''}`.trim() || 'Unknown User';
+        }
         
         return {
           id: topic.id,
           title: topic.title,
           description: topic.description,
           author_id: topic.author_id,
-          author_name: authorName || 'Unknown User',
+          author_name: authorName,
           is_pinned: topic.is_pinned,
           is_locked: topic.is_locked,
           view_count: topic.view_count,
@@ -321,7 +321,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         .from('forum_posts')
         .select(`
           *,
-          profiles:author_id (
+          profiles!forum_posts_author_id_fkey (
             first_name,
             last_name
           )
@@ -332,19 +332,19 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       if (error) throw error;
 
       const formattedPosts = posts.map(post => {
-        let authorName = post.profiles 
-          ? `${post.profiles.first_name || ''} ${post.profiles.last_name || ''}`.trim()
-          : 'Unknown User';
+        let authorName = 'Unknown User';
         
-        // Check if the author has anonymous posting enabled
-        // TODO: Uncomment after migration is applied
-        // if (post.profiles?.is_anonymous_in_forum) {
-        //   authorName = 'Anonymous User';
-        // }
+        // Check if the post was made anonymously
+        // Use type assertion since the field might not exist in the database yet
+        if ((post as any).is_anonymous) {
+          authorName = 'Anonymous User';
+        } else if (post.profiles) {
+          authorName = `${post.profiles.first_name || ''} ${post.profiles.last_name || ''}`.trim() || 'Unknown User';
+        }
         
         return {
           ...post,
-          author_name: authorName || 'Unknown User',
+          author_name: authorName,
           view_count: post.view_count || 0,
           reply_count: post.reply_count || 0
         };
@@ -419,7 +419,14 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
     if (!newPostContent.trim() || !selectedTopic || !profile) return;
     
     try {
-      const authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User';
+      // Check if user has anonymous posting enabled
+      const isAnonymous = profile.is_anonymous_in_forum || false;
+      
+      // Determine the author name to display
+      let authorName = 'Anonymous User';
+      if (!isAnonymous) {
+        authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User';
+      }
       
       // Save the post to the database
       const { data: newPost, error } = await (supabase as any)
@@ -429,8 +436,10 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
           content: newPostContent.trim(),
           author_id: profile.id,
           parent_post_id: replyingToPost?.id || null,
-          is_edited: false
-        })
+          is_edited: false,
+          // Store the anonymous status at the time of posting
+          is_anonymous: isAnonymous
+        } as any)
         .select(`
           *,
           profiles!forum_posts_author_id_fkey(first_name, last_name)
@@ -528,7 +537,14 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
     if (!newTopicTitle.trim() || !selectedCategory || !profile) return;
     
     try {
-      const authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User';
+      // Check if user has anonymous posting enabled
+      const isAnonymous = profile.is_anonymous_in_forum || false;
+      
+      // Determine the author name to display
+      let authorName = 'Anonymous User';
+      if (!isAnonymous) {
+        authorName = `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Unknown User';
+      }
       
       // Save the topic to the database
       const { data: newTopic, error } = await (supabase as any)

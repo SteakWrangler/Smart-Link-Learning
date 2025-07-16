@@ -69,6 +69,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) throw error;
       
+      // Check if the account has been deleted
+      if (data.deleted_at) {
+        console.log('Account has been deleted, signing out user');
+        await supabase.auth.signOut();
+        setProfile(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
       // Immediately update the profile state
       setProfile(data);
       

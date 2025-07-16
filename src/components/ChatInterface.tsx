@@ -315,10 +315,18 @@ Keep the response friendly and encouraging. If the document content isn't availa
           // If this is a loaded conversation, update it
           if (isLoadedConversation && currentConversationId) {
             // Update existing conversation
+            // Generate a better title from conversation content if current title is empty or generic
+            const currentTitle = conversationTitle.trim() || loadedConversation?.title || '';
+            const shouldGenerateNewTitle = !currentTitle || currentTitle === 'Updated Conversation' || currentTitle === 'New Conversation';
+            
+            const newTitle = shouldGenerateNewTitle 
+              ? generateTitleFromFirstMessage(messages)
+              : currentTitle;
+            
             const { error: conversationError } = await supabase
               .from('conversations')
               .update({
-                title: conversationTitle.trim() || loadedConversation?.title || 'Updated Conversation',
+                title: newTitle,
                 is_favorite: isFavorite,
                 updated_at: new Date().toISOString()
               })
@@ -359,10 +367,14 @@ Keep the response friendly and encouraging. If the document content isn't availa
 
             console.log('Conversation auto-saved successfully');
             setHasUnsavedChanges(false);
+            
+            // Update local title state if we generated a new title
+            if (shouldGenerateNewTitle && newTitle !== currentTitle) {
+              setConversationTitle(newTitle);
+            }
           } else {
             // Create new conversation
-            const title = conversationTitle.trim() || 
-              (messages.find(m => m.type === 'user')?.content.slice(0, 50) + '...' || 'New Conversation');
+            const title = conversationTitle.trim() || generateTitleFromFirstMessage(messages);
 
             const conversationData = {
               child_id: selectedChild.id,
@@ -407,6 +419,11 @@ Keep the response friendly and encouraging. If the document content isn't availa
             setCurrentConversationId(conversation.id);
             setIsLoadedConversation(true);
             setHasUnsavedChanges(false);
+            
+            // Update local title state if we generated a title from content
+            if (!conversationTitle.trim() && title !== 'New Conversation') {
+              setConversationTitle(title);
+            }
           }
         } catch (error) {
           console.error('Error auto-saving conversation:', error);
@@ -550,6 +567,44 @@ Keep the response friendly and encouraging. If the document content isn't availa
       { id: 'college', label: 'College (18+)' }
     ];
     return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
+  };
+
+  // Helper function to generate a title from the first user message
+  const generateTitleFromFirstMessage = (messages: Array<{ type: 'user' | 'ai'; content: string }>): string => {
+    // Find the first user message
+    const firstUserMessage = messages.find(m => m.type === 'user');
+    
+    if (!firstUserMessage) {
+      return 'New Conversation';
+    }
+    
+    const content = firstUserMessage.content.trim();
+    
+    // If the message is very short, use it as is
+    if (content.length <= 30) {
+      return content;
+    }
+    
+    // Find the first sentence (up to the first period, exclamation mark, or question mark)
+    const sentenceEnd = content.search(/[.!?]/);
+    if (sentenceEnd !== -1 && sentenceEnd <= 60) {
+      // If the first sentence is reasonable length, use it
+      return content.slice(0, sentenceEnd + 1);
+    }
+    
+    // If no sentence ending found or it's too long, take the first 50 characters
+    // but try to break at a word boundary
+    if (content.length > 50) {
+      const truncated = content.slice(0, 50);
+      const lastSpace = truncated.lastIndexOf(' ');
+      if (lastSpace > 30) {
+        // Break at word boundary if it's not too short
+        return truncated.slice(0, lastSpace) + '...';
+      }
+      return truncated + '...';
+    }
+    
+    return content;
   };
 
   // Add initial AI greeting when chat loads (only for new conversations)

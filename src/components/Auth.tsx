@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Check, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
 interface AuthProps {
   onAuthSuccess: () => void;
@@ -79,6 +80,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     
     if (!password.trim()) {
       newErrors.password = 'Password is required';
+    } else {
+      // Validate password requirements
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        newErrors.password = passwordValidation.errors.join(', ');
+      }
     }
     
     if (!confirmPassword.trim()) {
@@ -92,6 +99,8 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     if (Object.keys(newErrors).length > 0) {
       if (newErrors.confirmPassword === 'Passwords do not match') {
         setTopErrorMessage('Passwords do not match');
+      } else if (newErrors.password && newErrors.password.includes('Password must')) {
+        setTopErrorMessage('Password does not meet requirements');
       } else {
         setTopErrorMessage('Please fill in all required fields marked with *');
       }
@@ -353,6 +362,33 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                         <AlertCircle className="mr-1" size={16} />
                         {errors.password}
                       </p>
+                    )}
+                    
+                    {/* Password Requirements */}
+                    {password && (
+                      <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                        <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                        <div className="space-y-1">
+                          {(() => {
+                            const validation = validatePassword(password);
+                            return getPasswordRequirementsList().map((requirement, index) => {
+                              const isMet = Object.values(validation.requirements)[index];
+                              return (
+                                <div key={index} className="flex items-center text-xs">
+                                  {isMet ? (
+                                    <Check className="mr-2 text-green-500" size={14} />
+                                  ) : (
+                                    <X className="mr-2 text-red-500" size={14} />
+                                  )}
+                                  <span className={isMet ? "text-green-700" : "text-red-700"}>
+                                    {requirement}
+                                  </span>
+                                </div>
+                              );
+                            });
+                          })()}
+                        </div>
+                      </div>
                     )}
                   </div>
                   

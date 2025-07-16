@@ -7,6 +7,7 @@ export interface Profile {
   is_anonymous_in_forum?: boolean;
   email_notifications?: boolean;
   forum_notifications?: boolean;
+  deleted_at?: string;
   created_at: string;
   updated_at: string;
 }
@@ -89,4 +90,44 @@ export interface ConversationDocument {
   conversation_id: string;
   document_id: string;
   created_at: string | null;
+}
+
+export interface ForumPost {
+  id: string;
+  topic_id: string;
+  content: string;
+  author_id: string;
+  parent_post_id?: string | null;
+  is_anonymous: boolean;
+  is_edited: boolean;
+  view_count: number;
+  reply_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForumTopic {
+  id: string;
+  category_id: string;
+  title: string;
+  description?: string | null;
+  author_id: string;
+  is_pinned: boolean;
+  is_locked: boolean;
+  view_count: number;
+  post_count: number;
+  last_post_at: string;
+  last_post_author_name?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ForumCategory {
+  id: string;
+  name: string;
+  description?: string | null;
+  color: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
 }
