@@ -2,6 +2,8 @@
 
 An interactive AI-powered learning platform designed to help parents and educators create personalized educational experiences for children. This project demonstrates advanced React development, AI integration, and full-stack application architecture.
 
+**🌐 Live Application**: [smartlinklearning.com](https://smartlinklearning.com)
+
 ## 🚀 Project Overview
 
 ### Core Features
