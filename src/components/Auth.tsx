@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, AlertCircle, Check, X } from 'lucide-react';
+import { ArrowLeft, AlertCircle, Check, X, Mail, Lock } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
@@ -25,8 +25,38 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
   const [errors, setErrors] = useState<{[key: string]: string}>({});
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [topErrorMessage, setTopErrorMessage] = useState<string>('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordSent, setForgotPasswordSent] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const { toast } = useToast();
   const { user, profile } = useAuth();
+
+  // Check for password reset parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetParam = urlParams.get('reset');
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    
+    if (resetParam === 'true' && accessToken && refreshToken) {
+      // Set the session with the tokens from the password reset link
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(({ data, error }) => {
+        if (!error && data.session) {
+          setShowPasswordReset(true);
+          // Clear the URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      });
+    }
+  }, []);
 
   const clearForm = () => {
     setEmail('');
@@ -37,6 +67,12 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     setErrors({});
     setHasAttemptedSubmit(false);
     setTopErrorMessage('');
+    setShowForgotPassword(false);
+    setForgotPasswordEmail('');
+    setForgotPasswordSent(false);
+    setShowPasswordReset(false);
+    setNewPassword('');
+    setConfirmNewPassword('');
   };
 
   const validateSignInForm = () => {
@@ -190,6 +226,103 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!forgotPasswordEmail.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail.trim(), {
+        redirectTo: `${window.location.origin}/?reset=true`,
+      });
+
+      if (error) throw error;
+
+      setForgotPasswordSent(true);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your email for a password reset link. If you don't see it, check your spam folder.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send password reset email. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password requirements
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      toast({
+        title: "Password Requirements Not Met",
+        description: passwordValidation.errors.join(', '),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPasswordResetLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password Reset Successfully",
+        description: "Your password has been updated. You can now sign in with your new password.",
+      });
+      
+      setShowPasswordReset(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
   const hasErrors = Object.keys(errors).length > 0;
 
   return (
@@ -273,8 +406,202 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
                   <p className="text-sm text-gray-600 text-center">
                     Just created an account? Check your email for a confirmation link, then sign in here.
                   </p>
+                  <div className="text-center">
+                    <button
+                      onClick={() => setShowForgotPassword(true)}
+                      className="text-sm text-blue-600 hover:underline"
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
                 </form>
               </TabsContent>
+              
+              {/* Forgot Password Modal */}
+              {showForgotPassword && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                    {!forgotPasswordSent ? (
+                      <>
+                        <div className="flex items-center gap-3 mb-4">
+                          <Mail className="text-blue-600" size={24} />
+                          <h3 className="text-lg font-semibold text-gray-800">Reset Password</h3>
+                        </div>
+                        
+                        <p className="text-gray-600 mb-6">
+                          Enter your email address and we'll send you a link to reset your password.
+                        </p>
+                        
+                        <form onSubmit={handleForgotPassword} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="forgot-password-email" className="flex items-center">
+                              Email Address <span className="text-red-500 ml-1">*</span>
+                            </Label>
+                            <Input
+                              id="forgot-password-email"
+                              type="email"
+                              value={forgotPasswordEmail}
+                              onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                              placeholder="Enter your email address"
+                              required
+                            />
+                          </div>
+                          
+                          <div className="flex gap-3">
+                            <Button
+                              type="button"
+                              onClick={() => setShowForgotPassword(false)}
+                              variant="outline"
+                              className="flex-1"
+                            >
+                              Cancel
+                            </Button>
+                            <Button
+                              type="submit"
+                              disabled={forgotPasswordLoading}
+                              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                            >
+                              {forgotPasswordLoading ? 'Sending...' : 'Send Reset Link'}
+                            </Button>
+                          </div>
+                        </form>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3 mb-4">
+                          <Check className="text-green-600" size={24} />
+                          <h3 className="text-lg font-semibold text-gray-800">Email Sent!</h3>
+                        </div>
+                        
+                        <p className="text-gray-600 mb-6">
+                          We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>. 
+                          Please check your email and click the link to reset your password.
+                        </p>
+                        
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                          <p className="text-sm text-blue-700">
+                            <strong>Didn't receive the email?</strong> Check your spam folder or try again with a different email address.
+                          </p>
+                        </div>
+                        
+                        <div className="flex gap-3">
+                          <Button
+                            onClick={() => {
+                              setShowForgotPassword(false);
+                              setForgotPasswordSent(false);
+                              setForgotPasswordEmail('');
+                            }}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            Close
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setForgotPasswordSent(false);
+                              setForgotPasswordEmail('');
+                            }}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
+                          >
+                            Try Again
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Password Reset Modal */}
+              {showPasswordReset && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                  <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Lock className="text-green-600" size={24} />
+                      <h3 className="text-lg font-semibold text-gray-800">Set New Password</h3>
+                    </div>
+                    
+                    <p className="text-gray-600 mb-6">
+                      Please enter your new password below.
+                    </p>
+                    
+                    <form onSubmit={handlePasswordReset} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="new-password" className="flex items-center">
+                          New Password <span className="text-red-500 ml-1">*</span>
+                        </Label>
+                        <Input
+                          id="new-password"
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Enter your new password"
+                          required
+                        />
+                        
+                        {/* Password Requirements */}
+                        {newPassword && (
+                          <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                            <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                            <div className="space-y-1">
+                              {(() => {
+                                const validation = validatePassword(newPassword);
+                                return getPasswordRequirementsList().map((requirement, index) => {
+                                  const isMet = Object.values(validation.requirements)[index];
+                                  return (
+                                    <div key={index} className="flex items-center text-xs">
+                                      {isMet ? (
+                                        <Check className="mr-2 text-green-500" size={14} />
+                                      ) : (
+                                        <X className="mr-2 text-red-500" size={14} />
+                                      )}
+                                      <span className={isMet ? "text-green-700" : "text-red-700"}>
+                                        {requirement}
+                                      </span>
+                                    </div>
+                                  );
+                                });
+                              })()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="confirm-new-password" className="flex items-center">
+                          Confirm New Password <span className="text-red-500 ml-1">*</span>
+                        </Label>
+                        <Input
+                          id="confirm-new-password"
+                          type="password"
+                          value={confirmNewPassword}
+                          onChange={(e) => setConfirmNewPassword(e.target.value)}
+                          placeholder="Confirm your new password"
+                          required
+                        />
+                      </div>
+                      
+                      <div className="flex gap-3">
+                        <Button
+                          type="button"
+                          onClick={() => setShowPasswordReset(false)}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={passwordResetLoading}
+                          className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {passwordResetLoading ? 'Updating...' : 'Update Password'}
+                        </Button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
               
               <TabsContent value="signup" className="space-y-4">
                 {topErrorMessage && (

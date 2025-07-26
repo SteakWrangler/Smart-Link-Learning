@@ -12,6 +12,11 @@ import Auth from './Auth';
 import { Child, SavedConversation } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Lock, Check, X } from 'lucide-react';
+import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
 const AuthenticatedApp: React.FC = () => {
   const { user, profile, loading } = useAuth();
@@ -27,6 +32,32 @@ const AuthenticatedApp: React.FC = () => {
   const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
   const [selectedFeature, setSelectedFeature] = useState<string>('');
   const [redirectToTab, setRedirectToTab] = useState<string>('');
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+
+  // Check for password reset parameters on component mount
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resetParam = urlParams.get('reset');
+    const accessToken = urlParams.get('access_token');
+    const refreshToken = urlParams.get('refresh_token');
+    
+    if (resetParam === 'true' && accessToken && refreshToken) {
+      // Set the session with the tokens from the password reset link
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(({ data, error }) => {
+        if (!error && data.session) {
+          setShowPasswordReset(true);
+          // Clear the URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      });
+    }
+  }, []);
 
   // Clear redirect tab after it's been used
   useEffect(() => {
@@ -194,6 +225,66 @@ const AuthenticatedApp: React.FC = () => {
     setRedirectToTab('');
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newPassword.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate password requirements
+    const passwordValidation = validatePassword(newPassword);
+    if (!passwordValidation.isValid) {
+      toast({
+        title: "Password Requirements Not Met",
+        description: passwordValidation.errors.join(', '),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setPasswordResetLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Password Reset Successfully",
+        description: "Your password has been updated. You can now sign in with your new password.",
+      });
+      
+      setShowPasswordReset(false);
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reset password. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setPasswordResetLoading(false);
+    }
+  };
+
   // Map features to dashboard tabs
   const getFeatureRedirectTab = (featureId: string): string => {
     const featureTabMap: Record<string, string> = {
@@ -323,7 +414,102 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  return <div>Authenticated App</div>;
+  return (
+    <>
+      <div>Authenticated App</div>
+      
+      {/* Password Reset Modal */}
+      {showPasswordReset && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <Lock className="text-green-600" size={24} />
+              <h3 className="text-lg font-semibold text-gray-800">Set New Password</h3>
+            </div>
+            
+            <p className="text-gray-600 mb-6">
+              Please enter your new password below.
+            </p>
+            
+            <form onSubmit={handlePasswordReset} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password" className="flex items-center">
+                  New Password <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Enter your new password"
+                  required
+                />
+                
+                {/* Password Requirements */}
+                {newPassword && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg">
+                    <p className="text-sm font-medium text-gray-700 mb-2">Password Requirements:</p>
+                    <div className="space-y-1">
+                      {(() => {
+                        const validation = validatePassword(newPassword);
+                        return getPasswordRequirementsList().map((requirement, index) => {
+                          const isMet = Object.values(validation.requirements)[index];
+                          return (
+                            <div key={index} className="flex items-center text-xs">
+                              {isMet ? (
+                                <Check className="mr-2 text-green-500" size={14} />
+                              ) : (
+                                <X className="mr-2 text-red-500" size={14} />
+                              )}
+                              <span className={isMet ? "text-green-700" : "text-red-700"}>
+                                {requirement}
+                              </span>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="confirm-new-password" className="flex items-center">
+                  Confirm New Password <span className="text-red-500 ml-1">*</span>
+                </Label>
+                <Input
+                  id="confirm-new-password"
+                  type="password"
+                  value={confirmNewPassword}
+                  onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  placeholder="Confirm your new password"
+                  required
+                />
+              </div>
+              
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  onClick={() => setShowPasswordReset(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={passwordResetLoading}
+                  className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {passwordResetLoading ? 'Updating...' : 'Update Password'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  );
 };
 
 export default AuthenticatedApp;
