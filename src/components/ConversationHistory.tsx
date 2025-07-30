@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft } from 'lucide-react';
+import { MessageSquare, Star, Clock, Search, Filter, User, ArrowLeft, FileText } from 'lucide-react';
 import { SavedConversation, Child, ConversationDocument } from '../types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import DocumentListPopup from './DocumentListPopup';
 
 interface ConversationHistoryProps {
   children: Child[];
@@ -24,6 +25,8 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
   const [conversations, setConversations] = useState<SavedConversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDocumentPopup, setShowDocumentPopup] = useState(false);
+  const [selectedConversationDocs, setSelectedConversationDocs] = useState<{ id: string; fileName: string }[]>([]);
 
   useEffect(() => {
     loadConversations();
@@ -52,7 +55,7 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         return;
       }
 
-      // Query only saved conversations
+      // Query only saved conversations with document counts
       let query = supabase
         .from('conversations')
         .select(`
@@ -62,6 +65,13 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
             content,
             type,
             created_at
+          ),
+          conversation_documents (
+            id,
+            documents (
+              id,
+              file_name
+            )
           )
         `)
         .in('child_id', childIds)
@@ -88,6 +98,10 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
       const formattedConversations = conversations.map(conv => {
         console.log('Processing conversation:', conv);
         const child = children.find(c => c.id === conv.child_id);
+        
+        // Extract document information
+        const documents = (conv.conversation_documents || []).map((cd: any) => cd.documents).filter(Boolean);
+        
         return {
           id: conv.id,
           title: conv.title,
@@ -101,7 +115,11 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           })) : [],
           createdAt: new Date(conv.created_at),
           isFavorite: conv.is_favorite || false,
-          documents: [] as ConversationDocument[] // Add empty documents array for now
+          documents: documents.map((doc: any) => ({
+            id: doc.id,
+            fileName: doc.file_name,
+            conversationId: conv.id
+          }))
         };
       });
 
@@ -154,6 +172,17 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
         description: 'Failed to update favorite status',
         variant: 'destructive'
       });
+    }
+  };
+
+  const handleDocumentClick = (conversation: SavedConversation, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent conversation from opening
+    if (conversation.documents && conversation.documents.length > 0) {
+      setSelectedConversationDocs(conversation.documents.map(doc => ({
+        id: doc.id,
+        fileName: doc.fileName
+      })));
+      setShowDocumentPopup(true);
     }
   };
 
@@ -315,15 +344,36 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
                     ? conversation.messages[conversation.messages.length - 1]?.content || 'No messages'
                     : 'No messages'}
                 </p>
-                <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
-                  <Clock size={14} />
-                  <span>{formatDate(conversation.createdAt)}</span>
+                <div className="flex items-center justify-between mt-2 text-xs text-gray-400">
+                  <div className="flex items-center gap-2">
+                    <Clock size={14} />
+                    <span>{formatDate(conversation.createdAt)}</span>
+                  </div>
+                  {conversation.documents && conversation.documents.length > 0 && (
+                    <button
+                      onClick={(e) => handleDocumentClick(conversation, e)}
+                      className="flex items-center gap-1 text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
+                      title="View documents"
+                    >
+                      <FileText size={14} />
+                      <span>{conversation.documents.length} document{conversation.documents.length !== 1 ? 's' : ''}</span>
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Document Popup */}
+      {showDocumentPopup && (
+        <DocumentListPopup
+          documents={selectedConversationDocs}
+          onClose={() => setShowDocumentPopup(false)}
+          title="Conversation Documents"
+        />
+      )}
     </div>
   );
 };

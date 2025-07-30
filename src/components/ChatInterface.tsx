@@ -8,6 +8,7 @@ import { generateChatResponse, ChatMessage } from '@/utils/openaiClient';
 import { toast } from '@/components/ui/use-toast';
 import ConversationDocumentUpload from '@/components/ConversationDocumentUpload';
 import DocumentListModal from '@/components/DocumentListModal';
+import DocumentListPopup from '@/components/DocumentListPopup';
 import type { Tables } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { Paperclip } from 'lucide-react';
@@ -48,6 +49,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [showDocumentUpload, setShowDocumentUpload] = useState(false);
   const [showDocumentList, setShowDocumentList] = useState(false);
+  const [showDocumentPopup, setShowDocumentPopup] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isLoadingConversation, setIsLoadingConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -337,32 +339,43 @@ Keep the response friendly and encouraging. If the document content isn't availa
               return;
             }
 
-            // Delete existing messages
-            const { error: deleteError } = await supabase
+            // Use a more robust approach: get existing messages and only insert new ones
+            const { data: existingMessages, error: fetchError } = await supabase
               .from('messages')
-              .delete()
-              .eq('conversation_id', currentConversationId);
+              .select('id, created_at')
+              .eq('conversation_id', currentConversationId)
+              .order('created_at', { ascending: true });
 
-            if (deleteError) {
-              console.error('Error deleting old messages:', deleteError);
+            if (fetchError) {
+              console.error('Error fetching existing messages:', fetchError);
               return;
             }
 
-            // Insert updated messages
-            const messageInserts = messages.map(msg => ({
-              conversation_id: currentConversationId,
-              content: msg.content,
-              type: msg.type,
-              created_at: msg.timestamp.toISOString()
-            }));
+            // Determine which messages are new (don't exist in database)
+            const existingTimestamps = new Set((existingMessages || []).map(msg => new Date(msg.created_at).getTime()));
+            const newMessages = messages.filter(msg => !existingTimestamps.has(msg.timestamp.getTime()));
 
-            const { error: messagesError } = await supabase
-              .from('messages')
-              .insert(messageInserts);
+            // Only insert truly new messages to prevent duplicates
+            if (newMessages.length > 0) {
+              const messageInserts = newMessages.map(msg => ({
+                conversation_id: currentConversationId,
+                content: msg.content,
+                type: msg.type,
+                created_at: msg.timestamp.toISOString()
+              }));
 
-            if (messagesError) {
-              console.error('Error saving updated messages:', messagesError);
-              return;
+              const { error: messagesError } = await supabase
+                .from('messages')
+                .insert(messageInserts);
+
+              if (messagesError) {
+                console.error('Error saving new messages:', messagesError);
+                return;
+              }
+
+              console.log(`Inserted ${newMessages.length} new messages`);
+            } else {
+              console.log('No new messages to insert');
             }
 
             console.log('Conversation auto-saved successfully');
@@ -399,6 +412,7 @@ Keep the response friendly and encouraging. If the document content isn't availa
               return;
             }
 
+            // For new conversations, all messages are new so insert them all
             const messageInserts = messages.map(msg => ({
               conversation_id: conversation.id,
               content: msg.content,
@@ -478,6 +492,18 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `I'll create a supportive, low-pressure environment to help build math confidence. `;
     }
     
+    if (challengeLower.some(c => c.includes('autism') || c.includes('asd'))) {
+      greeting += `I'll provide clear structure, visual supports, and predictable routines for autism spectrum learning. `;
+    }
+    
+    if (challengeLower.some(c => c.includes('english language learner') || c.includes('ell'))) {
+      greeting += `I'll use visual supports, simple language, and cultural connections for English language learners. `;
+    }
+    
+    if (challengeLower.some(c => c.includes('language delays') || c.includes('speech'))) {
+      greeting += `I'll use visual cues, simplified language, and interactive activities to support language development. `;
+    }
+    
     if (challengeLower.some(c => c.includes('general learning support'))) {
       greeting += `I'll use multiple teaching approaches and provide positive reinforcement to support learning. `;
     }
@@ -496,8 +522,8 @@ Keep the response friendly and encouraging. If the document content isn't availa
     greeting += `• "Generate an activity sheet about space"\n`;
     greeting += `• When I create educational content (worksheets, tests, activities), you'll see a download button to save as PDF!\n\n`;
     
-    // Age-appropriate examples with specific subjects and themes
-    if (ageGroup === 'early-elementary' || ageGroup === 'elementary') {
+    // Grade-appropriate examples with specific subjects and themes
+    if (ageGroup === 'kindergarten-2nd' || ageGroup === 'early-elementary') {
       const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
       greeting += `🧮 **Subject Practice & Games**\n`;
       greeting += `• "Create a dinosaur-themed ${primarySubject} practice test"\n`;
@@ -507,7 +533,17 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `📚 **Learning Activities**\n`;
       greeting += `• "What's a fun way to learn ${primarySubject} using building blocks?"\n`;
       greeting += `• "Create a 5-minute ${primarySubject} game about animals"\n\n`;
-    } else if (ageGroup === 'middle-school') {
+    } else if (ageGroup === '3rd-5th' || ageGroup === 'elementary') {
+      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+      greeting += `🧮 **Subject Practice & Games**\n`;
+      greeting += `• "Create a science-themed ${primarySubject} practice test using real experiments"\n`;
+      greeting += `• "Help me practice ${primarySubject} with cooking and recipes"\n`;
+      greeting += `• "Make a fun ${primarySubject} activity with animals from around the world"\n\n`;
+      
+      greeting += `📚 **Learning Activities**\n`;
+      greeting += `• "What's a fun way to learn ${primarySubject} using board games?"\n`;
+      greeting += `• "Create a 10-minute ${primarySubject} challenge about nature"\n\n`;
+    } else if (ageGroup === '6th-8th' || ageGroup === 'middle-school') {
       const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
       greeting += `📊 **Subject & Science Help**\n`;
       greeting += `• "Explain ${primarySubject} concepts using video game examples"\n`;
@@ -517,7 +553,17 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `🎯 **Study Strategies**\n`;
       greeting += `• "Make a practice test for my upcoming ${primarySubject} exam"\n`;
       greeting += `• "What's the best way to study for ${primarySubject} tests?"\n\n`;
-    } else if (ageGroup === 'high-school' || ageGroup === 'college') {
+    } else if (ageGroup === '9th-12th' || ageGroup === 'high-school') {
+      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+      greeting += `📈 **Advanced Subject & Concepts**\n`;
+      greeting += `• "Help me understand advanced ${primarySubject} concepts with real-world applications"\n`;
+      greeting += `• "Create practice problems for ${primarySubject} using current events"\n`;
+      greeting += `• "Explain ${primarySubject} concepts using career-focused examples"\n\n`;
+      
+      greeting += `🎓 **Test Prep & Study Skills**\n`;
+      greeting += `• "Build a comprehensive practice test for ${primarySubject} finals"\n`;
+      greeting += `• "Help me break down complex ${primarySubject} problems step-by-step"\n\n`;
+    } else if (ageGroup === 'college-plus' || ageGroup === 'college') {
       const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
       greeting += `📈 **Advanced Subject & Concepts**\n`;
       greeting += `• "Help me understand advanced ${primarySubject} concepts"\n`;
@@ -560,6 +606,12 @@ Keep the response friendly and encouraging. If the document content isn't availa
   // Helper function to get age group labels
   const getAgeGroupLabel = (ageGroupId: string): string => {
     const ageGroups = [
+      { id: 'kindergarten-2nd', label: 'Kindergarten to 2nd Grade' },
+      { id: '3rd-5th', label: '3rd Grade to 5th Grade' },
+      { id: '6th-8th', label: '6th Grade to 8th Grade' },
+      { id: '9th-12th', label: '9th Grade to 12th Grade' },
+      { id: 'college-plus', label: 'College Plus' },
+      // Legacy support for old age group IDs
       { id: 'early-elementary', label: 'Early Elementary (5-7)' },
       { id: 'elementary', label: 'Elementary (8-10)' },
       { id: 'middle-school', label: 'Middle School (11-13)' },
@@ -637,7 +689,11 @@ Keep the response friendly and encouraging. If the document content isn't availa
     });
     
     // Build comprehensive context about the learner
-    let systemContext = `You are an AI tutor helping ${learnerName} with personalized learning. 
+    let systemContext = `You are an AI tutor helping a student with personalized learning. 
+
+CRITICAL: Never use the student's specific name in your responses. Instead, use "you" when addressing the user directly, or "the student" when referring to them in third person. Remember that the person chatting with you might be the student, their parent, teacher, or tutor - you don't know who you're talking to.
+
+CRITICAL: You cannot generate, create, or display images, pictures, videos, or any visual content. When creating worksheets or activities, use only text-based content. Instead of saying "look at this picture" or "(picture of dinosaur)", create text-based descriptions, word problems, or written activities. Never reference visual elements that don't exist.
 
 IMPORTANT DOWNLOAD INSTRUCTIONS:
 When you create actual educational content that should be downloadable (worksheets, practice tests, activities, etc.), include the special marker "DOWNLOADABLE_CONTENT_START" at the beginning and "DOWNLOADABLE_CONTENT_END" at the end of your response. This tells the system to show a download button.
@@ -670,7 +726,7 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
     // Add child-specific context
     if (selectedChild) {
       const ageGroupLabel = getAgeGroupLabel(selectedChild.ageGroup);
-      systemContext += `${learnerName} is ${ageGroupLabel.toLowerCase()}. `;
+      systemContext += `The student is ${ageGroupLabel.toLowerCase()}. `;
       
       if (selectedChild.subjects && selectedChild.subjects.length > 0) {
         systemContext += `Their focus subjects are: ${selectedChild.subjects.join(', ')}. `;
@@ -684,23 +740,35 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
         const challenges = selectedChild.challenges.map(c => c.toLowerCase());
         
         if (challenges.some(c => c.includes('dyslexia'))) {
-          systemContext += `Since ${learnerName} has dyslexia, when relevant to the task, use clear fonts, avoid dense text, provide visual aids, and break down complex instructions into smaller steps. However, if the current task is purely mathematical and doesn't involve reading comprehension, the dyslexia may not be relevant to address. `;
+          systemContext += `Since the student has dyslexia, when relevant to the task, use clear fonts, avoid dense text, provide visual aids, and break down complex instructions into smaller steps. However, if the current task is purely mathematical and doesn't involve reading comprehension, the dyslexia may not be relevant to address. `;
         }
         
         if (challenges.some(c => c.includes('adhd') || c.includes('focus'))) {
-          systemContext += `Since ${learnerName} has ADHD/focus issues, when relevant, keep activities shorter, provide clear structure, use engaging themes, and include movement or hands-on elements when possible. `;
+          systemContext += `Since the student has ADHD/focus issues, when relevant, keep activities shorter, provide clear structure, use engaging themes, and include movement or hands-on elements when possible. `;
         }
         
         if (challenges.some(c => c.includes('processing'))) {
-          systemContext += `Since ${learnerName} has processing delays, when relevant, provide extra time for responses, break down complex concepts into smaller parts, and use visual aids to support understanding. `;
+          systemContext += `Since the student has processing delays, when relevant, provide extra time for responses, break down complex concepts into smaller parts, and use visual aids to support understanding. `;
         }
         
         if (challenges.some(c => c.includes('math anxiety'))) {
-          systemContext += `Since ${learnerName} experiences math anxiety, when relevant, create a supportive, low-pressure environment, emphasize progress over perfection, and use encouraging language. Focus on building confidence through gradual success. `;
+          systemContext += `Since the student experiences math anxiety, when relevant, create a supportive, low-pressure environment, emphasize progress over perfection, and use encouraging language. Focus on building confidence through gradual success. `;
+        }
+        
+        if (challenges.some(c => c.includes('autism spectrum disorder') || c.includes('asd'))) {
+          systemContext += `Since the student has Autism Spectrum Disorder (ASD), when relevant, provide clear structure and routine, use concrete examples rather than abstract concepts, break tasks into smaller steps, and consider sensory sensitivities. Use direct, literal language and provide predictable patterns in activities. `;
+        }
+        
+        if (challenges.some(c => c.includes('english language learners') || c.includes('ell'))) {
+          systemContext += `Since the student is an English Language Learner (ELL), when relevant, use simplified vocabulary, provide visual aids and context clues, explain cultural references, and focus on vocabulary building. Use shorter sentences and check for comprehension frequently. `;
+        }
+        
+        if (challenges.some(c => c.includes('language delays'))) {
+          systemContext += `Since the student has language delays, when relevant, use simpler sentence structures, provide extra time for responses, use visual supports and gestures, and focus on building communication skills gradually. Repeat key concepts and use multiple ways to express the same idea. `;
         }
         
         if (challenges.some(c => c.includes('general learning support'))) {
-          systemContext += `Since ${learnerName} benefits from general learning support, when relevant, provide clear explanations, use multiple teaching approaches, and offer positive reinforcement to maintain engagement and motivation. `;
+          systemContext += `Since the student benefits from general learning support, when relevant, provide clear explanations, use multiple teaching approaches, and offer positive reinforcement to maintain engagement and motivation. `;
         }
       }
     }
@@ -724,7 +792,7 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
         // Add document analysis if available
         if (doc.ai_analysis && typeof doc.ai_analysis === 'object' && 'accuracy' in doc.ai_analysis) {
           const analysis = doc.ai_analysis as any;
-          systemContext += `- Analysis shows ${learnerName} got ${analysis.accuracy}% accuracy with problem areas in: ${analysis.problemAreas?.join(', ')}\n`;
+          systemContext += `- Analysis shows the student got ${analysis.accuracy}% accuracy with problem areas in: ${analysis.problemAreas?.join(', ')}\n`;
         }
         
         // Add document content if available
@@ -757,6 +825,20 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
     }
     
     systemContext += `Generate helpful, engaging responses that incorporate any themes, time constraints, difficulty preferences, or other requirements the user mentions. Be natural and conversational while providing practical educational content. Only address learning differences when they are relevant to the current task.
+
+STATE LEARNING STANDARDS FEATURE:
+If the user asks about state learning standards, state-specific curriculum, or mentions wanting to align with their state's educational requirements, respond with:
+
+"I can help align this content with your state's learning standards! What state are you in? I can incorporate [State Name] standards into our activities and lessons to ensure they meet your local curriculum requirements."
+
+Once they provide a state, incorporate relevant state standards context into your responses. For major states, use these guidelines:
+- California: Use Common Core Plus, emphasis on critical thinking and problem-solving
+- Texas: Use TEKS (Texas Essential Knowledge and Skills), focus on mastery learning
+- New York: Use Next Generation Learning Standards, emphasis on depth over breadth  
+- Florida: Use BEST Standards, focus on foundational skills and practical application
+- Other states: Mention you'll incorporate their state's standards and adapt accordingly
+
+When providing state-aligned content, mention specific grade-level expectations and learning objectives from that state's curriculum when relevant.
 
 IMPORTANT: When creating themed problems or activities, make them genuinely thematic rather than just adding theme words to basic problems. For example:
 - GOOD: "Detective Justin is investigating a case. He found 12 clues and needs to organize them into 4 evidence categories. How many clues per category?"
@@ -1059,7 +1141,7 @@ The activity should immerse the student in the theme's world and make the learni
               )} */}
               {conversationDocuments.length > 0 && (
                 <button 
-                  onClick={() => setShowDocumentList(true)}
+                  onClick={() => setShowDocumentPopup(true)}
                   className="text-xs text-blue-600 flex items-center gap-1 mt-1 hover:text-blue-800 hover:underline cursor-pointer"
                 >
                   <FileText size={12} />
@@ -1222,6 +1304,18 @@ The activity should immerse the student in the theme's world and make the learni
         <DocumentListModal
           documents={conversationDocuments}
           onClose={() => setShowDocumentList(false)}
+        />
+      )}
+
+      {/* Document Popup */}
+      {showDocumentPopup && (
+        <DocumentListPopup
+          documents={conversationDocuments.map(doc => ({
+            id: doc.id,
+            fileName: doc.file_name
+          }))}
+          onClose={() => setShowDocumentPopup(false)}
+          title="Chat Documents"
         />
       )}
     </div>

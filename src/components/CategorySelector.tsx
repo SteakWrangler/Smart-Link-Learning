@@ -28,11 +28,11 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
   ];
 
   const ageGroups = [
-    { id: 'early-elementary', label: 'Early Elementary (5-7)', color: 'bg-pink-100 text-pink-700' },
-    { id: 'elementary', label: 'Elementary (8-10)', color: 'bg-indigo-100 text-indigo-700' },
-    { id: 'middle-school', label: 'Middle School (11-13)', color: 'bg-teal-100 text-teal-700' },
-    { id: 'high-school', label: 'High School (14-18)', color: 'bg-purple-100 text-purple-700' },
-    { id: 'college', label: 'College (18+)', color: 'bg-amber-100 text-amber-700' }
+    { id: 'k-2', label: 'K-2nd Grade', color: 'bg-pink-100 text-pink-700' },
+    { id: '3-5', label: '3rd-5th Grade', color: 'bg-indigo-100 text-indigo-700' },
+    { id: '6-8', label: '6th-8th Grade', color: 'bg-teal-100 text-teal-700' },
+    { id: '9-12', label: '9th-12th Grade', color: 'bg-purple-100 text-purple-700' },
+    { id: 'college', label: 'College+', color: 'bg-amber-100 text-amber-700' }
   ];
 
   const challenges = [
@@ -40,6 +40,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     { id: 'dyslexia', label: 'Dyslexia', color: 'bg-rose-100 text-rose-700' },
     { id: 'processing-delays', label: 'Processing Delays', color: 'bg-cyan-100 text-cyan-700' },
     { id: 'math-anxiety', label: 'Math Anxiety', color: 'bg-amber-100 text-amber-700' },
+    { id: 'autism-spectrum', label: 'Autism Spectrum (ASD)', color: 'bg-blue-100 text-blue-700' },
+    { id: 'english-language-learner', label: 'English Language Learner', color: 'bg-green-100 text-green-700' },
+    { id: 'language-delays', label: 'Language/Speech Delays', color: 'bg-purple-100 text-purple-700' },
     { id: 'general-support', label: 'General Learning Support', color: 'bg-lime-100 text-lime-700' }
   ];
 
@@ -110,7 +113,7 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
           />
           
           <CategorySection
-            title="Age Group"
+            title="Grade Level"
             icon={Users}
             items={ageGroups}
             selectedValue={selectedCategories.ageGroup}

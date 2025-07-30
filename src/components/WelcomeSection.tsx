@@ -30,7 +30,7 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       id: 'ai-interactive-learning',
       icon: Brain,
       title: 'AI Interactive Learning',
-      description: 'Personalized AI conversations and activities that adapt to your child\'s unique learning style',
+      description: 'Advanced educational AI with specialized prompting for superior learning outcomes beyond standard chatbots',
       color: 'purple'
     },
     {
@@ -95,6 +95,9 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
           </p>
           <p>
             Our platform serves teachers, parents, and tutors with personalized learning plans, worksheets, activities, and ongoing guidance - all created in seconds based on your input.
+          </p>
+          <p>
+            <strong className="text-blue-600">Beyond Standard AI:</strong> Our advanced educational prompting techniques deliver results specifically optimized for learning, making every interaction more effective than generic AI chatbots.
           </p>
           <p>
             Every student gets unique, high-quality educational content that adapts to their specific needs, learning style, and pace.

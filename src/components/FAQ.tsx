@@ -47,18 +47,19 @@ const FAQ: React.FC = () => {
     },
     {
       question: "How does Smart Link Learning help children with learning differences?",
-      answer: "The AI is specifically designed to work with children who have various learning challenges and differences. It adapts its teaching style, pace, and approach based on your child's specific needs. The platform provides:",
+      answer: "Smart Link Learning is designed to support all children in their learning journey, and we're especially effective at helping students with learning challenges and differences. The AI adapts its teaching style, pace, and approach based on each child's individual needs. The platform provides:",
       listItems: [
+        "Personalized learning approaches that work for students of all abilities",
         "Shorter, more focused learning sessions for children with attention challenges",
         "Multi-sensory learning approaches for different processing styles",
-        "Positive reinforcement and confidence-building interactions",
-        "Custom strategies for specific learning difficulties",
-        "Flexible pacing and repetition based on individual needs"
+        "Positive reinforcement and confidence-building interactions for every student",
+        "Custom strategies for specific learning difficulties when needed",
+        "Flexible pacing and repetition based on individual learning needs"
       ]
     },
     {
       question: "What devices work with Smart Link Learning and how do I access my saved content?",
-      answer: "Smart Link Learning works on any device with a web browser - computers, tablets, and phones. All your conversations, student profiles, and documents are automatically saved and accessible from any device. You can view your saved conversations in the 'Saved Conversations' tab and manage documents in the 'Documents' section."
+      answer: "Smart Link Learning works on any device with a web browser - computers, tablets, and phones. All your conversations, student profiles, and uploaded documents are automatically saved and accessible from any device. You can view your saved conversations in the Chat History section, and documents uploaded to specific conversations are accessible within those chats."
     },
     {
       question: "Where can I get help if I have questions or need support?",

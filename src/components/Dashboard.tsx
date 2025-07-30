@@ -603,6 +603,93 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
             organization: 'Verywell Mind'
           }
         ]
+      },
+      'autism spectrum disorder (asd)': {
+        title: 'Autism Spectrum Disorder (ASD) Support',
+        resources: [
+          {
+            title: 'Autism Speaks - Education Resources',
+            description: 'Comprehensive educational strategies and support for students with autism',
+            url: 'https://www.autismspeaks.org/tool-kit-excerpts/school-community-tool-kit',
+            organization: 'Autism Speaks'
+          },
+          {
+            title: 'Visual Supports for Students with Autism',
+            description: 'Using visual schedules and supports in educational settings',
+            url: 'https://www.understood.org/articles/visual-supports-for-kids-with-autism',
+            organization: 'Understood'
+          },
+          {
+            title: 'Sensory Processing and Learning',
+            description: 'Managing sensory needs in educational environments',
+            url: 'https://childmind.org/article/sensory-processing-issues-in-the-classroom/',
+            organization: 'Child Mind Institute'
+          },
+          {
+            title: 'Structure and Routine for Autism',
+            description: 'Creating predictable learning environments',
+            url: 'https://www.verywellhealth.com/autism-and-routine-260154',
+            organization: 'Verywell Health'
+          }
+        ]
+      },
+      'english language learners (ell)': {
+        title: 'English Language Learners (ELL) Support',
+        resources: [
+          {
+            title: 'Colorín Colorado - ELL Resources',
+            description: 'Comprehensive resources for educators and families of ELL students',
+            url: 'https://www.colorincolorado.org/educators',
+            organization: 'Colorín Colorado'
+          },
+          {
+            title: 'Supporting English Language Learners',
+            description: 'Strategies for helping ELL students succeed academically',
+            url: 'https://www.edutopia.org/english-language-learners-resources',
+            organization: 'Edutopia'
+          },
+          {
+            title: 'Home Language Support',
+            description: 'Maintaining native language while learning English',
+            url: 'https://www.understood.org/articles/the-benefits-of-multilingualism',
+            organization: 'Understood'
+          },
+          {
+            title: 'Cultural Responsiveness in Education',
+            description: 'Creating inclusive environments for diverse learners',
+            url: 'https://www.tolerance.org/magazine/what-is-culturally-responsive-teaching',
+            organization: 'Teaching Tolerance'
+          }
+        ]
+      },
+      'language delays': {
+        title: 'Language Delays Support',
+        resources: [
+          {
+            title: 'American Speech-Language-Hearing Association',
+            description: 'Professional resources for language development and delays',
+            url: 'https://www.asha.org/public/speech/development/',
+            organization: 'ASHA'
+          },
+          {
+            title: 'Supporting Language Development at Home',
+            description: 'Activities and strategies to promote language growth',
+            url: 'https://www.understood.org/articles/how-to-help-your-child-with-language-delays',
+            organization: 'Understood'
+          },
+          {
+            title: 'Communication Strategies for Delayed Language',
+            description: 'Techniques to support children with language challenges',
+            url: 'https://childmind.org/article/helping-children-with-language-delays/',
+            organization: 'Child Mind Institute'
+          },
+          {
+            title: 'Early Intervention for Language Delays',
+            description: 'When and how to seek professional support',
+            url: 'https://www.verywellhealth.com/language-delays-in-children-4178877',
+            organization: 'Verywell Health'
+          }
+        ]
       }
     };
 
@@ -651,6 +738,30 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         buttonClass: 'text-amber-600',
         buttonHoverClass: 'hover:text-amber-800',
         description: 'Strategies to reduce math stress and build confidence.'
+      },
+      'Autism Spectrum Disorder (ASD)': {
+        bgClass: 'bg-blue-50',
+        titleClass: 'text-blue-800',
+        textClass: 'text-blue-700',
+        buttonClass: 'text-blue-600',
+        buttonHoverClass: 'hover:text-blue-800',
+        description: 'Structured learning approaches and sensory-friendly strategies for students with autism.'
+      },
+      'English Language Learners (ELL)': {
+        bgClass: 'bg-purple-50',
+        titleClass: 'text-purple-800',
+        textClass: 'text-purple-700',
+        buttonClass: 'text-purple-600',
+        buttonHoverClass: 'hover:text-purple-800',
+        description: 'Language development support and culturally responsive teaching strategies.'
+      },
+      'Language Delays': {
+        bgClass: 'bg-indigo-50',
+        titleClass: 'text-indigo-800',
+        textClass: 'text-indigo-700',
+        buttonClass: 'text-indigo-600',
+        buttonHoverClass: 'hover:text-indigo-800',
+        description: 'Communication support and language development strategies.'
       },
       'General Learning Support': {
         bgClass: 'bg-green-50',

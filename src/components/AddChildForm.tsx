@@ -27,11 +27,11 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   ];
 
   const ageGroups = [
-    { id: 'early-elementary', label: 'Early Elementary (5-7)', color: 'bg-pink-100 text-pink-700' },
-    { id: 'elementary', label: 'Elementary (8-10)', color: 'bg-indigo-100 text-indigo-700' },
-    { id: 'middle-school', label: 'Middle School (11-13)', color: 'bg-teal-100 text-teal-700' },
-    { id: 'high-school', label: 'High School (14-18)', color: 'bg-purple-100 text-purple-700' },
-    { id: 'college', label: 'College (18+)', color: 'bg-amber-100 text-amber-700' }
+    { id: 'kindergarten-2nd', label: 'Kindergarten to 2nd Grade', color: 'bg-pink-100 text-pink-700' },
+    { id: '3rd-5th', label: '3rd Grade to 5th Grade', color: 'bg-indigo-100 text-indigo-700' },
+    { id: '6th-8th', label: '6th Grade to 8th Grade', color: 'bg-teal-100 text-teal-700' },
+    { id: '9th-12th', label: '9th Grade to 12th Grade', color: 'bg-purple-100 text-purple-700' },
+    { id: 'college-plus', label: 'College Plus', color: 'bg-amber-100 text-amber-700' }
   ];
 
   const challenges = [
@@ -39,6 +39,9 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
     { id: 'dyslexia', label: 'Dyslexia', color: 'bg-rose-100 text-rose-700' },
     { id: 'processing-delays', label: 'Processing Delays', color: 'bg-cyan-100 text-cyan-700' },
     { id: 'math-anxiety', label: 'Math Anxiety', color: 'bg-amber-100 text-amber-700' },
+    { id: 'asd', label: 'Autism Spectrum Disorder (ASD)', color: 'bg-blue-100 text-blue-700' },
+    { id: 'ell', label: 'English Language Learners (ELL)', color: 'bg-purple-100 text-purple-700' },
+    { id: 'language-delays', label: 'Language Delays', color: 'bg-indigo-100 text-indigo-700' },
     { id: 'general-support', label: 'General Learning Support', color: 'bg-lime-100 text-lime-700' }
   ];
 
