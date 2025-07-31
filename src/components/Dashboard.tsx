@@ -637,28 +637,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'Autism Spectrum Disorder (ASD) Support',
         resources: [
           {
-            title: 'Autism Speaks - Education Resources',
+            title: 'Autism Speaks',
             description: 'Comprehensive educational strategies and support for students with autism',
-            url: 'https://www.autismspeaks.org/tool-kit-excerpts/school-community-tool-kit',
+            url: 'https://www.autismspeaks.org/',
             organization: 'Autism Speaks'
           },
           {
-            title: 'Visual Supports for Students with Autism',
-            description: 'Using visual schedules and supports in educational settings',
-            url: 'https://www.understood.org/articles/visual-supports-for-kids-with-autism',
-            organization: 'Understood'
+            title: 'Understood.org - Autism Resources',
+            description: 'Visual supports, learning strategies, and educational guidance',
+            url: 'https://www.understood.org/',
+            organization: 'Understood.org'
           },
           {
-            title: 'Sensory Processing and Learning',
-            description: 'Managing sensory needs in educational environments',
-            url: 'https://childmind.org/article/sensory-processing-issues-in-the-classroom/',
+            title: 'Child Mind Institute',
+            description: 'Research-based strategies for supporting children with autism',
+            url: 'https://childmind.org/',
             organization: 'Child Mind Institute'
           },
           {
-            title: 'Structure and Routine for Autism',
-            description: 'Creating predictable learning environments',
-            url: 'https://www.verywellhealth.com/autism-and-routine-260154',
-            organization: 'Verywell Health'
+            title: 'CDC Autism Information',
+            description: 'Medical information and developmental support resources',
+            url: 'https://www.cdc.gov/ncbddd/autism/',
+            organization: 'CDC'
           }
         ]
       },
@@ -666,28 +666,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'English Language Learners (ELL) Support',
         resources: [
           {
-            title: 'Colorín Colorado - ELL Resources',
+            title: 'Colorín Colorado',
             description: 'Comprehensive resources for educators and families of ELL students',
-            url: 'https://www.colorincolorado.org/educators',
+            url: 'https://www.colorincolorado.org/',
             organization: 'Colorín Colorado'
           },
           {
-            title: 'Supporting English Language Learners',
-            description: 'Strategies for helping ELL students succeed academically',
-            url: 'https://www.edutopia.org/english-language-learners-resources',
+            title: 'Edutopia',
+            description: 'Evidence-based strategies for helping ELL students succeed academically',
+            url: 'https://www.edutopia.org/',
             organization: 'Edutopia'
           },
           {
-            title: 'Home Language Support',
-            description: 'Maintaining native language while learning English',
-            url: 'https://www.understood.org/articles/the-benefits-of-multilingualism',
-            organization: 'Understood'
+            title: 'Understood.org - Multilingual Resources',
+            description: 'Supporting multilingual learners and language development',
+            url: 'https://www.understood.org/',
+            organization: 'Understood.org'
           },
           {
-            title: 'Cultural Responsiveness in Education',
-            description: 'Creating inclusive environments for diverse learners',
-            url: 'https://www.tolerance.org/magazine/what-is-culturally-responsive-teaching',
-            organization: 'Teaching Tolerance'
+            title: 'U.S. Department of Education',
+            description: 'Federal resources and guidance for English language learners',
+            url: 'https://www2.ed.gov/',
+            organization: 'U.S. Department of Education'
           }
         ]
       },
@@ -696,27 +696,27 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         resources: [
           {
             title: 'American Speech-Language-Hearing Association',
-            description: 'Professional resources for language development and delays',
-            url: 'https://www.asha.org/public/speech/development/',
+            description: 'Professional resources for language development and communication disorders',
+            url: 'https://www.asha.org/',
             organization: 'ASHA'
           },
           {
-            title: 'Supporting Language Development at Home',
-            description: 'Activities and strategies to promote language growth',
-            url: 'https://www.understood.org/articles/how-to-help-your-child-with-language-delays',
-            organization: 'Understood'
+            title: 'Understood.org - Language Development',
+            description: 'Practical strategies and activities to support language growth',
+            url: 'https://www.understood.org/',
+            organization: 'Understood.org'
           },
           {
-            title: 'Communication Strategies for Delayed Language',
-            description: 'Techniques to support children with language challenges',
-            url: 'https://childmind.org/article/helping-children-with-language-delays/',
+            title: 'Child Mind Institute',
+            description: 'Research-based approaches for communication and language challenges',
+            url: 'https://childmind.org/',
             organization: 'Child Mind Institute'
           },
           {
-            title: 'Early Intervention for Language Delays',
-            description: 'When and how to seek professional support',
-            url: 'https://www.verywellhealth.com/language-delays-in-children-4178877',
-            organization: 'Verywell Health'
+            title: 'CDC Developmental Milestones',
+            description: 'Information on typical language development and when to seek help',
+            url: 'https://www.cdc.gov/ncbddd/actearly/',
+            organization: 'CDC'
           }
         ]
       }

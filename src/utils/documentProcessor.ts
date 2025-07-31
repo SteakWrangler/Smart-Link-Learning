@@ -54,9 +54,29 @@ export const isFileTypeSupported = (file: File): { supported: boolean; message?:
   };
 };
 
+// Fallback PDF processing using pdf-parse (server-side compatible)
+const extractTextWithPdfParse = async (file: File): Promise<string> => {
+  try {
+    console.log('Trying fallback PDF extraction method...');
+    
+    // Dynamic import of pdf-parse for client-side compatibility
+    const pdfParse = await import('pdf-parse');
+    const buffer = await file.arrayBuffer();
+    const data = await pdfParse.default(buffer);
+    
+    console.log('PDF-parse extraction successful, text length:', data.text.length);
+    return data.text;
+  } catch (error) {
+    console.error('PDF-parse fallback failed:', error);
+    throw error;
+  }
+};
+
 // Extract text from PDF files
 export const extractTextFromPDF = async (file: File): Promise<string> => {
   try {
+    console.log('Starting PDF text extraction for:', file.name, 'Size:', file.size, 'Type:', file.type);
+    
     if (file.type !== 'application/pdf') {
       throw new Error('File is not a PDF document');
     }
@@ -65,35 +85,54 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
       throw new Error('PDF file is too large (max 10MB)');
     }
     
+    // Convert file to array buffer
     const arrayBuffer = await file.arrayBuffer();
+    console.log('File converted to array buffer, size:', arrayBuffer.byteLength);
+    
+    // Load the PDF document with additional options
     const loadingTask = pdfjsLib.getDocument({
       data: arrayBuffer,
       useSystemFonts: true,
       disableFontFace: false,
-      verbosity: 0,
+      verbosity: 0, // Reduce console noise
     });
     
     const pdf = await loadingTask.promise;
-    let fullText = '';
+    console.log('PDF loaded successfully, pages:', pdf.numPages);
     
+    let fullText = '';
+    let processedPages = 0;
+    
+    // Extract text from each page
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       try {
         const page = await pdf.getPage(pageNum);
         const textContent = await page.getTextContent();
         
+        // Combine all text items from the page with better spacing
         const pageText = textContent.items
           .map((item: any) => {
+            // Add spacing based on transform matrix if available
             if (item.hasEOL) return item.str + '\n';
             return item.str + ' ';
           })
           .join('');
         
         fullText += pageText + '\n\n';
+        processedPages++;
+        
+        console.log(`Page ${pageNum} processed, text length: ${pageText.length}`);
       } catch (pageError) {
         console.error(`Error processing page ${pageNum}:`, pageError);
+        // Continue with other pages even if one fails
       }
     }
     
+    console.log(`Extraction complete. Processed ${processedPages}/${pdf.numPages} pages`);
+    console.log('Total extracted text length:', fullText.length);
+    console.log('First 200 characters:', fullText.substring(0, 200));
+    
+    // Check if we actually extracted any meaningful text
     const cleanText = fullText.trim();
     if (cleanText.length < 10) {
       throw new Error('PDF appears to contain no readable text. It may be a scanned image or an empty document.');
@@ -101,11 +140,38 @@ export const extractTextFromPDF = async (file: File): Promise<string> => {
     
     return cleanText;
   } catch (error) {
-    console.error('PDF extraction failed:', error);
+    console.error('PDF.js extraction failed:', error);
+    
+    // Try fallback method with pdf-parse
+    try {
+      console.log('Attempting fallback extraction method...');
+      const fallbackText = await extractTextWithPdfParse(file);
+      
+      if (fallbackText.trim().length < 10) {
+        throw new Error('PDF appears to contain no readable text. It may be a scanned image or an empty document.');
+      }
+      
+      console.log('Fallback extraction successful!');
+      return fallbackText.trim();
+    } catch (fallbackError) {
+      console.error('Fallback extraction also failed:', fallbackError);
+    }
+    
+    // Provide more specific error messages
     if (error instanceof Error) {
+      if (error.message.includes('Invalid PDF')) {
+        throw new Error('The uploaded file is not a valid PDF document');
+      } else if (error.message.includes('Password')) {
+        throw new Error('PDF is password protected. Please upload an unprotected version');
+      } else if (error.message.includes('network')) {
+        throw new Error('Network error while processing PDF. Please check your connection and try again');
+      } else if (error.message.includes('no readable text')) {
+        throw new Error('PDF contains no readable text. It may be a scanned image - try uploading a text-based PDF instead');
+      }
       throw error;
     }
-    throw new Error('Failed to extract text from PDF document');
+    
+    throw new Error('Failed to extract text from PDF. Please ensure the file is a valid, text-based PDF document');
   }
 };
 
