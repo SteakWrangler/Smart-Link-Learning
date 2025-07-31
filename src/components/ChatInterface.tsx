@@ -434,6 +434,32 @@ Keep the response friendly and encouraging. If the document content isn't availa
             setIsLoadedConversation(true);
             setHasUnsavedChanges(false);
             
+            // Link any unlinked conversation documents to this new conversation
+            // Only link if the conversation was saved due to actual messages (not just document uploads)
+            if (conversationDocuments.length > 0 && messages.length > 1) {
+              console.log('Linking', conversationDocuments.length, 'documents to conversation with messages:', conversation.id);
+              try {
+                const documentLinks = conversationDocuments.map(doc => ({
+                  conversation_id: conversation.id,
+                  document_id: doc.id
+                }));
+                
+                const { error: linkError } = await supabase
+                  .from('conversation_documents')
+                  .upsert(documentLinks, {
+                    onConflict: 'conversation_id,document_id'
+                  });
+                  
+                if (linkError) {
+                  console.error('Error linking documents to conversation:', linkError);
+                } else {
+                  console.log('Successfully linked documents to conversation');
+                }
+              } catch (error) {
+                console.error('Error linking documents to conversation:', error);
+              }
+            }
+            
             // Update local title state if we generated a title from content
             if (!conversationTitle.trim() && title !== 'New Conversation') {
               setConversationTitle(title);
