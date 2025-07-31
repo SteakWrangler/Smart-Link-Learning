@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, EyeOff, Check } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, EyeOff, Check, FileText } from 'lucide-react';
 import { Profile } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
+import ProfileDocumentList from './ProfileDocumentList';
 
 interface SettingsProps {
   profile: Profile;
@@ -506,6 +507,22 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
                 </label>
               </div>
             </div>
+          </div>
+
+          {/* My Documents Section */}
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center gap-3 mb-6">
+              <FileText className="text-purple-600" size={24} />
+              <h2 className="text-xl font-semibold text-gray-800">My Documents</h2>
+            </div>
+            
+            <div className="mb-4">
+              <p className="text-sm text-gray-600">
+                View and manage all documents uploaded across your conversations.
+              </p>
+            </div>
+            
+            <ProfileDocumentList />
           </div>
 
           {/* Account Management Section */}

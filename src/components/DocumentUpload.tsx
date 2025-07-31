@@ -11,11 +11,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   sanitizeFileDescription, 
-  validateFileType, 
-  validateFileSize,
   createSafeErrorMessage,
   checkRateLimit
 } from '@/utils/securityUtils';
+import { 
+  isFileTypeSupported, 
+  getFileValidationMessage, 
+  getSupportedFileTypes
+} from '@/utils/documentProcessor';
 import type { Child, Subject } from '@/types/database';
 
 interface DocumentUploadProps {
@@ -24,9 +27,8 @@ interface DocumentUploadProps {
   onUploadComplete: () => void;
 }
 
-// Define allowed file types for security
-const ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+// Get supported file types from the document processor
+const SUPPORTED_FILE_TYPES = getSupportedFileTypes();
 
 const DocumentUpload: React.FC<DocumentUploadProps> = ({
   children,
@@ -43,22 +45,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
   const { toast } = useToast();
 
   const validateFile = (file: File): string | null => {
-    // Validate file type
-    if (!validateFileType(file.name, ALLOWED_FILE_TYPES)) {
-      return `File type not allowed. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`;
-    }
-
-    // Validate file size
-    if (!validateFileSize(file.size, MAX_FILE_SIZE)) {
-      return `File size too large. Maximum size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
-    }
-
-    // Additional security checks for PDF files
-    if (file.type === 'application/pdf' && file.size < 100) {
-      return 'Invalid PDF file detected';
-    }
-
-    return null;
+    return getFileValidationMessage(file);
   };
 
   const handleFileChange = (file: File | null) => {
@@ -113,6 +100,17 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
       return;
     }
 
+    // Check if file type is supported
+    const fileCheck = isFileTypeSupported(selectedFile);
+    if (!fileCheck.supported) {
+      toast({
+        title: "Unsupported File Type",
+        description: fileCheck.message || "This file type is not supported for upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setUploading(true);
 
     try {
@@ -152,38 +150,36 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
       if (dbError) throw dbError;
 
-      // Process PDF content if it's a PDF file
-      if (selectedFile.type === 'application/pdf') {
-        try {
-          const learnerName = profile.user_type === 'parent' 
-            ? children?.find(child => child.id === selectedChild)?.name || 'Student'
-            : profile.first_name || 'Student';
-          
-          console.log('Starting PDF processing for document:', document.id);
-          
-          // Import the processing service dynamically
-          const { processDocument } = await import('@/services/documentProcessingService');
-          const result = await processDocument(document.id, selectedFile, learnerName);
-          
-          if (result.error) {
-            console.log('PDF processing completed with issues:', result.error);
-            toast({
-              title: "Upload successful with note",
-              description: "File uploaded successfully, but content analysis had issues.",
-              variant: "default",
-            });
-          } else {
-            console.log('PDF processing completed successfully');
-          }
-        } catch (processingError) {
-          console.error('PDF processing failed:', processingError);
-          // Don't fail the upload if processing fails
+      // Process document content for all supported files
+      try {
+        const learnerName = profile.user_type === 'parent' 
+          ? children?.find(child => child.id === selectedChild)?.name || 'Student'
+          : profile.first_name || 'Student';
+        
+        console.log('Starting document processing for:', document.id, 'File type:', selectedFile.type);
+        
+        // Import the processing service dynamically
+        const { processDocument } = await import('@/services/documentProcessingService');
+        const result = await processDocument(document.id, selectedFile, learnerName);
+        
+        if (result.error) {
+          console.log('Document processing completed with issues:', result.error);
           toast({
-            title: "Upload successful",
-            description: "File uploaded but content analysis failed. You can still use the document.",
+            title: "Upload successful with note",
+            description: "File uploaded successfully, but content analysis had issues.",
             variant: "default",
           });
+        } else {
+          console.log('Document processing completed successfully');
         }
+      } catch (processingError) {
+        console.error('Document processing failed:', processingError);
+        // Don't fail the upload if processing fails
+        toast({
+          title: "Upload successful",
+          description: "File uploaded but content analysis failed. You can still use the document.",
+          variant: "default",
+        });
       }
 
       toast({
@@ -222,10 +218,42 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({
           id="file"
           onChange={handleFileChange}
         />
+        
+        {/* File type information */}
+        <div className="mt-2 text-sm">
+          <div className="text-green-600 mb-2">
+            <strong>✅ Supported file types:</strong>
+            <ul className="ml-4 mt-1">
+              {SUPPORTED_FILE_TYPES.map((type) => (
+                <li key={type.extension} className="text-xs">
+                  • .{type.extension} - {type.displayName}
+                </li>
+              ))}
+            </ul>
+          </div>
+          
+          <div className="text-red-600">
+            <strong>❌ Unsupported file types:</strong>
+            <p className="text-xs mt-1 ml-4">
+              Images (.jpg, .png, .gif), videos (.mp4), audio files (.mp3), archives (.zip), and other formats are not supported.
+            </p>
+          </div>
+        </div>
+        
         {selectedFile && (
-          <p className="text-sm text-gray-600 mt-1">
-            Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-          </p>
+          <div className="mt-2">
+            <p className="text-sm text-gray-600">
+              Selected: {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+            </p>
+            {(() => {
+              const fileCheck = isFileTypeSupported(selectedFile);
+              if (fileCheck.supported) {
+                return <p className="text-xs text-green-600">✅ This file type is supported and will be processed</p>;
+              } else {
+                return <p className="text-xs text-red-600">❌ This file type is not supported</p>;
+              }
+            })()}
+          </div>
         )}
       </div>
 

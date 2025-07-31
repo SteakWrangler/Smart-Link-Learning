@@ -8,11 +8,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   sanitizeFileDescription, 
-  validateFileType, 
-  validateFileSize,
   createSafeErrorMessage,
   checkRateLimit
 } from '@/utils/securityUtils';
+import { 
+  isFileTypeSupported, 
+  getFileValidationMessage 
+} from '@/utils/documentProcessor';
 import type { Tables } from '@/types/supabase';
 
 interface ConversationDocumentUploadProps {
@@ -22,9 +24,6 @@ interface ConversationDocumentUploadProps {
   onClose: () => void;
 }
 
-// Define allowed file types for security
-const ALLOWED_FILE_TYPES = ['pdf', 'doc', 'docx', 'txt', 'jpg', 'jpeg', 'png'];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 const MAX_FILES_PER_UPLOAD = 5; // Limit number of files per upload
 
 const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
@@ -41,22 +40,7 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
   const { toast } = useToast();
 
   const validateFile = (file: File): string | null => {
-    // Validate file type
-    if (!validateFileType(file.name, ALLOWED_FILE_TYPES)) {
-      return `File type not allowed. Allowed types: ${ALLOWED_FILE_TYPES.join(', ')}`;
-    }
-
-    // Validate file size
-    if (!validateFileSize(file.size, MAX_FILE_SIZE)) {
-      return `File size too large. Maximum size: ${MAX_FILE_SIZE / (1024 * 1024)}MB`;
-    }
-
-    // Additional security checks for PDF files
-    if (file.type === 'application/pdf' && file.size < 100) {
-      return 'Invalid PDF file detected';
-    }
-
-    return null;
+    return getFileValidationMessage(file);
   };
 
   const handleFilesChange = (files: File | File[] | null) => {
@@ -188,26 +172,24 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
 
           setUploadProgress(prev => ({ ...prev, [fileKey]: 85 }));
 
-          // Process PDF content if it's a PDF file
-          if (selectedFile.type === 'application/pdf') {
-            try {
-              const learnerName = selectedChild?.name || profile.first_name || 'Student';
-              
-              console.log('Starting PDF processing for conversation document:', document.id);
-              
-              // Import the processing service dynamically
-              const { processDocument } = await import('@/services/documentProcessingService');
-              const result = await processDocument(document.id, selectedFile, learnerName);
-              
-              if (result.error) {
-                console.log('PDF processing completed with issues:', result.error);
-              } else {
-                console.log('PDF processing completed successfully');
-              }
-            } catch (processingError) {
-              console.error('PDF processing failed:', processingError);
-              // Don't fail the upload if processing fails
+          // Process document content for all supported files
+          try {
+            const learnerName = selectedChild?.name || profile.first_name || 'Student';
+            
+            console.log('Starting document processing for conversation document:', document.id, 'File type:', selectedFile.type);
+            
+            // Import the processing service dynamically
+            const { processDocument } = await import('@/services/documentProcessingService');
+            const result = await processDocument(document.id, selectedFile, learnerName);
+            
+            if (result.error) {
+              console.log('Document processing completed with issues:', result.error);
+            } else {
+              console.log('Document processing completed successfully');
             }
+          } catch (processingError) {
+            console.error('Document processing failed:', processingError);
+            // Don't fail the upload if processing fails
           }
 
           setUploadProgress(prev => ({ ...prev, [fileKey]: 100 }));
@@ -329,7 +311,7 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Choose Files (Max {MAX_FILES_PER_UPLOAD} files, {MAX_FILE_SIZE / (1024 * 1024)}MB each)
+              Choose Files (Max {MAX_FILES_PER_UPLOAD} files)
             </label>
             <FileInput
               multiple={true}

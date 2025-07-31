@@ -1,19 +1,34 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { extractTextFromPDF, analyzeTestContent } from '@/utils/pdfProcessor';
+import { extractTextFromFile, isFileTypeSupported } from '@/utils/documentProcessor';
+import { analyzeTestContent } from '@/utils/pdfProcessor';
 import { sanitizeText, createSafeErrorMessage } from '@/utils/securityUtils';
 import type { DocumentData } from '@/types/database';
 
-// Additional PDF security checks
-const performPDFSecurityChecks = (file: File): string | null => {
-  // Check file size (basic DoS prevention)
-  if (file.size > 100 * 1024 * 1024) { // 100MB limit for PDFs
-    return 'PDF file too large for processing';
+// Enhanced file security checks for all supported types
+const performFileSecurityChecks = (file: File): string | null => {
+  // Check if file type is supported
+  const fileCheck = isFileTypeSupported(file);
+  if (!fileCheck.supported) {
+    return fileCheck.message || 'File type not supported';
   }
 
-  // Check for minimum viable PDF size
-  if (file.size < 100) {
-    return 'Invalid PDF file detected';
+  // Check file size limits based on type
+  const maxSizes: { [key: string]: number } = {
+    'application/pdf': 100 * 1024 * 1024, // 100MB for PDFs
+    'text/plain': 5 * 1024 * 1024, // 5MB for text files
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': 50 * 1024 * 1024, // 50MB for DOCX
+    'application/msword': 50 * 1024 * 1024, // 50MB for DOC
+  };
+  
+  const maxSize = maxSizes[file.type] || 10 * 1024 * 1024; // Default 10MB
+  if (file.size > maxSize) {
+    return `File too large for processing. Maximum size: ${Math.round(maxSize / (1024 * 1024))}MB`;
+  }
+
+  // Check for minimum viable file size
+  if (file.size < 10) {
+    return 'Invalid or empty file detected';
   }
 
   // Basic filename validation
@@ -30,23 +45,23 @@ export const processDocument = async (
   learnerName: string
 ): Promise<{ extractedText: string; analysis: any; error?: string }> => {
   try {
-    console.log('Starting document processing for:', documentId);
+    console.log('Starting document processing for:', documentId, 'File type:', file.type);
     
-    // Perform security checks for PDF files
-    if (file.type === 'application/pdf') {
-      const securityError = performPDFSecurityChecks(file);
-      if (securityError) {
-        throw new Error(securityError);
-      }
+    // Perform security checks for all file types
+    const securityError = performFileSecurityChecks(file);
+    if (securityError) {
+      throw new Error(securityError);
     }
+
+    // All supported files can be processed for text extraction
 
     // Sanitize learner name input
     const sanitizedLearnerName = sanitizeText(learnerName) || 'Student';
     
-    // Extract text from PDF with timeout protection
-    const extractionPromise = extractTextFromPDF(file);
+    // Extract text from file with timeout protection
+    const extractionPromise = extractTextFromFile(file);
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('PDF processing timeout')), 30000); // 30 second timeout
+      setTimeout(() => reject(new Error('File processing timeout')), 30000); // 30 second timeout
     });
     
     const extractedText = await Promise.race([extractionPromise, timeoutPromise]);
