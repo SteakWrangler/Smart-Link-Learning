@@ -59,6 +59,11 @@ export const processDocument = async (
     const sanitizedLearnerName = sanitizeText(learnerName) || 'Student';
     
     // Extract text from file with timeout protection
+    console.log('=== STARTING TEXT EXTRACTION ===');
+    console.log('File type:', file.type);
+    console.log('File size:', file.size);
+    console.log('File name:', file.name);
+    
     const extractionPromise = extractTextFromFile(file);
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => reject(new Error('File processing timeout')), 30000); // 30 second timeout
@@ -66,8 +71,9 @@ export const processDocument = async (
     
     const extractedText = await Promise.race([extractionPromise, timeoutPromise]);
     
+    console.log('=== TEXT EXTRACTION COMPLETE ===');
     console.log('Extracted text length:', extractedText.length);
-    console.log('First 200 characters:', extractedText.substring(0, 200));
+    console.log('First 200 chars:', extractedText.substring(0, 200));
     
     // Sanitize extracted text to prevent any potential issues
     const sanitizedText = sanitizeText(extractedText);
@@ -114,10 +120,15 @@ export const processDocument = async (
       analysis
     };
   } catch (error) {
-    console.error('Error processing document:', error);
+    console.error('=== DOCUMENT PROCESSING ERROR ===');
+    console.error('Error details:', error);
+    console.error('Error type:', typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     
     // Create safe error message for logging
     const safeErrorMessage = createSafeErrorMessage(error);
+    console.log('Safe error message:', safeErrorMessage);
     
     // Update the document with error status
     try {
@@ -129,6 +140,8 @@ export const processDocument = async (
           updated_at: new Date().toISOString()
         })
         .eq('id', documentId);
+        
+      console.log('Updated database with error status');
     } catch (updateError) {
       console.error('Error updating document with error status:', updateError);
     }
