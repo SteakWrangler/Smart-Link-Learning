@@ -105,7 +105,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
     if (!profile) return;
 
     try {
+      console.log('=== CHILD CREATION DEBUG ===');
       console.log('Adding/updating child:', childData);
+      console.log('Child name:', childData.name);
+      console.log('Child ageGroup:', childData.ageGroup);
+      console.log('Child subjects:', childData.subjects);
+      console.log('Child challenges:', childData.challenges);
+      console.log('Profile ID:', profile.id);
 
       if (editingChild) {
         // Update existing child
@@ -129,17 +135,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         });
       } else {
         // Create new child
+        console.log('=== CREATING NEW CHILD ===');
+        const insertData = {
+          name: childData.name,
+          age_group: childData.ageGroup,
+          parent_id: profile.id
+        };
+        console.log('Insert data:', insertData);
+        
         const { data: newChild, error: insertError } = await supabase
           .from('children')
-          .insert({
-            name: childData.name,
-            age_group: childData.ageGroup,
-            parent_id: profile.id
-          })
+          .insert(insertData)
           .select()
           .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('=== INSERT ERROR ===');
+          console.error('Error details:', insertError);
+          throw insertError;
+        }
         console.log('Created new child:', newChild);
 
         // Add subjects and challenges
@@ -167,25 +181,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
 
   const updateChildSubjectsAndChallenges = async (childId: string, subjects: string[], challenges: string[]) => {
     try {
-      console.log('Updating subjects and challenges for child:', childId, { subjects, challenges });
+      console.log('=== UPDATING SUBJECTS AND CHALLENGES ===');
+      console.log('Child ID:', childId);
+      console.log('Subjects to lookup:', subjects);
+      console.log('Challenges to lookup:', challenges);
 
       // Remove existing subjects and challenges
       await supabase.from('child_subjects').delete().eq('child_id', childId);
       await supabase.from('child_challenges').delete().eq('child_id', childId);
 
       // Get subject and challenge IDs (lookup by name)
-      const { data: subjectsData } = await supabase
+      console.log('=== LOOKING UP SUBJECTS ===');
+      const { data: subjectsData, error: subjectsError } = await supabase
         .from('subjects')
         .select('id, name')
         .in('name', subjects);
 
-      const { data: challengesData } = await supabase
+      if (subjectsError) {
+        console.error('Subject lookup error:', subjectsError);
+      }
+
+      console.log('=== LOOKING UP CHALLENGES ===');
+      const { data: challengesData, error: challengesError } = await supabase
         .from('challenges')
         .select('id, name')
         .in('name', challenges);
 
+      if (challengesError) {
+        console.error('Challenge lookup error:', challengesError);
+      }
+
       console.log('Found subjects:', subjectsData);
       console.log('Found challenges:', challengesData);
+      console.log('Expected subjects count:', subjects.length, 'Found:', subjectsData?.length || 0);
+      console.log('Expected challenges count:', challenges.length, 'Found:', challengesData?.length || 0);
 
       // Add new subject associations
       if (subjectsData && subjectsData.length > 0) {
