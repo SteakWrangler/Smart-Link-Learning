@@ -15,6 +15,7 @@ import {
   isFileTypeSupported, 
   getFileValidationMessage 
 } from '@/utils/documentProcessor';
+import { processDocument } from '@/services/documentProcessingService';
 import type { Tables } from '@/types/supabase';
 
 interface ConversationDocumentUploadProps {
@@ -178,8 +179,7 @@ const ConversationDocumentUpload: React.FC<ConversationDocumentUploadProps> = ({
             
             console.log('Starting document processing for conversation document:', document.id, 'File type:', selectedFile.type);
             
-            // Import the processing service dynamically
-            const { processDocument } = await import('@/services/documentProcessingService');
+            // Process the document using static import to avoid build issues
             const result = await processDocument(document.id, selectedFile, learnerName);
             
             if (result.error) {
