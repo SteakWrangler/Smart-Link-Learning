@@ -271,10 +271,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   // Generate response for uploaded documents
   const generateDocumentUploadResponse = async (documents: Tables<'documents'>[]): Promise<string> => {
+    console.log('=== GENERATING DOCUMENT UPLOAD RESPONSE ===');
+    console.log('Documents received:', documents.length);
+    documents.forEach((doc, index) => {
+      console.log(`Document ${index + 1}:`, {
+        name: doc.file_name,
+        hasExtractedContent: !!doc.extracted_content,
+        contentLength: doc.extracted_content?.length || 0,
+        hasAnalysis: !!doc.ai_analysis,
+        processingStatus: doc.processing_status
+      });
+    });
+    
     // Build document context
     const documentContext = documents.map(doc => {
       const content = doc.extracted_content || '';
       const analysis = doc.ai_analysis ? JSON.stringify(doc.ai_analysis) : '';
+      console.log(`Building context for ${doc.file_name}:`, {
+        contentLength: content.length,
+        analysisLength: analysis.length
+      });
       return `Document: ${doc.file_name}\nContent: ${content}\nAnalysis: ${analysis}`;
     }).join('\n\n');
 
@@ -801,6 +817,20 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
     
     // Add document context if available - prioritize conversation-specific documents
     const availableDocuments = conversationDocuments.length > 0 ? conversationDocuments : documents;
+    
+    console.log('=== DOCUMENT CONTEXT DEBUG ===');
+    console.log('conversationDocuments:', conversationDocuments.length);
+    console.log('documents:', documents.length);
+    console.log('availableDocuments selected:', availableDocuments.length);
+    console.log('availableDocuments:', availableDocuments.map(doc => ({
+      id: doc.id,
+      fileName: doc.file_name,
+      fileType: doc.file_type,
+      hasExtractedContent: !!doc.extracted_content,
+      extractedContentLength: doc.extracted_content?.length || 0,
+      processingStatus: doc.processing_status
+    })));
+    
     const pdfDocs = availableDocuments.filter(doc => {
       if ('fileType' in doc) {
         return doc.fileType === 'application/pdf';
@@ -809,16 +839,31 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
       }
     });
     
+    console.log('pdfDocs filtered:', pdfDocs.length);
+    console.log('pdfDocs details:', pdfDocs.map(doc => ({
+      id: doc.id,
+      fileName: doc.file_name,
+      hasExtractedContent: !!doc.extracted_content,
+      extractedContentLength: doc.extracted_content?.length || 0,
+      firstChars: doc.extracted_content?.substring(0, 100) || 'NO CONTENT'
+    })));
+    
     if (pdfDocs.length > 0) {
       systemContext += `You have access to ${pdfDocs.length} document${pdfDocs.length > 1 ? 's' : ''} uploaded to this conversation:\n\n`;
       
       pdfDocs.forEach((doc, index) => {
         systemContext += `Document ${index + 1}: "${doc.file_name}"\n`;
         
+        console.log(`Processing doc ${index + 1} (${doc.file_name}):`);
+        console.log('- has ai_analysis:', !!doc.ai_analysis);
+        console.log('- has extracted_content:', !!doc.extracted_content);
+        console.log('- extracted_content length:', doc.extracted_content?.length || 0);
+        
         // Add document analysis if available
         if (doc.ai_analysis && typeof doc.ai_analysis === 'object' && 'accuracy' in doc.ai_analysis) {
           const analysis = doc.ai_analysis as any;
           systemContext += `- Analysis shows the student got ${analysis.accuracy}% accuracy with problem areas in: ${analysis.problemAreas?.join(', ')}\n`;
+          console.log('- Added analysis to context');
         }
         
         // Add document content if available
@@ -827,10 +872,18 @@ CRITICAL: NEVER create download links or URLs in your responses. The download fu
             ? doc.extracted_content.substring(0, 300) + '...' 
             : doc.extracted_content;
           systemContext += `- Content: ${contentPreview}\n`;
+          console.log('- Added content to context, preview length:', contentPreview.length);
+        } else {
+          console.log('- NO EXTRACTED CONTENT FOUND!');
         }
         
         systemContext += '\n';
       });
+      
+      console.log('Final systemContext with documents length:', systemContext.length);
+      console.log('Final systemContext contains "Content:":', systemContext.includes('Content:'));
+    } else {
+      console.log('No PDF documents found for context');
     }
     
     // Add conversation-specific document context for non-PDF documents
@@ -1083,14 +1136,29 @@ The activity should immerse the student in the theme's world and make the learni
   const generateDocumentContext = (): string => {
     const allDocuments = [...conversationDocuments, ...documents];
     
-    if (allDocuments.length === 0) return '';
+    console.log('=== BUILDING SYSTEM CONTEXT ===');
+    console.log('Conversation documents:', conversationDocuments.length);
+    console.log('Other documents:', documents.length);
+    console.log('Total documents:', allDocuments.length);
+    
+    if (allDocuments.length === 0) {
+      console.log('No documents available for context');
+      return '';
+    }
     
     const documentContexts = allDocuments.map(doc => {
       const content = doc.extracted_content || '';
       const analysis = doc.ai_analysis ? JSON.stringify(doc.ai_analysis) : '';
+      console.log(`Context for ${doc.file_name}:`, {
+        hasContent: !!content,
+        contentLength: content.length,
+        hasAnalysis: !!analysis,
+        processingStatus: doc.processing_status
+      });
       return `Document: ${doc.file_name}\nContent: ${content}\nAnalysis: ${analysis}`;
     }).join('\n\n');
     
+    console.log('Built document context length:', documentContexts.length);
     return `\n\nRelevant Documents:\n${documentContexts}`;
   };
 
