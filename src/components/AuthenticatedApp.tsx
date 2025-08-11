@@ -299,11 +299,11 @@ const AuthenticatedApp: React.FC = () => {
     return featureTabMap[featureId] || 'children';
   };
 
+  const { loading: subLoading, isActive } = useSubscription();
+
   if (loading) {
     return <div>Loading...</div>;
   }
-
-  const { loading: subLoading, isActive } = useSubscription();
 
   if (user && !subLoading && !isActive) {
     return (

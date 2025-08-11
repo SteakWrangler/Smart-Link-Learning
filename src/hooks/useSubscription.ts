@@ -8,25 +8,32 @@ export function useSubscription() {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        if (!cancelled) { setIsActive(false); setLoading(false); }
-        return;
-      }
-      const { data, error } = await (supabase as any)
-        .from('subscriptions')
-        .select('status, current_period_end')
-        .eq('user_id', user.id)
-        .maybeSingle();
-      if (!cancelled) {
-        if (error || !data) {
-          setIsActive(false);
-        } else {
-          const active = ["active", "trialing"].includes((data as any).status) && new Date((data as any).current_period_end) > new Date();
-          setIsActive(active);
+      try {
+        const { data: sessionRes } = await supabase.auth.getSession();
+        const user = sessionRes?.session?.user;
+        if (!user) {
+          if (!cancelled) { setIsActive(false); setLoading(false); }
+          return;
         }
-        setLoading(false);
+        const { data, error } = await (supabase as any)
+          .from('subscriptions')
+          .select('status, current_period_end')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        if (!cancelled) {
+          if (error || !data) {
+            setIsActive(false);
+          } else {
+            const active = ["active", "trialing"].includes((data as any).status) && new Date((data as any).current_period_end) > new Date();
+            setIsActive(active);
+          }
+          setLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setIsActive(false);
+          setLoading(false);
+        }
       }
     }
     load();
