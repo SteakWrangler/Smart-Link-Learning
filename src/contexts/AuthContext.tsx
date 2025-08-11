@@ -41,65 +41,97 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   console.log('🟡 AuthProvider: Initial state set - loading:', true, 'isSubscriptionActive:', false);
 
   const checkSubscription = async () => {
-    console.log('🔵 checkSubscription: Function called, user:', user ? user.email : 'null');
+    console.log('CHECKSUBSCRIPTION START: Function called');
+    console.log('CHECKSUBSCRIPTION: User check - exists:', !!user);
+    console.log('CHECKSUBSCRIPTION: User email:', user ? user.email : 'NO USER');
     
     if (!user) {
-      console.log('🔴 checkSubscription: No user, setting subscription inactive');
+      console.log('CHECKSUBSCRIPTION NO USER: No user found, setting subscription inactive');
+      console.log('CHECKSUBSCRIPTION NO USER: About to set isSubscriptionActive to false');
       setIsSubscriptionActive(false);
+      console.log('CHECKSUBSCRIPTION NO USER: About to set subscriptionLoading to false');
       setSubscriptionLoading(false);
+      console.log('CHECKSUBSCRIPTION NO USER: Function returning early');
       return;
     }
 
-    console.log('🔵 checkSubscription: Starting subscription check for user:', user.email);
+    console.log('CHECKSUBSCRIPTION: User exists, starting subscription check for:', user.email);
+    console.log('CHECKSUBSCRIPTION: About to set subscriptionLoading to true');
     setSubscriptionLoading(true);
-    console.log('🔵 checkSubscription: Set subscriptionLoading to true');
+    console.log('CHECKSUBSCRIPTION: subscriptionLoading set to true');
 
+    console.log('CHECKSUBSCRIPTION: About to enter try block');
     try {
-      console.log('🔵 checkSubscription: Getting session...');
-      const { data: sessionRes } = await supabase.auth.getSession();
-      console.log('🔵 checkSubscription: Session data:', sessionRes.session ? 'exists' : 'null');
+      console.log('CHECKSUBSCRIPTION TRY: Getting session from supabase...');
+      const sessionResult = await supabase.auth.getSession();
+      console.log('CHECKSUBSCRIPTION TRY: Session result received');
+      console.log('CHECKSUBSCRIPTION TRY: Session exists:', !!sessionResult.data.session);
+      console.log('CHECKSUBSCRIPTION TRY: Session user:', sessionResult.data.session?.user?.email || 'NO USER IN SESSION');
+      console.log('CHECKSUBSCRIPTION TRY: Access token exists:', !!sessionResult.data.session?.access_token);
       
-      console.log('🔵 checkSubscription: Making request to check-subscription function...');
+      console.log('CHECKSUBSCRIPTION TRY: About to make fetch request...');
+      console.log('CHECKSUBSCRIPTION TRY: URL:', `${SUPABASE_FUNCTIONS_URL}/check-subscription`);
+      console.log('CHECKSUBSCRIPTION TRY: Auth header:', `Bearer ${sessionResult.data.session?.access_token ? 'TOKEN_EXISTS' : 'NO_TOKEN'}`);
+      
       const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/check-subscription`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${sessionRes.session?.access_token ?? ''}`,
+          Authorization: `Bearer ${sessionResult.data.session?.access_token ?? ''}`,
         },
       });
 
-      console.log('🔵 checkSubscription: Response status:', res.status);
+      console.log('CHECKSUBSCRIPTION TRY: Fetch completed');
+      console.log('CHECKSUBSCRIPTION TRY: Response status:', res.status);
+      console.log('CHECKSUBSCRIPTION TRY: Response ok:', res.ok);
+      console.log('CHECKSUBSCRIPTION TRY: Response headers:', [...res.headers.entries()]);
 
+      console.log('CHECKSUBSCRIPTION TRY: About to check if response is ok...');
       if (res.ok) {
+        console.log('CHECKSUBSCRIPTION SUCCESS: Response is ok, about to parse JSON...');
         const responseData = await res.json();
-        console.log('SUBSCRIPTION CHECK SUCCESS! Response data:', JSON.stringify(responseData, null, 2));
-        console.log('SUBSCRIPTION CHECK: Setting isSubscriptionActive to:', responseData.isActive);
-        console.log('SUBSCRIPTION CHECK: About to set state - current isSubscriptionActive before update:', isSubscriptionActive);
+        console.log('CHECKSUBSCRIPTION SUCCESS: JSON parsed successfully');
+        console.log('CHECKSUBSCRIPTION SUCCESS: Response data:', JSON.stringify(responseData, null, 2));
+        console.log('CHECKSUBSCRIPTION SUCCESS: isActive value:', responseData.isActive);
+        console.log('CHECKSUBSCRIPTION SUCCESS: About to set state - current isSubscriptionActive before update:', isSubscriptionActive);
+        console.log('CHECKSUBSCRIPTION SUCCESS: Calling setIsSubscriptionActive with:', responseData.isActive);
         setIsSubscriptionActive(responseData.isActive);
-        console.log('SUBSCRIPTION CHECK: State setter called with value:', responseData.isActive);
+        console.log('CHECKSUBSCRIPTION SUCCESS: setIsSubscriptionActive called');
       } else {
-        console.log('SUBSCRIPTION CHECK FAILED with status:', res.status);
+        console.log('CHECKSUBSCRIPTION ERROR: Response not ok, status:', res.status);
+        console.log('CHECKSUBSCRIPTION ERROR: About to read error text...');
         const errorText = await res.text().catch(() => 'Could not read error');
-        console.log('SUBSCRIPTION CHECK ERROR response:', errorText);
-        console.log('SUBSCRIPTION CHECK: Setting isSubscriptionActive to false due to error');
+        console.log('CHECKSUBSCRIPTION ERROR: Error response text:', errorText);
+        console.log('CHECKSUBSCRIPTION ERROR: Setting isSubscriptionActive to false');
         setIsSubscriptionActive(false);
+        console.log('CHECKSUBSCRIPTION ERROR: setIsSubscriptionActive(false) called');
       }
+      console.log('CHECKSUBSCRIPTION TRY: End of try block reached');
     } catch (error) {
-      console.log('🔴 checkSubscription: Exception occurred:', error);
+      console.log('CHECKSUBSCRIPTION CATCH: Exception occurred:', error);
+      console.log('CHECKSUBSCRIPTION CATCH: Error type:', typeof error);
+      console.log('CHECKSUBSCRIPTION CATCH: Error message:', error?.message);
+      console.log('CHECKSUBSCRIPTION CATCH: Full error:', JSON.stringify(error, null, 2));
+      console.log('CHECKSUBSCRIPTION CATCH: Setting isSubscriptionActive to false');
       setIsSubscriptionActive(false);
+      console.log('CHECKSUBSCRIPTION CATCH: setIsSubscriptionActive(false) called');
     } finally {
-      console.log('SUBSCRIPTION CHECK: Setting subscriptionLoading to false');
+      console.log('CHECKSUBSCRIPTION FINALLY: Finally block executing');
+      console.log('CHECKSUBSCRIPTION FINALLY: Setting subscriptionLoading to false');
       setSubscriptionLoading(false);
+      console.log('CHECKSUBSCRIPTION FINALLY: subscriptionLoading set to false');
       
       // Log state after React has had a chance to update
       setTimeout(() => {
-        console.log('SUBSCRIPTION CHECK FINAL STATE (after update):', {
+        console.log('CHECKSUBSCRIPTION FINAL STATE (after timeout):', {
           isSubscriptionActive,
           subscriptionLoading: false,
           user: user?.email
         });
       }, 100);
+      console.log('CHECKSUBSCRIPTION FINALLY: Timeout set for final state logging');
     }
+    console.log('CHECKSUBSCRIPTION END: Function completely finished');
   };
 
   const refreshSubscription = async () => {
@@ -154,58 +186,82 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
-    console.log('🟠 fetchProfile: Called with userId:', userId);
+    console.log('FETCHPROFILE START: Called with userId:', userId);
+    console.log('FETCHPROFILE: About to enter try block');
     try {
-      console.log('🟠 fetchProfile: Querying profiles table...');
-      const { data, error } = await supabase
+      console.log('FETCHPROFILE: Inside try block, about to query profiles table');
+      console.log('FETCHPROFILE: Creating supabase query...');
+      const query = supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
+      console.log('FETCHPROFILE: Query object created, about to execute...');
+      
+      const { data, error } = await query;
+      console.log('FETCHPROFILE: Query executed, checking results...');
+      console.log('FETCHPROFILE: Raw query result - data exists:', !!data);
+      console.log('FETCHPROFILE: Raw query result - error exists:', !!error);
+      console.log('FETCHPROFILE: Raw query result - error details:', error);
+      console.log('FETCHPROFILE: Raw query result - data:', data);
 
+      console.log('FETCHPROFILE: About to check if error exists...');
       if (error) {
-        console.log('🔴 fetchProfile: Database error:', error);
+        console.log('FETCHPROFILE ERROR DETECTED: Database error:', error);
+        console.log('FETCHPROFILE ERROR: About to throw error...');
         throw error;
       }
+      console.log('FETCHPROFILE: No error detected, continuing...');
       
-      console.log('🟠 fetchProfile: Profile data received:', data ? 'exists' : 'null');
-      console.log('🟠 fetchProfile: Profile email:', data?.email);
-      console.log('🟠 fetchProfile: Profile stripe_customer_id:', data?.stripe_customer_id || 'none');
+      console.log('FETCHPROFILE: Profile data received - exists:', data ? 'YES' : 'NO');
+      console.log('FETCHPROFILE: Profile email:', data?.email);
+      console.log('FETCHPROFILE: Profile stripe_customer_id:', data?.stripe_customer_id || 'NONE');
+      console.log('FETCHPROFILE: Full profile data object:', JSON.stringify(data, null, 2));
       
+      console.log('FETCHPROFILE: About to check deleted_at...');
       // Check if the account has been deleted
       if (data.deleted_at) {
-        console.log('🔴 fetchProfile: Account has been deleted, signing out user');
+        console.log('FETCHPROFILE DELETED: Account has been deleted, signing out user');
         await supabase.auth.signOut();
         setProfile(null);
         setUser(null);
         setLoading(false);
         return;
       }
+      console.log('FETCHPROFILE: Account not deleted, continuing...');
       
-      // Immediately update the profile state
-      console.log('🟠 fetchProfile: Setting profile state');
+      console.log('FETCHPROFILE: About to set profile state...');
       setProfile(data);
-      console.log('🟠 fetchProfile: Profile state set, now calling checkSubscription');
+      console.log('FETCHPROFILE: Profile state set successfully');
+      console.log('FETCHPROFILE: About to call checkSubscription...');
       
       // Check subscription status after profile is loaded
+      console.log('FETCHPROFILE: CALLING CHECKSUBSCRIPTION NOW...');
       await checkSubscription();
-      console.log('🟠 fetchProfile: checkSubscription completed');
+      console.log('FETCHPROFILE: checkSubscription call completed successfully');
       
-      // Force a re-render by briefly setting loading to true
-      console.log('🟠 fetchProfile: Setting loading states');
+      console.log('FETCHPROFILE: About to set loading states...');
       setLoading(true);
+      console.log('FETCHPROFILE: Set loading to true, about to set timeout...');
       setTimeout(() => {
-        console.log('🟠 fetchProfile: Setting final loading to false');
+        console.log('FETCHPROFILE TIMEOUT: Setting final loading to false');
         setLoading(false);
       }, 10);
+      console.log('FETCHPROFILE: Timeout set, function should complete normally');
       
     } catch (error) {
-      console.log('🔴 fetchProfile: Exception occurred:', error);
-      console.error('Error fetching profile:', error);
+      console.log('FETCHPROFILE CATCH: Exception occurred:', error);
+      console.log('FETCHPROFILE CATCH: Error type:', typeof error);
+      console.log('FETCHPROFILE CATCH: Error message:', error?.message);
+      console.log('FETCHPROFILE CATCH: Full error object:', JSON.stringify(error, null, 2));
+      console.error('FETCHPROFILE CATCH: Console.error for error:', error);
     } finally {
-      console.log('🟠 fetchProfile: Finally block, setting loading to false');
+      console.log('FETCHPROFILE FINALLY: Finally block executing');
+      console.log('FETCHPROFILE FINALLY: About to set loading to false');
       setLoading(false);
+      console.log('FETCHPROFILE FINALLY: Loading set to false');
     }
+    console.log('FETCHPROFILE END: Function completely finished');
   };
 
   const signOut = async () => {
