@@ -44,4 +44,4 @@ Deno.serve(async (req) => {
     console.error("portal error", e);
     return new Response(JSON.stringify({ error: "Server error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-}); 
+});
