@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, EyeOff, Check, FileText } from 'lucide-react';
+import { Settings as SettingsIcon, User, Shield, Bell, Trash2, Save, X, Eye, EyeOff, Check, FileText, CreditCard } from 'lucide-react';
 import { Profile } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
+import { openBillingPortal } from '@/utils/billing';
 import ProfileDocumentList from './ProfileDocumentList';
 
 interface SettingsProps {
@@ -16,6 +18,7 @@ interface SettingsProps {
 const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   const { toast } = useToast();
   const { fetchProfile, setProfile } = useAuth();
+  const { isActive } = useSubscription();
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -524,6 +527,31 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
             
             <ProfileDocumentList />
           </div>
+
+          {/* Billing Management Section */}
+          {isActive && (
+            <div className="bg-white rounded-xl shadow-lg p-6">
+              <div className="flex items-center gap-3 mb-6">
+                <CreditCard className="text-blue-600" size={24} />
+                <h2 className="text-xl font-semibold text-gray-800">Billing Management</h2>
+              </div>
+              
+              <div className="mb-4">
+                <p className="text-sm text-gray-600">
+                  Manage your subscription, view billing history, and update payment methods.
+                </p>
+              </div>
+              
+              <Button
+                onClick={() => openBillingPortal()}
+                variant="outline"
+                className="w-full justify-start"
+              >
+                <CreditCard size={16} className="mr-2" />
+                Manage Billing & Subscription
+              </Button>
+            </div>
+          )}
 
           {/* Account Management Section */}
           <div className="bg-white rounded-xl shadow-lg p-6">

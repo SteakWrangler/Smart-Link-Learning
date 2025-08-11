@@ -311,9 +311,8 @@ const AuthenticatedApp: React.FC = () => {
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
           <h2 className="text-xl font-semibold">Subscription required</h2>
           <p className="mt-2 text-gray-600">Subscribe to access all features. You can cancel anytime.</p>
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-6">
             <button className="btn btn-primary" onClick={() => startCheckout('price_1RuktRDMUr1nCqd4cO6UQa6v')}>Start 14‑day free trial</button>
-            <button className="btn" onClick={() => openBillingPortal()}>Manage billing</button>
           </div>
         </div>
       </div>
