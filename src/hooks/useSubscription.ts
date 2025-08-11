@@ -6,12 +6,17 @@ export function useSubscription() {
   const [isActive, setIsActive] = useState<boolean>(false);
 
   useEffect(() => {
+    console.log('useSubscription effect running...');
     let cancelled = false;
     async function load() {
       try {
+        console.log('Starting subscription check...');
         const { data: sessionRes } = await supabase.auth.getSession();
         const user = sessionRes?.session?.user;
+        console.log('User from session:', user?.email || 'No user');
+        
         if (!user) {
+          console.log('No user found, setting inactive');
           if (!cancelled) { setIsActive(false); setLoading(false); }
           return;
         }
