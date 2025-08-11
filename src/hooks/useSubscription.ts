@@ -17,6 +17,7 @@ export function useSubscription() {
         }
 
         // Call our check-subscription function that queries Stripe directly
+        console.log('Calling check-subscription function...');
         const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/check-subscription`, {
           method: 'POST',
           headers: {
@@ -25,11 +26,21 @@ export function useSubscription() {
           },
         });
 
+        console.log('Response status:', res.status);
+        
         if (!cancelled) {
           if (res.ok) {
-            const { isActive: active } = await res.json();
-            setIsActive(active);
+            const responseData = await res.json();
+            console.log('Response data:', responseData);
+            setIsActive(responseData.isActive);
           } else {
+            console.error('Function call failed:', res.status, res.statusText);
+            try {
+              const errorData = await res.text();
+              console.error('Error response:', errorData);
+            } catch (e) {
+              console.error('Could not read error response');
+            }
             setIsActive(false);
           }
           setLoading(false);
