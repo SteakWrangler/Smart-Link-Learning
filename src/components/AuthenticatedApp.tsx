@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
 import { useSubscription } from '@/hooks/useSubscription';
-import { startCheckout, openBillingPortal } from '@/utils/billing';
+import { startCheckout } from '@/utils/billing';
 import Dashboard from './Dashboard';
 import StudentDashboard from './StudentDashboard';
 import ChatInterface from './ChatInterface';
