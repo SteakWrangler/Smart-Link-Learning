@@ -40,12 +40,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   console.log('🟡 AuthProvider: Initial state set - loading:', true, 'isSubscriptionActive:', false);
 
-  const checkSubscription = async () => {
+  const checkSubscription = async (userOverride?: User | null) => {
+    const currentUser = userOverride || user;
     console.log('CHECKSUBSCRIPTION START: Function called');
-    console.log('CHECKSUBSCRIPTION: User check - exists:', !!user);
-    console.log('CHECKSUBSCRIPTION: User email:', user ? user.email : 'NO USER');
+    console.log('CHECKSUBSCRIPTION: User check - exists:', !!currentUser);
+    console.log('CHECKSUBSCRIPTION: User email:', currentUser ? currentUser.email : 'NO USER');
+    console.log('CHECKSUBSCRIPTION: Using userOverride:', !!userOverride);
     
-    if (!user) {
+    if (!currentUser) {
       console.log('CHECKSUBSCRIPTION NO USER: No user found, setting subscription inactive');
       console.log('CHECKSUBSCRIPTION NO USER: About to set isSubscriptionActive to false');
       setIsSubscriptionActive(false);
@@ -55,7 +57,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
-    console.log('CHECKSUBSCRIPTION: User exists, starting subscription check for:', user.email);
+    console.log('CHECKSUBSCRIPTION: User exists, starting subscription check for:', currentUser.email);
     console.log('CHECKSUBSCRIPTION: About to set subscriptionLoading to true');
     setSubscriptionLoading(true);
     console.log('CHECKSUBSCRIPTION: subscriptionLoading set to true');
@@ -126,7 +128,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.log('CHECKSUBSCRIPTION FINAL STATE (after timeout):', {
           isSubscriptionActive,
           subscriptionLoading: false,
-          user: user?.email
+          user: currentUser?.email
         });
       }, 100);
       console.log('CHECKSUBSCRIPTION FINALLY: Timeout set for final state logging');
@@ -237,7 +239,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Check subscription status after profile is loaded
       console.log('FETCHPROFILE: CALLING CHECKSUBSCRIPTION NOW...');
-      await checkSubscription();
+      console.log('FETCHPROFILE: Passing user from session to checkSubscription');
+      await checkSubscription(user);
       console.log('FETCHPROFILE: checkSubscription call completed successfully');
       
       console.log('FETCHPROFILE: About to set loading states...');
