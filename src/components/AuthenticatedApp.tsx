@@ -39,12 +39,23 @@ const AuthenticatedApp: React.FC = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
 
-  // Check for password reset parameters on component mount
+  // Check for password reset and checkout parameters on component mount
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const resetParam = urlParams.get('reset');
+    const checkoutParam = urlParams.get('checkout');
     const accessToken = urlParams.get('access_token');
     const refreshToken = urlParams.get('refresh_token');
+    
+    // Handle checkout success
+    if (checkoutParam === 'success') {
+      toast({
+        title: "Payment Successful!",
+        description: "Your subscription is now active. Welcome to the app!",
+      });
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
     
     if (resetParam === 'true' && accessToken && refreshToken) {
       // Set the session with the tokens from the password reset link

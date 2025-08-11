@@ -11,7 +11,11 @@ export async function startCheckout(priceId: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${session?.access_token ?? ''}`,
     },
-    body: JSON.stringify({ priceId }),
+    body: JSON.stringify({ 
+      priceId,
+      successUrl: `${window.location.origin}?checkout=success`,
+      cancelUrl: `${window.location.origin}?checkout=cancel`
+    }),
   });
   if (!res.ok) throw new Error('Failed to create checkout session');
   const { url } = await res.json();
