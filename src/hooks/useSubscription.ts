@@ -4,37 +4,42 @@ import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client
 export function useSubscription() {
   const [loading, setLoading] = useState(true);
   const [isActive, setIsActive] = useState<boolean>(false);
-  const [authReady, setAuthReady] = useState(false);
-
-  // Wait for auth to be ready
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed in subscription hook:', event, session?.user?.email);
-      setAuthReady(true);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   useEffect(() => {
-    if (!authReady) return; // Wait for auth to be ready
     console.log('useSubscription effect running...');
     let cancelled = false;
+    
     async function load() {
       try {
         console.log('Starting subscription check...');
-        const { data: sessionRes } = await supabase.auth.getSession();
-        const user = sessionRes?.session?.user;
-        console.log('User from session:', user?.email || 'No user');
+        
+        // Wait a bit for auth to initialize, then check multiple times
+        let attempts = 0;
+        let user = null;
+        
+        while (attempts < 5 && !user && !cancelled) {
+          console.log(`Attempt ${attempts + 1} to get user session...`);
+          const { data: sessionRes } = await supabase.auth.getSession();
+          user = sessionRes?.session?.user;
+          
+          if (!user) {
+            console.log('No user yet, waiting...');
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+            attempts++;
+          }
+        }
+        
+        console.log('Final user from session:', user?.email || 'No user');
         
         if (!user) {
-          console.log('No user found, setting inactive');
+          console.log('No user found after retries, setting inactive');
           if (!cancelled) { setIsActive(false); setLoading(false); }
           return;
         }
 
         // Call our check-subscription function that queries Stripe directly
         console.log('Calling check-subscription function...');
+        const { data: sessionRes } = await supabase.auth.getSession(); // Get fresh session
         const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/check-subscription`, {
           method: 'POST',
           headers: {
@@ -71,7 +76,7 @@ export function useSubscription() {
     }
     load();
     return () => { cancelled = true; };
-  }, [authReady]);
+  }, []);
 
   // Function to refresh subscription status (call after successful payment)
   const refresh = async () => {
