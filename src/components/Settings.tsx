@@ -4,7 +4,6 @@ import { Profile } from '@/types/database';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/useAuth';
-import { useSubscription } from '@/hooks/useSubscription';
 import { Button } from '@/components/ui/button';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 import { openBillingPortal } from '@/utils/billing';
@@ -17,8 +16,7 @@ interface SettingsProps {
 
 const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   const { toast } = useToast();
-  const { fetchProfile, setProfile } = useAuth();
-  const { isActive } = useSubscription();
+  const { fetchProfile, setProfile, isSubscriptionActive } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showPasswordChange, setShowPasswordChange] = useState(false);
@@ -529,7 +527,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
           </div>
 
           {/* Billing Management Section */}
-          {isActive && (
+          {isSubscriptionActive && (
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex items-center gap-3 mb-6">
                 <CreditCard className="text-blue-600" size={24} />
