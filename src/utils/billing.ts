@@ -1,7 +1,7 @@
 import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client";
 
-const CHECKOUT_FUNCTION_NAME = 'dynamic-responder';
-const PORTAL_FUNCTION_NAME = 'billing-portal'; // create this function in Supabase and keep this name
+const CHECKOUT_FUNCTION_NAME = 'checkout-session';
+const PORTAL_FUNCTION_NAME = 'billing-portal';
 
 export async function startCheckout(priceId: string) {
   const { data: { session } } = await supabase.auth.getSession();
