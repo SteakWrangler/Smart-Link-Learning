@@ -1,17 +1,31 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client";
 
 export async function startCheckout(priceId: string) {
-  const { data, error } = await supabase.functions.invoke('stripe-create-checkout-session', {
-    body: { priceId },
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/stripe-create-checkout-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify({ priceId }),
   });
-  if (error || !data?.url) throw new Error("Failed to create checkout session");
-  window.location.href = data.url as string;
+  if (!res.ok) throw new Error('Failed to create checkout session');
+  const { url } = await res.json();
+  window.location.href = url as string;
 }
 
 export async function openBillingPortal() {
-  const { data, error } = await supabase.functions.invoke('stripe-create-portal-session', {
-    body: { returnUrl: window.location.origin },
+  const { data: { session } } = await supabase.auth.getSession();
+  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/stripe-create-portal-session`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${session?.access_token ?? ''}`,
+    },
+    body: JSON.stringify({ returnUrl: window.location.origin }),
   });
-  if (error || !data?.url) throw new Error("Failed to create portal session");
-  window.location.href = data.url as string;
+  if (!res.ok) throw new Error('Failed to create portal session');
+  const { url } = await res.json();
+  window.location.href = url as string;
 } 
