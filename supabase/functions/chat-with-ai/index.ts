@@ -1,6 +1,7 @@
 
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
 
@@ -21,6 +22,26 @@ serve(async (req) => {
   }
 
   try {
+    // Enforce authenticated user and active subscription
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } } }
+    );
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+    const { data: sub } = await supabase
+      .from('subscriptions')
+      .select('status, current_period_end')
+      .eq('user_id', user.id)
+      .maybeSingle();
+    const active = sub && ['active','trialing'].includes(sub.status) && new Date(sub.current_period_end) > new Date();
+    if (!active) {
+      return new Response(JSON.stringify({ error: 'Subscription required' }), { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
     if (!openAIApiKey) {
       throw new Error('OpenAI API key not found in environment variables');
     }
@@ -113,11 +134,11 @@ Please provide a shorter but complete version that covers the most important par
     
     let errorMessage = 'I encountered an error while generating a response. Please try again.';
     
-    if (error.message.includes('API key')) {
+    if ((error as Error).message.includes('API key')) {
       errorMessage = 'Please check your OpenAI API key configuration.';
-    } else if (error.message.includes('quota')) {
+    } else if ((error as Error).message.includes('quota')) {
       errorMessage = 'OpenAI API quota exceeded. Please check your billing settings.';
-    } else if (error.message.includes('rate limit')) {
+    } else if ((error as Error).message.includes('rate limit')) {
       errorMessage = 'Rate limit exceeded. Please try again in a moment.';
     }
     
