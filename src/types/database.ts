@@ -7,6 +7,7 @@ export interface Profile {
   is_anonymous_in_forum?: boolean;
   email_notifications?: boolean;
   forum_notifications?: boolean;
+  has_used_trial?: boolean;
   deleted_at?: string;
   created_at: string;
   updated_at: string;

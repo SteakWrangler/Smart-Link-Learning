@@ -20,7 +20,7 @@ import { Lock, Check, X } from 'lucide-react';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
 const AuthenticatedApp: React.FC = () => {
-  const { user, profile, loading, isSubscriptionActive, subscriptionLoading, refreshSubscription } = useAuth();
+  const { user, profile, loading, isSubscriptionActive, subscriptionLoading, isTrialEligible, refreshSubscription } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history' | 'feature-detail'>('welcome');
@@ -325,10 +325,20 @@ const AuthenticatedApp: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
           <h2 className="text-xl font-semibold">Subscription required</h2>
-          <p className="mt-2 text-gray-600">Subscribe to access all features. You can cancel anytime.</p>
+          <p className="mt-2 text-gray-600">
+            {isTrialEligible 
+              ? "Start your free trial today! You can cancel anytime."
+              : "Subscribe to access all features. You can cancel anytime."
+            }
+          </p>
           
           <div className="mt-6">
-            <button className="btn btn-primary" onClick={() => startCheckout('price_1RuktRDMUr1nCqd4cO6UQa6v')}>Start 14‑day free trial</button>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => startCheckout('price_1RuktRDMUr1nCqd4cO6UQa6v')}
+            >
+              {isTrialEligible ? "Start 14‑day free trial" : "Subscribe now"}
+            </button>
           </div>
         </div>
       </div>

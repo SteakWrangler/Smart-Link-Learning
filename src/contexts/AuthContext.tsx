@@ -9,6 +9,7 @@ interface AuthContextType {
   loading: boolean;
   isSubscriptionActive: boolean;
   subscriptionLoading: boolean;
+  isTrialEligible: boolean;
   signOut: () => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   setProfile: (profile: Profile | null) => void;
@@ -161,6 +162,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     loading,
     isSubscriptionActive,
     subscriptionLoading,
+    isTrialEligible: !profile?.has_used_trial && !isSubscriptionActive,
     signOut,
     fetchProfile,
     setProfile,

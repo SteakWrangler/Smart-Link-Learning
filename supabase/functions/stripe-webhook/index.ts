@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
 
         const { data: profile } = await admin
           .from("profiles")
-          .select("id")
+          .select("id, has_used_trial")
           .eq("stripe_customer_id", customerId)
           .single();
 
@@ -63,6 +63,25 @@ Deno.serve(async (req) => {
 
         const { error } = await admin.from("subscriptions").upsert(payload);
         if (error) console.error("Upsert subscription error", error);
+
+        // Mark trial as used when subscription is created or updated with trialing status
+        if ((event.type === "customer.subscription.created" || event.type === "customer.subscription.updated") && 
+            (sub.status === "trialing" || sub.status === "active") && 
+            !profile.has_used_trial) {
+          
+          console.log(`Marking trial as used for user ${profile.id} (subscription ${sub.id})`);
+          
+          const { error: trialUpdateError } = await admin
+            .from("profiles")
+            .update({ has_used_trial: true })
+            .eq("id", profile.id);
+            
+          if (trialUpdateError) {
+            console.error("Failed to mark trial as used:", trialUpdateError);
+          } else {
+            console.log("Successfully marked trial as used");
+          }
+        }
         break;
       }
       case "invoice.payment_failed":

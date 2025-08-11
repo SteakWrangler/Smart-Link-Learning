@@ -33,10 +33,23 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "No Stripe customer" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const { returnUrl } = await req.json().catch(() => ({}));
+    let returnUrl = `${new URL(req.url).origin}/`;
+    
+    try {
+      const body = await req.json();
+      if (body.returnUrl) {
+        returnUrl = body.returnUrl;
+      }
+    } catch (e) {
+      console.log('No JSON body provided, using default return URL');
+    }
+    
+    console.log('Creating billing portal session for customer:', profile.stripe_customer_id);
+    console.log('Return URL:', returnUrl);
+    
     const session = await stripe.billingPortal.sessions.create({
       customer: profile.stripe_customer_id,
-      return_url: returnUrl ?? `${new URL(req.url).origin}/`,
+      return_url: returnUrl,
     });
 
     return new Response(JSON.stringify({ url: session.url }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

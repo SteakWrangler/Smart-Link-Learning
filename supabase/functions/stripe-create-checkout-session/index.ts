@@ -34,10 +34,10 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: "Missing priceId" }), { status: 400, headers: { ...cors, "Content-Type": "application/json" } });
     }
 
-    // Ensure Stripe customer exists
+    // Ensure Stripe customer exists and check trial eligibility
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, email, stripe_customer_id")
+      .select("id, email, stripe_customer_id, has_used_trial")
       .eq("id", user.id)
       .single();
 
@@ -58,20 +58,39 @@ serve(async (req) => {
         .eq("id", user.id);
     }
 
-    // Create Checkout Session with a 14-day trial
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+    // Determine if user is eligible for free trial
+    const isTrialEligible = !profile.has_used_trial;
+    
+    console.log(`Creating checkout session for user ${user.id}:`, {
+      email: profile.email,
+      customerId,
+      hasUsedTrial: profile.has_used_trial,
+      isTrialEligible
+    });
+
+    // Create checkout session configuration
+    const sessionConfig = {
+      mode: "subscription" as const,
       customer: customerId!,
       line_items: [
         { price: priceId, quantity: 1 },
       ],
-      subscription_data: {
-        trial_period_days: 14,
-      },
       allow_promotion_codes: true,
       success_url: successUrl ?? `${new URL(req.url).origin}?checkout=success`,
       cancel_url: cancelUrl ?? `${new URL(req.url).origin}?checkout=cancel`,
-    });
+    };
+
+    // Only add trial for eligible users
+    if (isTrialEligible) {
+      sessionConfig.subscription_data = {
+        trial_period_days: 14,
+      };
+      console.log("Adding 14-day trial to checkout session");
+    } else {
+      console.log("User not eligible for trial - creating immediate subscription");
+    }
+
+    const session = await stripe.checkout.sessions.create(sessionConfig);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...cors, "Content-Type": "application/json" },
