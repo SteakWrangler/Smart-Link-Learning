@@ -22,6 +22,7 @@ import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordV
 
 const AuthenticatedApp: React.FC = () => {
   const { user, profile, loading } = useAuth();
+  const { loading: subLoading, isActive, refresh: refreshSubscription } = useSubscription();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history' | 'feature-detail'>('welcome');
@@ -53,6 +54,8 @@ const AuthenticatedApp: React.FC = () => {
         title: "Payment Successful!",
         description: "Your subscription is now active. Welcome to the app!",
       });
+      // Refresh subscription status to get latest from Stripe
+      refreshSubscription();
       // Clear the URL parameters
       window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -310,7 +313,7 @@ const AuthenticatedApp: React.FC = () => {
     return featureTabMap[featureId] || 'children';
   };
 
-  const { loading: subLoading, isActive } = useSubscription();
+  // Remove this line since we're now getting it above
 
   if (loading) {
     return <div>Loading...</div>;
