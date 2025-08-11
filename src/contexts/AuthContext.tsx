@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, SUPABASE_FUNCTIONS_URL } from '@/integrations/supabase/client';
 import type { User } from '@supabase/supabase-js';
 import type { Profile } from '@/types/database';
 
@@ -7,9 +7,12 @@ interface AuthContextType {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  isSubscriptionActive: boolean;
+  subscriptionLoading: boolean;
   signOut: () => Promise<void>;
   fetchProfile: (userId: string) => Promise<void>;
   setProfile: (profile: Profile | null) => void;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +33,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isSubscriptionActive, setIsSubscriptionActive] = useState(false);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+
+  const checkSubscription = async () => {
+    if (!user) {
+      setIsSubscriptionActive(false);
+      setSubscriptionLoading(false);
+      return;
+    }
+
+    console.log('Checking subscription for user:', user.email);
+    setSubscriptionLoading(true);
+
+    try {
+      const { data: sessionRes } = await supabase.auth.getSession();
+      const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/check-subscription`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${sessionRes.session?.access_token ?? ''}`,
+        },
+      });
+
+      if (res.ok) {
+        const responseData = await res.json();
+        console.log('Subscription check response:', responseData);
+        setIsSubscriptionActive(responseData.isActive);
+      } else {
+        console.error('Subscription check failed:', res.status);
+        setIsSubscriptionActive(false);
+      }
+    } catch (error) {
+      console.error('Subscription check error:', error);
+      setIsSubscriptionActive(false);
+    } finally {
+      setSubscriptionLoading(false);
+    }
+  };
+
+  const refreshSubscription = async () => {
+    await checkSubscription();
+  };
 
   useEffect(() => {
     // Get initial session
@@ -82,6 +127,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Immediately update the profile state
       setProfile(data);
       
+      // Check subscription status after profile is loaded
+      await checkSubscription();
+      
       // Force a re-render by briefly setting loading to true
       setLoading(true);
       setTimeout(() => setLoading(false), 10);
@@ -101,9 +149,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     profile,
     loading,
+    isSubscriptionActive,
+    subscriptionLoading,
     signOut,
     fetchProfile,
     setProfile,
+    refreshSubscription,
   };
 
   return (

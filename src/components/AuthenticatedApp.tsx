@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
-import { useSubscription } from '@/hooks/useSubscription';
 import { startCheckout } from '@/utils/billing';
 import Dashboard from './Dashboard';
 import StudentDashboard from './StudentDashboard';
@@ -21,8 +20,7 @@ import { Lock, Check, X } from 'lucide-react';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
 const AuthenticatedApp: React.FC = () => {
-  const { user, profile, loading } = useAuth();
-  const { loading: subLoading, isActive, refresh: refreshSubscription } = useSubscription();
+  const { user, profile, loading, isSubscriptionActive, subscriptionLoading, refreshSubscription } = useAuth();
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history' | 'feature-detail'>('welcome');
@@ -88,10 +86,10 @@ const AuthenticatedApp: React.FC = () => {
 
   // Auto-redirect active subscribers to dashboard (skip welcome screen)
   useEffect(() => {
-    if (!subLoading && isActive && currentView === 'welcome') {
+    if (!subscriptionLoading && isSubscriptionActive && currentView === 'welcome') {
       setCurrentView('dashboard');
     }
-  }, [subLoading, isActive, currentView]);
+  }, [subscriptionLoading, isSubscriptionActive, currentView]);
 
   useEffect(() => {
     const fetchChildren = async () => {
@@ -326,7 +324,7 @@ const AuthenticatedApp: React.FC = () => {
     return <div>Loading...</div>;
   }
 
-  if (user && !subLoading && !isActive) {
+  if (user && !subscriptionLoading && !isSubscriptionActive) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
@@ -335,7 +333,7 @@ const AuthenticatedApp: React.FC = () => {
           
           {/* Temporary debug info */}
           <div className="mt-4 p-2 bg-gray-100 text-xs text-left">
-            <p>Debug: subLoading={subLoading.toString()}, isActive={isActive.toString()}</p>
+            <p>Debug: subscriptionLoading={subscriptionLoading.toString()}, isSubscriptionActive={isSubscriptionActive.toString()}</p>
             <p>User: {user?.email}</p>
           </div>
           
