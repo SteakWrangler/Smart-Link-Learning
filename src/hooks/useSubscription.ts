@@ -4,8 +4,20 @@ import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client
 export function useSubscription() {
   const [loading, setLoading] = useState(true);
   const [isActive, setIsActive] = useState<boolean>(false);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Wait for auth to be ready
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state changed in subscription hook:', event, session?.user?.email);
+      setAuthReady(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
+    if (!authReady) return; // Wait for auth to be ready
     console.log('useSubscription effect running...');
     let cancelled = false;
     async function load() {
@@ -59,7 +71,7 @@ export function useSubscription() {
     }
     load();
     return () => { cancelled = true; };
-  }, []);
+  }, [authReady]);
 
   // Function to refresh subscription status (call after successful payment)
   const refresh = async () => {
