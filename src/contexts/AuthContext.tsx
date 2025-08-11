@@ -152,7 +152,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         console.log('🟡 AuthProvider: Initial session has user, calling fetchProfile');
-        fetchProfile(session.user.id);
+        fetchProfile(session.user.id, session.user);
       } else {
         console.log('🟡 AuthProvider: No initial session, setting loading to false');
         setLoading(false);
@@ -171,7 +171,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         
         if (session?.user) {
           console.log('🟢 AUTH STATE CHANGE: User exists, calling fetchProfile with ID:', session.user.id);
-          fetchProfile(session.user.id);
+          fetchProfile(session.user.id, session.user);
         } else {
           console.log('🟢 AUTH STATE CHANGE: No user, clearing all data');
           setProfile(null);
@@ -187,7 +187,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
   }, []);
 
-  const fetchProfile = async (userId: string) => {
+  const fetchProfile = async (userId: string, sessionUser?: User | null) => {
     console.log('FETCHPROFILE START: Called with userId:', userId);
     console.log('FETCHPROFILE: About to enter try block');
     try {
@@ -239,8 +239,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       // Check subscription status after profile is loaded
       console.log('FETCHPROFILE: CALLING CHECKSUBSCRIPTION NOW...');
-      console.log('FETCHPROFILE: Passing user from session to checkSubscription');
-      await checkSubscription(user);
+      console.log('FETCHPROFILE: Passing sessionUser to checkSubscription:', sessionUser?.email || 'NO SESSION USER');
+      await checkSubscription(sessionUser || user);
       console.log('FETCHPROFILE: checkSubscription call completed successfully');
       
       console.log('FETCHPROFILE: About to set loading states...');
