@@ -325,6 +325,12 @@ const AuthenticatedApp: React.FC = () => {
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
           <h2 className="text-xl font-semibold">Subscription required</h2>
           <p className="mt-2 text-gray-600">Subscribe to access all features. You can cancel anytime.</p>
+          
+          {/* Debug info - remove this after testing */}
+          <div className="mt-4 p-2 bg-gray-100 text-xs text-left">
+            <p>Debug: subLoading={subLoading.toString()}, isActive={isActive.toString()}</p>
+          </div>
+          
           <div className="mt-6">
             <button className="btn btn-primary" onClick={() => startCheckout('price_1RuktRDMUr1nCqd4cO6UQa6v')}>Start 14‑day free trial</button>
           </div>

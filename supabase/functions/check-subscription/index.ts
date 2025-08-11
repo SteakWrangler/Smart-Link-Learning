@@ -25,6 +25,8 @@ Deno.serve(async (req) => {
     );
 
     const { data: { user }, error: userError } = await supabase.auth.getUser();
+    console.log("User check:", { user: user?.id, error: userError });
+    
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -33,37 +35,58 @@ Deno.serve(async (req) => {
     }
 
     // Get user's profile with Stripe customer ID
-    const { data: profile } = await supabase
+    const { data: profile, error: profileError } = await supabase
       .from("profiles")
       .select("stripe_customer_id")
       .eq("id", user.id)
       .single();
 
+    console.log("Profile check:", { profile, error: profileError });
+
     if (!profile?.stripe_customer_id) {
+      console.log("No stripe_customer_id found for user");
       return new Response(JSON.stringify({ 
         isActive: false, 
-        status: "no_customer" 
+        status: "no_customer",
+        debug: "User has no stripe_customer_id in profile"
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" }
       });
     }
 
     // Check Stripe for active subscriptions
+    console.log("Checking Stripe for customer:", profile.stripe_customer_id);
+    
     const subscriptions = await stripe.subscriptions.list({
       customer: profile.stripe_customer_id,
       status: "all",
-      limit: 1,
+      limit: 10,
     });
+
+    console.log("Stripe subscriptions found:", subscriptions.data.length);
+    console.log("Subscription details:", subscriptions.data.map(sub => ({
+      id: sub.id,
+      status: sub.status,
+      current_period_end: sub.current_period_end,
+      current_period_end_date: new Date(sub.current_period_end * 1000).toISOString()
+    })));
 
     const activeSubscription = subscriptions.data.find(sub => 
       ["active", "trialing"].includes(sub.status) && 
       new Date(sub.current_period_end * 1000) > new Date()
     );
 
+    console.log("Active subscription found:", !!activeSubscription);
+
     return new Response(JSON.stringify({
       isActive: !!activeSubscription,
       status: activeSubscription?.status || "inactive",
-      currentPeriodEnd: activeSubscription ? new Date(activeSubscription.current_period_end * 1000).toISOString() : null
+      currentPeriodEnd: activeSubscription ? new Date(activeSubscription.current_period_end * 1000).toISOString() : null,
+      debug: {
+        customerId: profile.stripe_customer_id,
+        totalSubscriptions: subscriptions.data.length,
+        subscriptionStatuses: subscriptions.data.map(s => s.status)
+      }
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" }
     });
