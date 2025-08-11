@@ -541,7 +541,18 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
               </div>
               
               <Button
-                onClick={() => openBillingPortal()}
+                onClick={async () => {
+                  try {
+                    await openBillingPortal();
+                  } catch (error) {
+                    console.error('Failed to open billing portal:', error);
+                    toast({
+                      title: "Error",
+                      description: "Failed to open billing portal. Please try again or contact support.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
                 variant="outline"
                 className="w-full justify-start"
               >
