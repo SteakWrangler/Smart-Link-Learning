@@ -1,8 +1,11 @@
 import { supabase, SUPABASE_FUNCTIONS_URL } from "@/integrations/supabase/client";
 
+const CHECKOUT_FUNCTION_NAME = 'dynamic-responder';
+const PORTAL_FUNCTION_NAME = 'billing-portal'; // create this function in Supabase and keep this name
+
 export async function startCheckout(priceId: string) {
   const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/stripe-create-checkout-session`, {
+  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/${CHECKOUT_FUNCTION_NAME}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -17,7 +20,7 @@ export async function startCheckout(priceId: string) {
 
 export async function openBillingPortal() {
   const { data: { session } } = await supabase.auth.getSession();
-  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/stripe-create-portal-session`, {
+  const res = await fetch(`${SUPABASE_FUNCTIONS_URL}/${PORTAL_FUNCTION_NAME}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

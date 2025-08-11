@@ -7,6 +7,8 @@ const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY")!, { apiVersion: "202
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Credentials": "false",
 };
 
 serve(async (req) => {
