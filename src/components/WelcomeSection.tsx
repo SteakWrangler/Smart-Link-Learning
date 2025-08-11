@@ -85,27 +85,50 @@ const WelcomeSection: React.FC<WelcomeSectionProps> = ({
       </div>
 
       {/* Hero Section - Now More Prominent */}
-      <div className="text-center space-y-6 max-w-4xl mx-auto">
+      <div className="text-center space-y-8 max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-5xl font-bold text-gray-800 leading-tight">
           Welcome to Smart Link Learning
         </h1>
-        <div className="space-y-4 text-lg sm:text-xl text-gray-700 leading-relaxed">
-          <p>
-            Unlock the full potential of AI-powered education with lightning-fast content generation that adapts to any number of students.
+        
+        <div className="space-y-6">
+          <p className="text-lg sm:text-xl text-gray-700 leading-relaxed">
+            Unlock the power of our specialized educational AI that adapts instantly to each learner.<br />
+            Whether you're a parent, teacher, or tutor — you tell us what your student needs, and we'll build it from there.
           </p>
-          <p>
-            Our platform serves teachers, parents, and tutors with personalized learning plans, worksheets, activities, and ongoing guidance - all created in seconds based on your input.
-          </p>
-          <p>
-            <strong className="text-blue-600">Beyond Standard AI:</strong> Our advanced educational prompting techniques deliver results specifically optimized for learning, making every interaction more effective than generic AI chatbots.
-          </p>
-          <p>
-            Every student gets unique, high-quality educational content that adapts to their specific needs, learning style, and pace.
-          </p>
-          <p>
-            Experience education where speed meets personalization, and every learner receives the guidance they need to thrive.
-          </p>
+
+          <div className="space-y-6 text-left max-w-3xl mx-auto">
+            <h2 className="text-xl sm:text-2xl font-semibold text-gray-800 text-center">
+              Why You'll Love It:
+            </h2>
+            
+            <div className="space-y-6">
+              <div className="flex items-start space-x-4">
+                <div className="text-2xl">🧠</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Instant Personalized Learning</h3>
+                  <p className="text-gray-700">Our AI adapts to individual levels, learning styles, and goals based on your input, with complete results provided in seconds.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="text-2xl">⚡</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Broad and Deep Content Generation</h3>
+                  <p className="text-gray-700">No more searching for high-quality resources! Our AI provides instant top-of-the-line resources for every educator's needs - lesson plans and supports, targeted intervention skills, ideas to gamify learning, and so much more. Just ask for what you need - the possibilities are limitless.</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-4">
+                <div className="text-2xl">🎯</div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Support for All Learners</h3>
+                  <p className="text-gray-700">From struggling learners to advanced thinkers—every student's needs are covered.</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
+
         <Button 
           onClick={onGetStarted}
           size="lg" 
