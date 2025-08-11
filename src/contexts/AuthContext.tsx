@@ -90,12 +90,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('Auth state changed in AuthContext:', event, session?.user?.email);
         setUser(session?.user ?? null);
         if (session?.user) {
+          console.log('User signed in, fetching profile...');
           fetchProfile(session.user.id);
         } else {
+          console.log('User signed out, clearing data...');
           setProfile(null);
+          setIsSubscriptionActive(false);
           setLoading(false);
         }
       }
@@ -105,6 +108,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const fetchProfile = async (userId: string) => {
+    console.log('fetchProfile called for userId:', userId);
     try {
       const { data, error } = await supabase
         .from('profiles')
