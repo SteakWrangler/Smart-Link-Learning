@@ -79,6 +79,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return;
     }
 
+    // Keep loading true during the entire process
     setLoading(true);
     
     try {
@@ -101,16 +102,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       setProfile(profileData);
 
-      // Check subscription
+      // Check subscription and wait for it to complete
       await checkSubscription(user);
       
     } catch (error) {
       console.error('Error in handleUserAuth:', error);
       setProfile(null);
       setIsSubscriptionActive(false);
-    } finally {
-      setLoading(false);
     }
+    
+    // Only set loading to false after everything is complete
+    setLoading(false);
   };
 
   useEffect(() => {

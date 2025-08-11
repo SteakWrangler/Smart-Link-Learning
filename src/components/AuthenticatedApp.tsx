@@ -20,17 +20,7 @@ import { Lock, Check, X } from 'lucide-react';
 import { validatePassword, getPasswordRequirementsList } from '@/utils/passwordValidation';
 
 const AuthenticatedApp: React.FC = () => {
-  console.log('🟣 AuthenticatedApp: Component rendering');
-  
   const { user, profile, loading, isSubscriptionActive, subscriptionLoading, refreshSubscription } = useAuth();
-  
-  console.log('🟣 AuthenticatedApp: Auth values received:', {
-    user: user ? user.email : 'null',
-    profile: profile ? 'exists' : 'null',
-    loading,
-    isSubscriptionActive,
-    subscriptionLoading
-  });
   const [children, setChildren] = useState<Child[]>([]);
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
   const [currentView, setCurrentView] = useState<'welcome' | 'dashboard' | 'category-selector' | 'chat' | 'conversation-history' | 'feature-detail'>('welcome');
@@ -58,19 +48,11 @@ const AuthenticatedApp: React.FC = () => {
     
     // Handle checkout success
     if (checkoutParam === 'success') {
-      console.log('CHECKOUT SUCCESS DETECTED! Processing payment success...');
       toast({
         title: "Payment Successful!",
         description: "Your subscription is now active. Welcome to the app!",
       });
-      // Refresh subscription status to get latest from Stripe
-      console.log('CHECKOUT SUCCESS: About to call refreshSubscription...');
-      refreshSubscription().then(() => {
-        console.log('CHECKOUT SUCCESS: refreshSubscription completed');
-      }).catch(error => {
-        console.log('CHECKOUT SUCCESS: refreshSubscription failed:', error);
-      });
-      // Clear the URL parameters
+      refreshSubscription();
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
@@ -102,31 +84,16 @@ const AuthenticatedApp: React.FC = () => {
 
   // Auto-redirect active subscribers to dashboard (skip welcome screen)
   useEffect(() => {
-    console.log('🟣 AuthenticatedApp: Auto-redirect useEffect triggered');
-    console.log('🟣 AuthenticatedApp: Auto-redirect conditions:', {
-      subscriptionLoading,
-      isSubscriptionActive,
-      currentView,
-      shouldRedirect: !subscriptionLoading && isSubscriptionActive && currentView === 'welcome'
-    });
-    
     if (!subscriptionLoading && isSubscriptionActive && currentView === 'welcome') {
-      console.log('🟢 AuthenticatedApp: Auto-redirecting active subscriber to dashboard');
       setCurrentView('dashboard');
     }
   }, [subscriptionLoading, isSubscriptionActive, currentView]);
 
   useEffect(() => {
-    console.log('🟣 AuthenticatedApp: fetchChildren useEffect triggered');
-    console.log('🟣 AuthenticatedApp: Profile for fetchChildren:', profile ? `ID: ${profile.id}` : 'null');
-    
     const fetchChildren = async () => {
       if (!profile?.id) {
-        console.log('🔴 AuthenticatedApp: No profile ID available for fetchChildren');
         return;
       }
-      
-      console.log('🟣 AuthenticatedApp: Starting fetchChildren for profile:', profile.id);
 
       try {
         let query = supabase
@@ -148,8 +115,6 @@ const AuthenticatedApp: React.FC = () => {
         }
 
         if (childrenData) {
-          console.log('🟣 AuthenticatedApp: fetchChildren got data:', childrenData.length, 'children');
-          // Transform database children to match Child type
           const transformedChildren: Child[] = childrenData.map(dbChild => ({
             id: dbChild.id,
             name: dbChild.name,
@@ -159,9 +124,7 @@ const AuthenticatedApp: React.FC = () => {
             createdAt: new Date(dbChild.created_at)
           }));
           setChildren(transformedChildren);
-          console.log('🟣 AuthenticatedApp: Set children state with', transformedChildren.length, 'children');
         } else {
-          console.log('🟣 AuthenticatedApp: No children data returned, setting empty array');
           setChildren([]);
         }
       } catch (error) {
@@ -175,10 +138,7 @@ const AuthenticatedApp: React.FC = () => {
     };
 
     if (profile?.user_type === 'parent') {
-      console.log('🟣 AuthenticatedApp: Profile is parent, calling fetchChildren');
       fetchChildren();
-    } else {
-      console.log('🟣 AuthenticatedApp: Profile is not parent or no profile, skipping fetchChildren');
     }
   }, [profile]);
 
@@ -356,40 +316,16 @@ const AuthenticatedApp: React.FC = () => {
 
   // Remove this line since we're now getting it above
 
-  console.log('🟣 AuthenticatedApp: Checking loading state:', loading);
   if (loading) {
-    console.log('🟡 AuthenticatedApp: Rendering loading state');
     return <div>Loading...</div>;
   }
 
-  console.log('AUTHENTICATED APP: Checking subscription gate condition:', {
-    hasUser: !!user,
-    userEmail: user?.email,
-    subscriptionLoading,
-    isSubscriptionActive,
-    shouldShowGate: user && !subscriptionLoading && !isSubscriptionActive,
-    timestamp: new Date().toISOString()
-  });
-  
   if (user && !subscriptionLoading && !isSubscriptionActive) {
-    console.log('AUTHENTICATED APP: SHOWING PAYWALL - user has no active subscription');
-    console.log('AUTHENTICATED APP: Final gate check values:', {
-      user: !!user,
-      subscriptionLoading,
-      isSubscriptionActive,
-      userEmail: user?.email
-    });
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
           <h2 className="text-xl font-semibold">Subscription required</h2>
           <p className="mt-2 text-gray-600">Subscribe to access all features. You can cancel anytime.</p>
-          
-          {/* Temporary debug info */}
-          <div className="mt-4 p-2 bg-gray-100 text-xs text-left">
-            <p>Debug: subscriptionLoading={subscriptionLoading.toString()}, isSubscriptionActive={isSubscriptionActive.toString()}</p>
-            <p>User: {user?.email}</p>
-          </div>
           
           <div className="mt-6">
             <button className="btn btn-primary" onClick={() => startCheckout('price_1RuktRDMUr1nCqd4cO6UQa6v')}>Start 14‑day free trial</button>
@@ -399,15 +335,8 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  console.log('🟣 AuthenticatedApp: Checking auth screen condition:', {
-    hasUser: !!user,
-    showAuth,
-    shouldShowAuth: !user && showAuth
-  });
-  
   // Show auth screen if user is not authenticated and showAuth is true
   if (!user && showAuth) {
-    console.log('🟡 AuthenticatedApp: Rendering auth screen');
     return <Auth 
       onAuthSuccess={() => {
         setShowAuth(false);
@@ -426,14 +355,8 @@ const AuthenticatedApp: React.FC = () => {
     />;
   }
 
-  console.log('🟣 AuthenticatedApp: Checking feature detail condition:', {
-    currentView,
-    shouldShowFeature: currentView === 'feature-detail'
-  });
-  
   // Show feature detail screen
   if (currentView === 'feature-detail') {
-    console.log('🟡 AuthenticatedApp: Rendering feature detail screen');
     return (
       <FeatureDetail
         featureId={selectedFeature}
@@ -451,14 +374,8 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  console.log('🟣 AuthenticatedApp: Checking welcome screen condition:', {
-    currentView,
-    shouldShowWelcome: currentView === 'welcome'
-  });
-  
   // Show welcome screen for all users (authenticated and unauthenticated)
   if (currentView === 'welcome') {
-    console.log('🟡 AuthenticatedApp: Rendering welcome screen');
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4 sm:p-6">
         <div className="max-w-6xl mx-auto w-full">
@@ -482,13 +399,7 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  console.log('🟣 AuthenticatedApp: Checking parent interface condition:', {
-    profileType: profile?.user_type,
-    shouldShowParent: profile?.user_type === 'parent'
-  });
-  
   if (profile?.user_type === 'parent') {
-    console.log('🟡 AuthenticatedApp: Rendering parent interface');
     return (
       <>
         {currentView === 'dashboard' && (
@@ -531,20 +442,12 @@ const AuthenticatedApp: React.FC = () => {
     );
   }
 
-  console.log('🟣 AuthenticatedApp: Checking student interface condition:', {
-    profileType: profile?.user_type,
-    shouldShowStudent: profile?.user_type === 'student'
-  });
-  
   if (profile?.user_type === 'student') {
-    console.log('🟡 AuthenticatedApp: Rendering student interface');
     return (
       <StudentDashboard onBack={() => {}} />
     );
   }
 
-  console.log('🔴 AuthenticatedApp: Rendering fallback authenticated app (this should not happen)');
-  
   return (
     <>
       <div>Authenticated App</div>
