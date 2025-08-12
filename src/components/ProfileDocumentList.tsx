@@ -58,6 +58,8 @@ const ProfileDocumentList: React.FC<ProfileDocumentListProps> = ({
       // Transform the data to include conversation details
       const documentsWithConversations: DocumentWithConversation[] = (data || []).map(doc => ({
         ...doc,
+        document_type: doc.document_type as "failed_test" | "study_guide" | "homework" | "other",
+        processing_status: doc.processing_status as "pending" | "processing" | "completed" | "failed",
         conversation_title: (doc.conversation_documents as any)?.[0]?.conversations?.title,
         conversation_id: (doc.conversation_documents as any)?.[0]?.conversations?.id,
       }));

@@ -39,8 +39,6 @@ interface ForumPost {
   content: string;
   author_id: string;
   author_name?: string;
-  view_count: number;
-  reply_count: number;
   created_at: string;
   updated_at: string;
   is_edited: boolean;
@@ -344,9 +342,7 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         
         return {
           ...post,
-          author_name: authorName,
-          view_count: post.view_count || 0,
-          reply_count: post.reply_count || 0
+          author_name: authorName
         };
       });
 
@@ -456,8 +452,6 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         content: newPost.content,
         author_id: newPost.author_id,
         author_name: authorName,
-        view_count: 0,
-        reply_count: 0,
         created_at: newPost.created_at,
         updated_at: newPost.updated_at,
         is_edited: newPost.is_edited
@@ -465,28 +459,6 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
       
       // Add the post to the current posts list
       setPosts(prevPosts => [...prevPosts, formattedPost]);
-      
-      // If this is a reply to a specific post, update the parent post's reply count
-      if (replyingToPost) {
-        const newReplyCount = replyingToPost.reply_count + 1;
-        
-        // Update database
-        await (supabase as any)
-          .from('forum_posts')
-          .update({ 
-            reply_count: newReplyCount
-          })
-          .eq('id', replyingToPost.id);
-        
-        // Update local state
-        setPosts(prevPosts => 
-          prevPosts.map(p => 
-            p.id === replyingToPost.id 
-              ? { ...p, reply_count: newReplyCount }
-              : p
-          )
-        );
-      }
       
       // Clear the form and replying state
       setNewPostContent('');
@@ -721,32 +693,6 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
         description: "Failed to delete post. Please try again.",
         variant: "destructive",
       });
-    }
-  };
-
-  const handlePostView = async (post: ForumPost) => {
-    try {
-      const newViewCount = post.view_count + 1;
-      
-      // Update database
-      await (supabase as any)
-        .from('forum_posts')
-        .update({ 
-          view_count: newViewCount
-        })
-        .eq('id', post.id);
-      
-      // Update local state
-      setPosts(prevPosts => 
-        prevPosts.map(p => 
-          p.id === post.id 
-            ? { ...p, view_count: newViewCount }
-            : p
-        )
-      );
-      
-    } catch (error) {
-      console.error('Error updating post view count:', error);
     }
   };
 
@@ -1062,26 +1008,13 @@ const CommunityForum: React.FC<CommunityForumProps> = ({ onClose, initialCategor
                       <p className="text-gray-700 whitespace-pre-wrap">{post.content}</p>
                     </div>
                     
-                    {/* Post stats and actions */}
+                    {/* Post actions */}
                     <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200">
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <Eye size={12} />
-                          {post.view_count} views
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MessageSquare size={12} />
-                          {post.reply_count} replies
-                        </span>
+                      <div className="text-xs text-gray-500">
+                        Posted {formatTimeAgo(post.created_at)}
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handlePostView(post)}
-                          className="text-xs text-blue-500 hover:text-blue-700 transition-colors"
-                        >
-                          View
-                        </button>
                         <button
                           onClick={() => handleReplyToPost(post)}
                           className="text-xs text-green-500 hover:text-green-700 transition-colors"

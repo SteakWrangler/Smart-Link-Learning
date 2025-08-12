@@ -5,6 +5,8 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://pvkrrwxgezxtmnxgpxhw.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2a3Jyd3hnZXp4dG1ueGdweGh3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk0ODg1OTEsImV4cCI6MjA2NTA2NDU5MX0.uoQZYi7zlMXY6QIAZ8FKvYCHV5uIzzOODUl2YKXf75E";
 
+export const SUPABASE_FUNCTIONS_URL = SUPABASE_URL.replace('.supabase.co', '.functions.supabase.co');
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

@@ -117,7 +117,15 @@ const ConversationHistory: React.FC<ConversationHistoryProps> = ({
           isFavorite: conv.is_favorite || false,
           documents: documents.map((doc: any) => ({
             id: doc.id,
+            documentId: doc.id,
             fileName: doc.file_name,
+            fileType: doc.file_type || 'unknown',
+            documentType: doc.document_type || 'other',
+            description: doc.description,
+            subject: doc.subject,
+            extractedContent: doc.extracted_content,
+            aiAnalysis: doc.ai_analysis,
+            createdAt: new Date(doc.created_at),
             conversationId: conv.id
           }))
         };

@@ -11,7 +11,7 @@ interface AuthContextType {
   subscriptionLoading: boolean;
   isTrialEligible: boolean;
   signOut: () => Promise<void>;
-  fetchProfile: (userId: string) => Promise<void>;
+  fetchProfile: (userId: string) => Promise<Profile | null>;
   setProfile: (profile: Profile | null) => void;
   refreshSubscription: () => Promise<void>;
 }
