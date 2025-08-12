@@ -500,9 +500,11 @@ export type Database = {
           email_notifications: boolean | null
           first_name: string | null
           forum_notifications: boolean | null
+          has_used_trial: boolean | null
           id: string
           is_anonymous_in_forum: boolean | null
           last_name: string | null
+          stripe_customer_id: string | null
           updated_at: string
           user_type: string
           username: string | null
@@ -514,9 +516,11 @@ export type Database = {
           email_notifications?: boolean | null
           first_name?: string | null
           forum_notifications?: boolean | null
+          has_used_trial?: boolean | null
           id: string
           is_anonymous_in_forum?: boolean | null
           last_name?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
           user_type: string
           username?: string | null
@@ -528,9 +532,11 @@ export type Database = {
           email_notifications?: boolean | null
           first_name?: string | null
           forum_notifications?: boolean | null
+          has_used_trial?: boolean | null
           id?: string
           is_anonymous_in_forum?: boolean | null
           last_name?: string | null
+          stripe_customer_id?: string | null
           updated_at?: string
           user_type?: string
           username?: string | null
@@ -554,6 +560,53 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          created_at: string
+          current_period_end: string
+          customer_id: string
+          id: string
+          price_id: string
+          product_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end: string
+          customer_id: string
+          id: string
+          price_id: string
+          product_id: string
+          status: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          created_at?: string
+          current_period_end?: string
+          customer_id?: string
+          id?: string
+          price_id?: string
+          product_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_settings: {
         Row: {
