@@ -320,7 +320,7 @@ const AuthenticatedApp: React.FC = () => {
     return <div>Loading...</div>;
   }
 
-  if (user && !subscriptionLoading && !isSubscriptionActive) {
+  if (user && !subscriptionLoading && !isSubscriptionActive && user.email !== 'linksmarttechllc@gmail.com') {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
