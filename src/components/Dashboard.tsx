@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users, HelpCircle, Settings as SettingsIcon } from 'lucide-react';
+import { Plus, MessageSquare, Star, LifeBuoy, ArrowLeft, FileText, X, Users, HelpCircle, Settings as SettingsIcon, BookOpen } from 'lucide-react';
 import { Child, SavedConversation } from '../types';
 import { Child as DatabaseChild } from '../types/database';
 import ChildProfile from './ChildProfile';
@@ -13,6 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import UserDisplay from './UserDisplay';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface DashboardProps {
   onBack: () => void;
@@ -27,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
   const [showAddChild, setShowAddChild] = useState(false);
   const [editingChild, setEditingChild] = useState<Child | undefined>();
   const [selectedChild, setSelectedChild] = useState<Child | null>(null);
-  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'support' | 'faq' | 'settings'>('children');
+  const [activeTab, setActiveTab] = useState<'children' | 'conversations' | 'support' | 'tips' | 'faq' | 'settings'>('children');
   const [showChat, setShowChat] = useState(false);
   const [loading, setLoading] = useState(true);
   const [deleteConfirmChild, setDeleteConfirmChild] = useState<string | null>(null);
@@ -42,11 +43,12 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
   } | null>(null);
   const [showChatInterface, setShowChatInterface] = useState(false);
   const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
+  const [selectedTipCategory, setSelectedTipCategory] = useState<string>('ai-basics');
 
   // Set initial tab if provided
   useEffect(() => {
-    if (initialTab && ['children', 'conversations', 'support', 'faq', 'settings'].includes(initialTab)) {
-      setActiveTab(initialTab as 'children' | 'conversations' | 'support' | 'faq' | 'settings');
+    if (initialTab && ['children', 'conversations', 'support', 'tips', 'faq', 'settings'].includes(initialTab)) {
+      setActiveTab(initialTab as 'children' | 'conversations' | 'support' | 'tips' | 'faq' | 'settings');
     }
   }, [initialTab]);
 
@@ -417,6 +419,115 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
   const getChildrenChallenges = (): string[] => {
     const allChallenges = children.flatMap(child => child.challenges || []);
     return [...new Set(allChallenges)]; // Remove duplicates
+  };
+
+  // Tips content structure
+  const getTipsContent = () => {
+    return {
+      'ai-basics': {
+        title: 'AI Conversation Basics',
+        description: 'Learn how to communicate effectively with AI to get the best results for your student.',
+        tips: [
+          {
+            title: 'Think of AI as a Very Capable Assistant',
+            content: 'The AI wants to help, but it needs clear instructions. Like giving directions to someone who\'s never been to your house - the more specific you are, the better it can help.',
+            example: 'Instead of "help with math," try "create 5 multiplication word problems for my 8-year-old who loves dinosaurs."'
+          },
+          {
+            title: 'Each Conversation Starts Fresh',
+            content: 'Important: Our AI doesn\'t remember previous conversations. If you worked on fractions yesterday and start a new chat about reading today, it won\'t remember the fractions work.',
+            example: 'Use "Continue Conversation" from your history to pick up where you left off, or give context like "We\'ve been working on 3rd grade fractions."'
+          },
+          {
+            title: 'More Context = Better Results',
+            content: 'Tell the AI about your student, what you\'re working on, and what\'s working or not working. Don\'t assume it knows what you mean.',
+            example: 'Instead of "make it easier," try "Sarah gets frustrated with word problems, can you make some that are more straightforward?"'
+          },
+          {
+            title: 'It\'s Okay to Correct and Refine',
+            content: 'If the AI\'s response isn\'t quite right, just tell it! AI learns from your feedback within the conversation.',
+            example: 'Say things like "That\'s too advanced, can you make it simpler?" or "That\'s not quite right, I meant something more like..."'
+          },
+          {
+            title: 'When Conversations Get Long, Start Fresh',
+            content: 'After very long conversations (20+ back-and-forth exchanges), the AI may give less relevant responses. Starting a new conversation can help.',
+            example: 'If you notice responses getting off-track, start a new conversation and give a summary: "We\'ve been working on addition with regrouping..."'
+          }
+        ]
+      },
+      'better-results': {
+        title: 'Getting Better Results',
+        description: 'Advanced techniques to get exactly what you need for your student\'s learning.',
+        tips: [
+          {
+            title: 'Be Specific About What You Want',
+            content: 'The more specific you are, the better the AI can tailor its response to your needs.',
+            example: 'Instead of "reading help," try "create a short story about friendship for a 2nd grader who\'s working on reading comprehension."'
+          },
+          {
+            title: 'Use Examples to Guide the AI',
+            content: 'If something worked well before, tell the AI! It can create similar content.',
+            example: '"I loved how you explained fractions using pizza slices last time. Can you do something similar for decimals using money?"'
+          },
+          {
+            title: 'Tell the AI About Your Student\'s Personality',
+            content: 'Your student profile helps, but adding personality details in your conversation makes responses even better.',
+            example: '"Emma gets frustrated easily, so can you make this encouraging?" or "Jake loves jokes, can you add some humor to this math worksheet?"'
+          },
+          {
+            title: 'What We Can and Can\'t Do',
+            content: 'We can create text-based content, worksheets, games, and stories. We can\'t generate images or browse the current internet.',
+            example: 'We can describe a drawing activity in detail or suggest free online tools for images, but we can\'t create the images ourselves.'
+          },
+          {
+            title: 'Ask for Different Formats',
+            content: 'The same concept can be presented as a worksheet, game, story, or hands-on activity. Just ask!',
+            example: '"Can you turn this multiplication practice into a game?" or "Can you make this into a story instead of a worksheet?"'
+          },
+          {
+            title: 'How Student Profiles Help',
+            content: 'When you create a student profile, our AI automatically adapts to their age, subjects, and challenges - but you can always add more context.',
+            example: 'The AI knows your child has ADHD from their profile, but you might add "Sarah\'s having a particularly hard time focusing today."'
+          }
+        ]
+      },
+      'platform-tips': {
+        title: 'Platform Best Practices',
+        description: 'Make the most of our site features to streamline your teaching.',
+        tips: [
+          {
+            title: 'Why Separate Students Matter',
+            content: 'Each student profile helps the AI personalize responses for that specific child\'s age, subjects, and learning challenges.',
+            example: 'Create separate profiles for each of your children, even if they\'re close in age - their learning styles and challenges are unique.'
+          },
+          {
+            title: 'One Chat Per Subject Works Better',
+            content: 'Mixing subjects in one conversation can confuse the AI\'s context. Keep math separate from reading, etc.',
+            example: 'Start a "Math - Fractions" chat and a separate "Reading Comprehension" chat rather than jumping between subjects.'
+          },
+          {
+            title: 'How Conversation History Works',
+            content: 'Saved conversations remember everything from that specific chat. Use them to build on previous work rather than starting over.',
+            example: 'If you\'ve been working through a multiplication unit, continue that conversation rather than starting fresh each day.'
+          },
+          {
+            title: 'What Carries Over vs. What Doesn\'t',
+            content: 'Student profiles (age, subjects, challenges) carry over to all conversations. Specific lesson content only stays in that conversation.',
+            example: 'The AI will always know your child is in 3rd grade and has dyslexia, but won\'t remember the specific story you read yesterday unless you continue that conversation.'
+          },
+          {
+            title: 'When to Start New vs. Continue Conversations',
+            content: 'Continue conversations for ongoing projects. Start new ones for different topics or when conversations get very long.',
+            example: 'Continue: building on yesterday\'s math lesson. Start new: switching from math to science, or after 20+ exchanges.'
+          },
+          {
+            title: 'Why Responses Take a Moment',
+            content: 'Our AI takes time to personalize responses based on your student\'s profile and create quality educational content.',
+            example: 'A few extra seconds of processing time means more thoughtful, personalized learning materials for your child.'
+          }
+        ]
+      }
+    };
   };
 
   // Comprehensive resource database with multiple sources for each topic
@@ -994,6 +1105,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
               <span className="sm:hidden">Support</span>
             </button>
             <button
+              onClick={() => setActiveTab('tips')}
+              className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
+                activeTab === 'tips'
+                  ? 'bg-blue-500 text-white'
+                  : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+              }`}
+            >
+              <BookOpen size={14} className="inline mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Tips & Guides</span>
+              <span className="sm:hidden">Tips</span>
+            </button>
+            <button
               onClick={() => setActiveTab('faq')}
               className={`px-2 sm:px-4 py-2 rounded-lg font-medium transition-colors text-sm sm:text-base ${
                 activeTab === 'faq'
@@ -1088,6 +1211,59 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
             onBack={() => setActiveTab('children')}
             profile={profile}
           />
+        )}
+
+        {activeTab === 'tips' && (
+          <div className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-4">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">Tips & Guides</h2>
+                <p className="text-gray-600 text-sm sm:text-base">Learn how to get the best results from AI and make the most of our platform</p>
+              </div>
+              <div className="w-full sm:w-64">
+                <Select value={selectedTipCategory} onValueChange={setSelectedTipCategory}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a guide" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ai-basics">AI Conversation Basics</SelectItem>
+                    <SelectItem value="better-results">Getting Better Results</SelectItem>
+                    <SelectItem value="platform-tips">Platform Best Practices</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {(() => {
+              const tipsContent = getTipsContent();
+              const selectedContent = tipsContent[selectedTipCategory as keyof typeof tipsContent];
+              
+              if (!selectedContent) return null;
+
+              return (
+                <div>
+                  <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+                    <h3 className="text-lg font-semibold text-blue-800 mb-2">{selectedContent.title}</h3>
+                    <p className="text-blue-700 text-sm sm:text-base">{selectedContent.description}</p>
+                  </div>
+
+                  <div className="space-y-6">
+                    {selectedContent.tips.map((tip, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 sm:p-6 hover:bg-gray-50 transition-colors">
+                        <h4 className="font-semibold text-gray-800 mb-3 text-base sm:text-lg">{tip.title}</h4>
+                        <p className="text-gray-600 mb-3 text-sm sm:text-base leading-relaxed">{tip.content}</p>
+                        <div className="bg-green-50 border-l-4 border-green-400 p-3 rounded-r-lg">
+                          <p className="text-green-800 text-sm sm:text-base">
+                            <span className="font-medium">Example: </span>{tip.example}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
         )}
 
         {activeTab === 'support' && (
