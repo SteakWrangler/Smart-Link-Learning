@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, Users, Brain, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface CategorySelectorProps {
   selectedCategories: {
@@ -27,12 +28,21 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     { id: 'social-studies', label: 'Social Studies', color: 'bg-red-100 text-red-700' }
   ];
 
-  const ageGroups = [
-    { id: 'k-2', label: 'K-2nd Grade', color: 'bg-pink-100 text-pink-700' },
-    { id: '3-5', label: '3rd-5th Grade', color: 'bg-indigo-100 text-indigo-700' },
-    { id: '6-8', label: '6th-8th Grade', color: 'bg-teal-100 text-teal-700' },
-    { id: '9-12', label: '9th-12th Grade', color: 'bg-purple-100 text-purple-700' },
-    { id: 'college', label: 'College+', color: 'bg-amber-100 text-amber-700' }
+  const grades = [
+    { id: 'kindergarten', label: 'Kindergarten', group: 'Elementary School' },
+    { id: '1st-grade', label: '1st Grade', group: 'Elementary School' },
+    { id: '2nd-grade', label: '2nd Grade', group: 'Elementary School' },
+    { id: '3rd-grade', label: '3rd Grade', group: 'Elementary School' },
+    { id: '4th-grade', label: '4th Grade', group: 'Elementary School' },
+    { id: '5th-grade', label: '5th Grade', group: 'Elementary School' },
+    { id: '6th-grade', label: '6th Grade', group: 'Middle School' },
+    { id: '7th-grade', label: '7th Grade', group: 'Middle School' },
+    { id: '8th-grade', label: '8th Grade', group: 'Middle School' },
+    { id: '9th-grade', label: '9th Grade', group: 'High School' },
+    { id: '10th-grade', label: '10th Grade', group: 'High School' },
+    { id: '11th-grade', label: '11th Grade', group: 'High School' },
+    { id: '12th-grade', label: '12th Grade', group: 'High School' },
+    { id: 'college', label: 'College', group: 'Post-Secondary' }
   ];
 
   const challenges = [
@@ -82,6 +92,47 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
     </div>
   );
 
+  const GradeDropdownSection = ({ 
+    title, 
+    icon: Icon, 
+    selectedValue, 
+    categoryType 
+  }: {
+    title: string;
+    icon: React.ComponentType<any>;
+    selectedValue: string;
+    categoryType: string;
+  }) => (
+    <div className="mb-8">
+      <div className="flex items-center gap-2 mb-4">
+        <Icon className="text-gray-600" size={20} />
+        <h3 className="text-lg font-semibold text-gray-800">{title}</h3>
+      </div>
+      <Select value={selectedValue} onValueChange={(value) => onCategoryChange(categoryType, value)}>
+        <SelectTrigger className="w-full">
+          <SelectValue placeholder="Select grade level" />
+        </SelectTrigger>
+        <SelectContent>
+          {['Elementary School', 'Middle School', 'High School', 'Post-Secondary'].map(group => {
+            const groupGrades = grades.filter(grade => grade.group === group);
+            return groupGrades.length > 0 ? (
+              <div key={group}>
+                <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 bg-gray-50">
+                  {group}
+                </div>
+                {groupGrades.map(grade => (
+                  <SelectItem key={grade.id} value={grade.id}>
+                    {grade.label}
+                  </SelectItem>
+                ))}
+              </div>
+            ) : null;
+          })}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
       <div className="max-w-4xl mx-auto">
@@ -112,10 +163,9 @@ const CategorySelector: React.FC<CategorySelectorProps> = ({
             categoryType="subject"
           />
           
-          <CategorySection
+          <GradeDropdownSection
             title="Grade Level"
             icon={Users}
-            items={ageGroups}
             selectedValue={selectedCategories.ageGroup}
             categoryType="ageGroup"
           />

@@ -16,16 +16,25 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
   onDelete,
   onSelect
 }) => {
-  const ageGroups = [
-    { id: 'early-elementary', label: 'Early Elementary (5-7)' },
-    { id: 'elementary', label: 'Elementary (8-10)' },
-    { id: 'middle-school', label: 'Middle School (11-13)' },
-    { id: 'high-school', label: 'High School (14-18)' },
-    { id: 'college', label: 'College (18+)' }
+  const grades = [
+    { id: 'kindergarten', label: 'Kindergarten' },
+    { id: '1st-grade', label: '1st Grade' },
+    { id: '2nd-grade', label: '2nd Grade' },
+    { id: '3rd-grade', label: '3rd Grade' },
+    { id: '4th-grade', label: '4th Grade' },
+    { id: '5th-grade', label: '5th Grade' },
+    { id: '6th-grade', label: '6th Grade' },
+    { id: '7th-grade', label: '7th Grade' },
+    { id: '8th-grade', label: '8th Grade' },
+    { id: '9th-grade', label: '9th Grade' },
+    { id: '10th-grade', label: '10th Grade' },
+    { id: '11th-grade', label: '11th Grade' },
+    { id: '12th-grade', label: '12th Grade' },
+    { id: 'college', label: 'College' }
   ];
 
-  const getAgeGroupLabel = (ageGroupId: string) => 
-    ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
+  const getGradeLabel = (gradeId: string) => 
+    grades.find(g => g.id === gradeId)?.label || gradeId;
 
   return (
     <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200 hover:shadow-lg transition-shadow">
@@ -63,9 +72,9 @@ const ChildProfile: React.FC<ChildProfileProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-2">
             <Users size={14} className="text-gray-600 sm:w-4 sm:h-4" />
-            <span className="text-xs sm:text-sm font-medium text-gray-700">Age Group</span>
+            <span className="text-xs sm:text-sm font-medium text-gray-700">Grade Level</span>
           </div>
-          <span className="text-xs sm:text-sm text-gray-600">{getAgeGroupLabel(child.ageGroup)}</span>
+          <span className="text-xs sm:text-sm text-gray-600">{getGradeLabel(child.ageGroup)}</span>
         </div>
 
         {child.subjects && child.subjects.length > 0 && (

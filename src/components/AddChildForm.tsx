@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, BookOpen, Users, Brain } from 'lucide-react';
 import { Child } from '../types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface AddChildFormProps {
   onSave: (child: Omit<Child, 'id' | 'createdAt'>) => void;
@@ -26,12 +27,21 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
     { id: 'social-studies', label: 'Social Studies', color: 'bg-red-100 text-red-700' }
   ];
 
-  const ageGroups = [
-    { id: 'kindergarten-2nd', label: 'Kindergarten to 2nd Grade', color: 'bg-pink-100 text-pink-700' },
-    { id: '3rd-5th', label: '3rd Grade to 5th Grade', color: 'bg-indigo-100 text-indigo-700' },
-    { id: '6th-8th', label: '6th Grade to 8th Grade', color: 'bg-teal-100 text-teal-700' },
-    { id: '9th-12th', label: '9th Grade to 12th Grade', color: 'bg-purple-100 text-purple-700' },
-    { id: 'college-plus', label: 'College Plus', color: 'bg-amber-100 text-amber-700' }
+  const grades = [
+    { id: 'kindergarten', label: 'Kindergarten', group: 'Elementary School' },
+    { id: '1st-grade', label: '1st Grade', group: 'Elementary School' },
+    { id: '2nd-grade', label: '2nd Grade', group: 'Elementary School' },
+    { id: '3rd-grade', label: '3rd Grade', group: 'Elementary School' },
+    { id: '4th-grade', label: '4th Grade', group: 'Elementary School' },
+    { id: '5th-grade', label: '5th Grade', group: 'Elementary School' },
+    { id: '6th-grade', label: '6th Grade', group: 'Middle School' },
+    { id: '7th-grade', label: '7th Grade', group: 'Middle School' },
+    { id: '8th-grade', label: '8th Grade', group: 'Middle School' },
+    { id: '9th-grade', label: '9th Grade', group: 'High School' },
+    { id: '10th-grade', label: '10th Grade', group: 'High School' },
+    { id: '11th-grade', label: '11th Grade', group: 'High School' },
+    { id: '12th-grade', label: '12th Grade', group: 'High School' },
+    { id: 'college', label: 'College', group: 'Post-Secondary' }
   ];
 
   const challenges = [
@@ -79,6 +89,12 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
         challenges: challengeLabels
       });
     }
+  };
+
+  // Get label for selected grade
+  const getSelectedGradeLabel = () => {
+    const grade = grades.find(g => g.id === selectedAgeGroup);
+    return grade ? grade.label : 'Select grade level';
   };
 
   const MultiSelectSection = ({ 
@@ -152,24 +168,30 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-3">
               <Users className="text-gray-600" size={20} />
-              <h3 className="text-lg font-semibold text-gray-800">Age Group</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Grade Level</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              {ageGroups.map((group) => (
-                <button
-                  key={group.id}
-                  type="button"
-                  onClick={() => setSelectedAgeGroup(group.id)}
-                  className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 border-2 ${
-                    selectedAgeGroup === group.id
-                      ? `${group.color} border-current shadow-md`
-                      : 'bg-white hover:bg-gray-50 text-gray-700 border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  {group.label}
-                </button>
-              ))}
-            </div>
+            <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select grade level" />
+              </SelectTrigger>
+              <SelectContent>
+                {['Elementary School', 'Middle School', 'High School', 'Post-Secondary'].map(group => {
+                  const groupGrades = grades.filter(grade => grade.group === group);
+                  return groupGrades.length > 0 ? (
+                    <div key={group}>
+                      <div className="px-2 py-1.5 text-sm font-semibold text-gray-500 bg-gray-50">
+                        {group}
+                      </div>
+                      {groupGrades.map(grade => (
+                        <SelectItem key={grade.id} value={grade.id}>
+                          {grade.label}
+                        </SelectItem>
+                      ))}
+                    </div>
+                  ) : null;
+                })}
+              </SelectContent>
+            </Select>
           </div>
 
           <MultiSelectSection

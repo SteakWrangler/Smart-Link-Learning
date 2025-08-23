@@ -498,6 +498,17 @@ Keep the response friendly and encouraging. If the document content isn't availa
   };
 
   // Generate initial greeting with personalized examples
+  // Helper function to determine grade level category for content suggestions
+  const getGradeCategory = (ageGroup: string): 'early' | 'elementary' | 'middle' | 'high' | 'college' => {
+    if (['kindergarten', '1st-grade', '2nd-grade'].includes(ageGroup)) return 'early';
+    if (['3rd-grade', '4th-grade', '5th-grade'].includes(ageGroup)) return 'elementary';
+    if (['6th-grade', '7th-grade', '8th-grade'].includes(ageGroup)) return 'middle';
+    if (['9th-grade', '10th-grade', '11th-grade', '12th-grade'].includes(ageGroup)) return 'high';
+    if (ageGroup === 'college') return 'college';
+    
+    return 'elementary'; // default
+  };
+
   const generateInitialGreeting = (): string => {
     const ageGroup = selectedChild?.ageGroup || '';
     const subjects = selectedChild?.subjects || [];
@@ -565,8 +576,10 @@ Keep the response friendly and encouraging. If the document content isn't availa
     greeting += `• When I create educational content (worksheets, tests, activities), you'll see a download button to save as PDF!\n\n`;
     
     // Grade-appropriate examples with specific subjects and themes
-    if (ageGroup === 'kindergarten-2nd' || ageGroup === 'early-elementary') {
-      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+    const gradeCategory = getGradeCategory(ageGroup);
+    const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+
+    if (gradeCategory === 'early') {
       greeting += `🧮 **Subject Practice & Games**\n`;
       greeting += `• "Create a dinosaur-themed ${primarySubject} practice test"\n`;
       greeting += `• "Help me practice ${primarySubject} with space exploration"\n`;
@@ -575,8 +588,7 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `📚 **Learning Activities**\n`;
       greeting += `• "What's a fun way to learn ${primarySubject} using building blocks?"\n`;
       greeting += `• "Create a 5-minute ${primarySubject} game about animals"\n\n`;
-    } else if (ageGroup === '3rd-5th' || ageGroup === 'elementary') {
-      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+    } else if (gradeCategory === 'elementary') {
       greeting += `🧮 **Subject Practice & Games**\n`;
       greeting += `• "Create a science-themed ${primarySubject} practice test using real experiments"\n`;
       greeting += `• "Help me practice ${primarySubject} with cooking and recipes"\n`;
@@ -585,8 +597,7 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `📚 **Learning Activities**\n`;
       greeting += `• "What's a fun way to learn ${primarySubject} using board games?"\n`;
       greeting += `• "Create a 10-minute ${primarySubject} challenge about nature"\n\n`;
-    } else if (ageGroup === '6th-8th' || ageGroup === 'middle-school') {
-      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+    } else if (gradeCategory === 'middle') {
       greeting += `📊 **Subject & Science Help**\n`;
       greeting += `• "Explain ${primarySubject} concepts using video game examples"\n`;
       greeting += `• "Create ${primarySubject} problems about basketball statistics"\n`;
@@ -595,8 +606,7 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `🎯 **Study Strategies**\n`;
       greeting += `• "Make a practice test for my upcoming ${primarySubject} exam"\n`;
       greeting += `• "What's the best way to study for ${primarySubject} tests?"\n\n`;
-    } else if (ageGroup === '9th-12th' || ageGroup === 'high-school') {
-      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+    } else if (gradeCategory === 'high') {
       greeting += `📈 **Advanced Subject & Concepts**\n`;
       greeting += `• "Help me understand advanced ${primarySubject} concepts with real-world applications"\n`;
       greeting += `• "Create practice problems for ${primarySubject} using current events"\n`;
@@ -605,8 +615,7 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `🎓 **Test Prep & Study Skills**\n`;
       greeting += `• "Build a comprehensive practice test for ${primarySubject} finals"\n`;
       greeting += `• "Help me break down complex ${primarySubject} problems step-by-step"\n\n`;
-    } else if (ageGroup === 'college-plus' || ageGroup === 'college') {
-      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
+    } else if (gradeCategory === 'college') {
       greeting += `📈 **Advanced Subject & Concepts**\n`;
       greeting += `• "Help me understand advanced ${primarySubject} concepts"\n`;
       greeting += `• "Create practice problems for ${primarySubject}"\n`;
@@ -615,16 +624,9 @@ Keep the response friendly and encouraging. If the document content isn't availa
       greeting += `🎓 **Test Prep & Study Skills**\n`;
       greeting += `• "Build a comprehensive practice test for ${primarySubject} finals"\n`;
       greeting += `• "Help me break down complex ${primarySubject} problems step-by-step"\n\n`;
-    } else {
-      const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
-      greeting += `🧮 **Subject Practice**\n`;
-      greeting += `• "Create practice problems for ${primarySubject} topics"\n`;
-      greeting += `• "Help explain difficult ${primarySubject} concepts step-by-step"\n`;
-      greeting += `• "Make learning fun with themed ${primarySubject} activities"\n\n`;
     }
     
     greeting += `💡 **Teaching Support**\n`;
-    const primarySubject = subjects.length > 0 ? subjects[0] : 'math';
     greeting += `• "How should I explain ${primarySubject} concepts to ${learnerName}?"\n`;
     greeting += `• "What are some hands-on activities for learning ${primarySubject}?"\n\n`;
     
@@ -648,17 +650,20 @@ Keep the response friendly and encouraging. If the document content isn't availa
   // Helper function to get age group labels
   const getAgeGroupLabel = (ageGroupId: string): string => {
     const ageGroups = [
-      { id: 'kindergarten-2nd', label: 'Kindergarten to 2nd Grade' },
-      { id: '3rd-5th', label: '3rd Grade to 5th Grade' },
-      { id: '6th-8th', label: '6th Grade to 8th Grade' },
-      { id: '9th-12th', label: '9th Grade to 12th Grade' },
-      { id: 'college-plus', label: 'College Plus' },
-      // Legacy support for old age group IDs
-      { id: 'early-elementary', label: 'Early Elementary (5-7)' },
-      { id: 'elementary', label: 'Elementary (8-10)' },
-      { id: 'middle-school', label: 'Middle School (11-13)' },
-      { id: 'high-school', label: 'High School (14-18)' },
-      { id: 'college', label: 'College (18+)' }
+      { id: 'kindergarten', label: 'Kindergarten' },
+      { id: '1st-grade', label: '1st Grade' },
+      { id: '2nd-grade', label: '2nd Grade' },
+      { id: '3rd-grade', label: '3rd Grade' },
+      { id: '4th-grade', label: '4th Grade' },
+      { id: '5th-grade', label: '5th Grade' },
+      { id: '6th-grade', label: '6th Grade' },
+      { id: '7th-grade', label: '7th Grade' },
+      { id: '8th-grade', label: '8th Grade' },
+      { id: '9th-grade', label: '9th Grade' },
+      { id: '10th-grade', label: '10th Grade' },
+      { id: '11th-grade', label: '11th Grade' },
+      { id: '12th-grade', label: '12th Grade' },
+      { id: 'college', label: 'College' }
     ];
     return ageGroups.find(a => a.id === ageGroupId)?.label || ageGroupId;
   };
