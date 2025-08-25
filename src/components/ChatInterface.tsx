@@ -277,6 +277,77 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     fetchConversationDocuments();
   };
 
+  // Download handler for popup
+  const handlePopupDownload = async (popupDoc: { id: string; fileName: string }) => {
+    // Find the full document object from conversationDocuments
+    const fullDoc = conversationDocuments.find(doc => doc.id === popupDoc.id);
+    if (!fullDoc) return;
+
+    try {
+      const response = await fetch(`/api/download-document?filePath=${encodeURIComponent(fullDoc.file_path)}`);
+      if (!response.ok) throw new Error('Download failed');
+      
+      // Create a blob from the response and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fullDoc.file_name;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download failed:', error);
+      // Fallback: try to open in new tab
+      window.open(`/api/download-document?filePath=${encodeURIComponent(fullDoc.file_path)}`, '_blank');
+    }
+  };
+
+  // Delete handler for popup
+  const handlePopupDelete = async (popupDoc: { id: string; fileName: string }) => {
+    // Find the full document object from conversationDocuments
+    const fullDoc = conversationDocuments.find(doc => doc.id === popupDoc.id);
+    if (!fullDoc) return;
+
+    if (!confirm(`Are you sure you want to delete "${fullDoc.file_name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([fullDoc.file_path]);
+      
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', fullDoc.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+
+      // Update the documents list
+      handleDocumentDeleted(fullDoc.id);
+
+    } catch (error: any) {
+      console.error('Delete failed:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete document",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Generate response for uploaded documents
   const generateDocumentUploadResponse = async (documents: Tables<'documents'>[]): Promise<string> => {
     console.log('=== GENERATING DOCUMENT UPLOAD RESPONSE ===');
@@ -1423,6 +1494,8 @@ The activity should immerse the student in the theme's world and make the learni
             fileName: doc.file_name
           }))}
           onClose={() => setShowDocumentPopup(false)}
+          onDownload={handlePopupDownload}
+          onRemove={handlePopupDelete}
           title="Chat Documents"
         />
       )}
