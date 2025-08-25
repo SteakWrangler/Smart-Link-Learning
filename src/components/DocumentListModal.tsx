@@ -1,15 +1,19 @@
 import React from 'react';
-import { X, FileText, Download, Calendar, User } from 'lucide-react';
+import { X, FileText, Download, Calendar, Trash2 } from 'lucide-react';
 import type { Tables } from '@/types/supabase';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/components/ui/use-toast';
 
 interface DocumentListModalProps {
   documents: Tables<'documents'>[];
   onClose: () => void;
+  onDocumentDeleted?: (documentId: string) => void;
 }
 
 const DocumentListModal: React.FC<DocumentListModalProps> = ({
   documents,
-  onClose
+  onClose,
+  onDocumentDeleted
 }) => {
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
@@ -61,6 +65,47 @@ const DocumentListModal: React.FC<DocumentListModalProps> = ({
     }
   };
 
+  const handleDelete = async (doc: Tables<'documents'>) => {
+    if (!confirm(`Are you sure you want to delete "${doc.file_name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      // Delete from storage
+      const { error: storageError } = await supabase.storage
+        .from('documents')
+        .remove([doc.file_path]);
+      
+      if (storageError) throw storageError;
+
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', doc.id);
+
+      if (dbError) throw dbError;
+
+      toast({
+        title: "Success",
+        description: "Document deleted successfully",
+      });
+
+      // Notify parent component to refresh the document list
+      if (onDocumentDeleted) {
+        onDocumentDeleted(doc.id);
+      }
+
+    } catch (error: any) {
+      console.error('Delete failed:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete document",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[80vh] overflow-hidden">
@@ -106,13 +151,22 @@ const DocumentListModal: React.FC<DocumentListModalProps> = ({
                         </div>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDownload(document)}
-                      className="flex-shrink-0 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      title="Download document"
-                    >
-                      <Download size={16} />
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleDownload(document)}
+                        className="flex-shrink-0 p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title="Download document"
+                      >
+                        <Download size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(document)}
+                        className="flex-shrink-0 p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete document"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                   
                   {document.description && (

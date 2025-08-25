@@ -269,6 +269,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  const handleDocumentDeleted = (documentId: string) => {
+    // Remove the deleted document from the conversation documents list
+    setConversationDocuments(prev => prev.filter(doc => doc.id !== documentId));
+    
+    // Also refresh the conversation documents to ensure consistency
+    fetchConversationDocuments();
+  };
+
   // Generate response for uploaded documents
   const generateDocumentUploadResponse = async (documents: Tables<'documents'>[]): Promise<string> => {
     console.log('=== GENERATING DOCUMENT UPLOAD RESPONSE ===');
@@ -1403,6 +1411,7 @@ The activity should immerse the student in the theme's world and make the learni
         <DocumentListModal
           documents={conversationDocuments}
           onClose={() => setShowDocumentList(false)}
+          onDocumentDeleted={handleDocumentDeleted}
         />
       )}
 
