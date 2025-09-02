@@ -38,6 +38,7 @@ const AuthenticatedApp: React.FC = () => {
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
   const [authFlowComplete, setAuthFlowComplete] = useState(false);
+  const [resetTokens, setResetTokens] = useState<{accessToken: string, refreshToken: string} | null>(null);
 
   // Check for password reset and checkout parameters on component mount
   useEffect(() => {
@@ -58,17 +59,11 @@ const AuthenticatedApp: React.FC = () => {
     }
     
     if (resetParam === 'true' && accessToken && refreshToken) {
-      // Set the session with the tokens from the password reset link
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      }).then(({ data, error }) => {
-        if (!error && data.session) {
-          setShowPasswordReset(true);
-          // Clear the URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      });
+      // Store tokens for password reset without auto-authenticating
+      setResetTokens({ accessToken, refreshToken });
+      setShowPasswordReset(true);
+      // Clear the URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
@@ -287,24 +282,54 @@ const AuthenticatedApp: React.FC = () => {
     setPasswordResetLoading(true);
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      if (!resetTokens) {
+        throw new Error('Reset tokens not available');
+      }
+
+      // Temporarily set session with reset tokens to update password
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: resetTokens.accessToken,
+        refresh_token: resetTokens.refreshToken,
+      });
+
+      if (sessionError) throw sessionError;
+
+      // Get user email before updating password
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError || !userData.user?.email) {
+        throw new Error('Could not retrieve user email for sign-in');
+      }
+
+      // Update password
+      const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword
       });
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+
+      // Sign out and then sign back in with new credentials for clean auth state
+      await supabase.auth.signOut();
+      
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userData.user.email,
+        password: newPassword
+      });
+
+      if (signInError) throw signInError;
 
       toast({
         title: "Password Reset Successfully",
-        description: "Your password has been updated. You can now sign in with your new password.",
+        description: "Your password has been updated and you are now signed in.",
       });
       
       setShowPasswordReset(false);
       setNewPassword('');
       setConfirmNewPassword('');
-    } catch (error: any) {
+      setResetTokens(null);
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "Failed to reset password. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to reset password. Please try again.",
         variant: "destructive",
       });
     } finally {
