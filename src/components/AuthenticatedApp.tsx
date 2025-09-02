@@ -37,6 +37,7 @@ const AuthenticatedApp: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmNewPassword, setConfirmNewPassword] = useState('');
   const [passwordResetLoading, setPasswordResetLoading] = useState(false);
+  const [authFlowComplete, setAuthFlowComplete] = useState(false);
 
   // Check for password reset and checkout parameters on component mount
   useEffect(() => {
@@ -81,6 +82,15 @@ const AuthenticatedApp: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [redirectToTab, currentView]);
+
+  // Track when both auth and subscription loading are complete
+  useEffect(() => {
+    if (!loading && !subscriptionLoading) {
+      setAuthFlowComplete(true);
+    } else {
+      setAuthFlowComplete(false);
+    }
+  }, [loading, subscriptionLoading]);
 
   // Auto-redirect active subscribers to dashboard (skip welcome screen)
   useEffect(() => {
@@ -320,7 +330,7 @@ const AuthenticatedApp: React.FC = () => {
     return <div>Loading...</div>;
   }
 
-  if (user && !subscriptionLoading && !isSubscriptionActive && user.email !== 'linksmarttechllc@gmail.com') {
+  if (user && authFlowComplete && !isSubscriptionActive && user.email !== 'linksmarttechllc@gmail.com') {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-white shadow rounded p-6 text-center">
