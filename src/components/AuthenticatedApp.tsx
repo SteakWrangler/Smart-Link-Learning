@@ -63,10 +63,23 @@ const AuthenticatedApp: React.FC = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
-    if (resetParam && accessToken && refreshToken) {
-      // Store tokens for password reset without auto-authenticating
-      setResetTokens({ accessToken, refreshToken });
-      setShowPasswordReset(true);
+    if (resetParam) {
+      // For Supabase's redirect flow, the user should already be authenticated
+      // Check if they have a valid session first
+      supabase.auth.getSession().then(({ data: { session }, error }) => {
+        if (!error && session) {
+          // User is authenticated via the reset flow, show password reset form
+          setResetTokens({ 
+            accessToken: session.access_token, 
+            refreshToken: session.refresh_token 
+          });
+          setShowPasswordReset(true);
+        } else if (accessToken && refreshToken) {
+          // Fallback for direct token URLs
+          setResetTokens({ accessToken, refreshToken });
+          setShowPasswordReset(true);
+        }
+      });
       // Clear both URL parameters and hash
       window.history.replaceState({}, document.title, window.location.pathname);
     }
