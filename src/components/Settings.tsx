@@ -12,15 +12,17 @@ import ProfileDocumentList from './ProfileDocumentList';
 interface SettingsProps {
   profile: Profile;
   onBack: () => void;
+  resetTokens?: {accessToken: string, refreshToken: string} | null;
 }
 
-const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
+const Settings: React.FC<SettingsProps> = ({ profile, onBack, resetTokens }) => {
   const { toast } = useToast();
   const { fetchProfile, setProfile, isSubscriptionActive } = useAuth();
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [showPasswordChange, setShowPasswordChange] = useState(!!resetTokens); // Auto-show if reset tokens provided
   const [showEmailChange, setShowEmailChange] = useState(false);
+  const [isPasswordReset, setIsPasswordReset] = useState(!!resetTokens); // Track if this is a reset flow
   
   // Form states
   const [formData, setFormData] = useState({
@@ -109,8 +111,8 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
   };
 
   const handleChangePassword = async () => {
-    // Validate that current password is provided
-    if (!passwordData.current_password.trim()) {
+    // Skip current password validation for reset flows
+    if (!isPasswordReset && !passwordData.current_password.trim()) {
       toast({
         title: "Error",
         description: "Current password is required.",
@@ -143,22 +145,25 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
 
     setLoading(true);
     try {
-      // First, verify the current password by attempting to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: profile.email,
-        password: passwordData.current_password,
-      });
-
-      if (signInError) {
-        toast({
-          title: "Error",
-          description: "Current password is incorrect.",
-          variant: "destructive",
+      // Skip current password verification for reset flows
+      if (!isPasswordReset) {
+        // First, verify the current password by attempting to sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: profile.email,
+          password: passwordData.current_password,
         });
-        return;
+
+        if (signInError) {
+          toast({
+            title: "Error",
+            description: "Current password is incorrect.",
+            variant: "destructive",
+          });
+          return;
+        }
       }
 
-      // If current password is correct, update to new password
+      // Update to new password
       const { error } = await supabase.auth.updateUser({
         password: passwordData.new_password
       });
@@ -176,6 +181,11 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
         new_password: '',
         confirm_password: '',
       });
+      
+      // Clear reset state if this was a password reset
+      if (isPasswordReset) {
+        setIsPasswordReset(false);
+      }
     } catch (error) {
       console.error('Error changing password:', error);
       toast({
@@ -596,20 +606,25 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
       {showPasswordChange && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Change Password</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">
+              {isPasswordReset ? "Set New Password" : "Change Password"}
+            </h3>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Password
-                </label>
-                <input
-                  type="password"
-                  value={passwordData.current_password}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, current_password: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
+              {/* Only show current password field if not a reset flow */}
+              {!isPasswordReset && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Current Password
+                  </label>
+                  <input
+                    type="password"
+                    value={passwordData.current_password}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, current_password: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              )}
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -676,7 +691,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack }) => {
                 disabled={loading}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
               >
-                Change Password
+                {isPasswordReset ? "Set Password" : "Change Password"}
               </Button>
             </div>
           </div>

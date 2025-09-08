@@ -18,9 +18,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface DashboardProps {
   onBack: () => void;
   initialTab?: string;
+  resetTokens?: {accessToken: string, refreshToken: string} | null;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab, resetTokens }) => {
   const { profile, user } = useAuth();
   const { toast } = useToast();
   const [children, setChildren] = useState<Child[]>([]);
@@ -1281,6 +1282,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
           <Settings 
             profile={profile}
             onBack={() => setActiveTab('children')}
+            resetTokens={resetTokens}
           />
         )}
       </div>

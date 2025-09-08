@@ -82,14 +82,15 @@ const AuthenticatedApp: React.FC = () => {
         console.log('Session check result:', { hasSession: !!session, error, accessToken: !!accessToken, refreshToken: !!refreshToken });
         
         if (!error && session) {
-          // User is authenticated via the reset flow, show password reset form
-          console.log('Using session tokens for password reset');
+          // User is authenticated via the reset flow, redirect to settings
+          console.log('Password reset detected - redirecting to settings');
+          setCurrentView('dashboard');
+          setRedirectToTab('settings');
+          // Set password reset context for Settings component
           setResetTokens({ 
             accessToken: session.access_token, 
             refreshToken: session.refresh_token 
           });
-          setShowPasswordReset(true);
-          console.log('Password reset modal should now be visible, showPasswordReset =', true);
           // Clear URL after successful setup
           window.history.replaceState({}, document.title, window.location.pathname);
         } else if (accessToken && refreshToken) {
@@ -492,6 +493,7 @@ const AuthenticatedApp: React.FC = () => {
           <Dashboard 
             onBack={() => setCurrentView('welcome')}
             initialTab={redirectToTab}
+            resetTokens={resetTokens}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
