@@ -542,31 +542,31 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
       }>;
     }> = {
       'guide': {
-        title: 'Getting Started with Learning Support',
+        title: 'General Parent Resources',
         resources: [
           {
-            title: 'Getting Started with Learning and Thinking Differences',
-            description: 'Step-by-step guide for parents beginning their learning support journey',
-            url: 'https://www.understood.org/articles/getting-started-with-learning-and-thinking-differences',
+            title: 'Understood.org',
+            description: 'Comprehensive resources for learning and thinking differences',
+            url: 'https://www.understood.org',
             organization: 'Understood.org'
-          },
-          {
-            title: 'Learning Disabilities: What You Need to Know',
-            description: 'Comprehensive overview for families new to learning differences',
-            url: 'https://www.verywellmind.com/learning-disabilities-what-parents-need-to-know-20586',
-            organization: 'Verywell Mind'
           },
           {
             title: 'National Center for Learning Disabilities',
             description: 'Research, resources, and advocacy for learning disabilities',
-            url: 'https://www.ncld.org/research-and-policy/what-is-ld/',
+            url: 'https://www.ncld.org',
             organization: 'NCLD'
           },
           {
-            title: 'CDC: Facts About Learning Disabilities',
-            description: 'Medical and educational information about learning disabilities',
-            url: 'https://www.cdc.gov/ncbddd/developmentaldisabilities/facts-about-intellectual-disability.html',
-            organization: 'CDC'
+            title: 'Learning Disabilities Association of America',
+            description: 'Support, resources, and advocacy for learning disabilities',
+            url: 'https://ldaamerica.org',
+            organization: 'LDA'
+          },
+          {
+            title: 'Parent Information Centers',
+            description: 'Special education rights, IEPs, 504 plans, and advocacy support',
+            url: 'https://www.parentcenterhub.org',
+            organization: 'Parent Information Centers'
           }
         ]
       },
@@ -574,28 +574,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'Managing Learning Frustration',
         resources: [
           {
-            title: '70+ Mental Health Coping Skills for Kids',
-            description: 'Practical tools to help your child stay strong in any situation',
-            url: 'https://www.verywellmind.com/mental-health-coping-skills-for-kids-8724073',
+            title: 'Verywell Mind',
+            description: 'Mental health resources, coping skills, and anxiety support for children',
+            url: 'https://www.verywellmind.com',
             organization: 'Verywell Mind'
           },
           {
-            title: 'How to Help a Child With Anxiety',
-            description: 'Supporting children through learning-related stress and worry',
-            url: 'https://www.understood.org/articles/anxiety-in-children-with-learning-differences',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Building Resilience in Children',
-            description: 'Helping kids bounce back from learning challenges',
-            url: 'https://childmind.org/guide/building-resilience-in-children/',
+            title: 'Child Mind Institute',
+            description: 'Research-based strategies for building resilience and managing learning challenges',
+            url: 'https://childmind.org',
             organization: 'Child Mind Institute'
           },
           {
-            title: 'Teaching Coping Skills to Children',
-            description: 'Evidence-based strategies for emotional regulation',
-            url: 'https://www.internet4classrooms.com/blog/2022/04/teaching_coping_skills_to_children.htm',
-            organization: 'Internet4Classrooms'
+            title: 'Center on the Developing Child - Harvard',
+            description: 'Science-based resources for supporting children through stress and adversity',
+            url: 'https://developingchild.harvard.edu',
+            organization: 'Harvard University'
           }
         ]
       },
@@ -603,28 +597,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'ADHD & Focus Support',
         resources: [
           {
-            title: 'CHADD Parent Resources',
+            title: 'CHADD (Children and Adults with ADHD)',
             description: 'Evidence-based information and support for ADHD families',
-            url: 'https://chadd.org/about-adhd/parents-caregivers/',
+            url: 'https://chadd.org',
             organization: 'CHADD'
           },
           {
-            title: '8 Simple Strategies for Students With ADHD',
-            description: 'Helpful techniques for teachers and parents',
-            url: 'https://www.verywellmind.com/help-for-students-with-adhd-20538',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'CDC ADHD Information for Parents',
+            title: 'CDC - ADHD Information',
             description: 'Medical information and behavior management strategies',
-            url: 'https://www.cdc.gov/ncbddd/adhd/facts.html',
+            url: 'https://www.cdc.gov/ncbddd/adhd',
             organization: 'CDC'
           },
           {
-            title: 'ADHD and School Success',
-            description: 'Academic support strategies and accommodations',
-            url: 'https://www.understood.org/articles/adhd-and-school-what-you-need-to-know',
-            organization: 'Understood.org'
+            title: 'ADDitude Magazine',
+            description: 'Practical strategies and expert advice for ADHD families',
+            url: 'https://www.additudemag.com',
+            organization: 'ADDitude'
           }
         ]
       },
@@ -634,26 +622,20 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
           {
             title: 'International Dyslexia Association',
             description: 'Comprehensive information about dyslexia and reading difficulties',
-            url: 'https://dyslexiaida.org/dyslexia-basics/',
+            url: 'https://dyslexiaida.org',
             organization: 'IDA'
           },
           {
-            title: 'What Is Dyslexia?',
-            description: 'Signs, causes, and how to help children with dyslexia',
-            url: 'https://www.understood.org/articles/what-is-dyslexia',
-            organization: 'Understood.org'
+            title: 'Reading Rockets',
+            description: 'Teaching strategies, activities, and resources for dyslexia support',
+            url: 'https://www.readingrockets.org',
+            organization: 'Reading Rockets'
           },
           {
-            title: 'Dyslexia Reading Programs That Work',
-            description: 'Evidence-based interventions and teaching methods',
-            url: 'https://www.verywellmind.com/teaching-reading-to-children-with-dyslexia-20530',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'Dyslexia and Your Child',
-            description: 'What parents need to know about supporting reading development',
-            url: 'https://childmind.org/guide/dyslexia-and-your-child/',
-            organization: 'Child Mind Institute'
+            title: 'Decoding Dyslexia',
+            description: 'Parent-driven grassroots movement for dyslexia awareness and support',
+            url: 'https://decodingdyslexia.net',
+            organization: 'Decoding Dyslexia'
           }
         ]
       },
@@ -661,28 +643,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'Processing Delays Support',
         resources: [
           {
-            title: 'Understanding Processing Issues',
-            description: 'What processing issues are and how to help',
-            url: 'https://www.understood.org/articles/processing-issues-in-kids-what-you-need-to-know',
-            organization: 'Understood.org'
+            title: 'STAR Institute for Sensory Processing',
+            description: 'Research and resources for sensory processing challenges',
+            url: 'https://www.spdstar.org',
+            organization: 'STAR Institute'
           },
           {
-            title: 'Slow Processing Speed: What You Need to Know',
-            description: 'Signs, causes, and ways to help children with slow processing speed',
-            url: 'https://www.verywellmind.com/what-is-slow-processing-speed-20546',
-            organization: 'Verywell Mind'
+            title: 'Sensory Processing Disorder Foundation',
+            description: 'Support and advocacy for sensory processing differences',
+            url: 'https://spdfoundation.net',
+            organization: 'SPD Foundation'
           },
           {
-            title: 'Processing Speed and Executive Functioning',
-            description: 'How processing speed impacts learning and daily activities',
-            url: 'https://childmind.org/article/processing-speed-and-executive-functioning/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'Sensory Processing Issues',
-            description: 'Understanding and supporting sensory processing differences',
-            url: 'https://www.understood.org/articles/sensory-processing-issues-what-you-need-to-know',
-            organization: 'Understood.org'
+            title: 'The Out-of-Sync Child',
+            description: 'Resources for understanding and supporting processing differences',
+            url: 'https://out-of-sync-child.com',
+            organization: 'Carol Kranowitz'
           }
         ]
       },
@@ -690,28 +666,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'Math Anxiety Support',
         resources: [
           {
-            title: 'How to Help Your Child Overcome Math Anxiety',
-            description: 'Practical strategies to reduce math stress and build confidence',
-            url: 'https://www.verywellmind.com/math-anxiety-in-children-20558',
-            organization: 'Verywell Mind'
-          },
-          {
-            title: 'Math Anxiety: What You Need to Know',
-            description: 'Understanding causes and solutions for math fear',
-            url: 'https://www.understood.org/articles/math-anxiety-what-you-need-to-know',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'Math Anxiety and Dyscalculia',
-            description: 'When math difficulties go beyond anxiety',
-            url: 'https://childmind.org/article/how-to-help-kids-with-math-anxiety/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'Khan Academy for Parents',
-            description: 'Free resources to support math learning at home',
-            url: 'https://www.khanacademy.org/about/blog/tag/parents',
+            title: 'Khan Academy',
+            description: 'Free math resources and personalized learning for all levels',
+            url: 'https://www.khanacademy.org',
             organization: 'Khan Academy'
+          },
+          {
+            title: 'Bedtime Math',
+            description: 'Making math fun and accessible for families',
+            url: 'https://bedtimemath.org',
+            organization: 'Bedtime Math Foundation'
+          },
+          {
+            title: 'National Council of Teachers of Mathematics',
+            description: 'Professional resources and strategies for math education',
+            url: 'https://www.nctm.org',
+            organization: 'NCTM'
           }
         ]
       },
@@ -719,28 +689,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
         title: 'General Learning Support',
         resources: [
           {
-            title: 'Learning and Thinking Differences',
-            description: 'Comprehensive guide to various learning differences',
-            url: 'https://www.understood.org/articles/learning-and-thinking-differences-your-child-may-have',
-            organization: 'Understood.org'
+            title: 'Center for Parent Information and Resources',
+            description: 'Comprehensive special education and disability resources',
+            url: 'https://www.parentcenterhub.org',
+            organization: 'CPIR'
           },
           {
-            title: 'Special Education Rights and Resources',
-            description: 'Understanding IEPs, 504 plans, and special education law',
-            url: 'https://www.parentcenterhub.org/find-your-center/',
-            organization: 'Parent Information Centers'
+            title: 'Wrightslaw',
+            description: 'Special education law, advocacy, and IEP/504 plan guidance',
+            url: 'https://www.wrightslaw.com',
+            organization: 'Wrightslaw'
           },
           {
-            title: 'Learning Disabilities Association of America',
-            description: 'Support, resources, and advocacy for learning disabilities',
-            url: 'https://ldaamerica.org/',
-            organization: 'LDA'
-          },
-          {
-            title: 'How to Support a Child With Learning Differences',
-            description: 'Evidence-based strategies for parents and caregivers',
-            url: 'https://www.verywellmind.com/supporting-children-with-learning-differences-20590',
-            organization: 'Verywell Mind'
+            title: 'Council for Exceptional Children',
+            description: 'Professional development and resources for special education',
+            url: 'https://www.cec.sped.org',
+            organization: 'CEC'
           }
         ]
       },
@@ -750,25 +714,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
           {
             title: 'Autism Speaks',
             description: 'Comprehensive educational strategies and support for students with autism',
-            url: 'https://www.autismspeaks.org/',
+            url: 'https://www.autismspeaks.org',
             organization: 'Autism Speaks'
           },
           {
-            title: 'Understood.org - Autism Resources',
-            description: 'Visual supports, learning strategies, and educational guidance',
-            url: 'https://www.understood.org/',
-            organization: 'Understood.org'
+            title: 'Autism Society of America',
+            description: 'Community support, resources, and advocacy for autism families',
+            url: 'https://www.autism-society.org',
+            organization: 'Autism Society'
           },
           {
-            title: 'Child Mind Institute',
-            description: 'Research-based strategies for supporting children with autism',
-            url: 'https://childmind.org/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'CDC Autism Information',
+            title: 'CDC - Autism Spectrum Disorder',
             description: 'Medical information and developmental support resources',
-            url: 'https://www.cdc.gov/ncbddd/autism/',
+            url: 'https://www.cdc.gov/ncbddd/autism',
             organization: 'CDC'
           }
         ]
@@ -779,25 +737,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
           {
             title: 'Colorín Colorado',
             description: 'Comprehensive resources for educators and families of ELL students',
-            url: 'https://www.colorincolorado.org/',
+            url: 'https://www.colorincolorado.org',
             organization: 'Colorín Colorado'
           },
           {
-            title: 'Edutopia',
-            description: 'Evidence-based strategies for helping ELL students succeed academically',
-            url: 'https://www.edutopia.org/',
-            organization: 'Edutopia'
+            title: 'TESOL International Association',
+            description: 'Professional resources for English language teaching and learning',
+            url: 'https://www.tesol.org',
+            organization: 'TESOL'
           },
           {
-            title: 'Understood.org - Multilingual Resources',
-            description: 'Supporting multilingual learners and language development',
-            url: 'https://www.understood.org/',
-            organization: 'Understood.org'
-          },
-          {
-            title: 'U.S. Department of Education',
+            title: 'U.S. Department of Education - English Learners',
             description: 'Federal resources and guidance for English language learners',
-            url: 'https://www2.ed.gov/',
+            url: 'https://www2.ed.gov',
             organization: 'U.S. Department of Education'
           }
         ]
@@ -808,25 +760,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
           {
             title: 'American Speech-Language-Hearing Association',
             description: 'Professional resources for language development and communication disorders',
-            url: 'https://www.asha.org/',
+            url: 'https://www.asha.org',
             organization: 'ASHA'
           },
           {
-            title: 'Understood.org - Language Development',
-            description: 'Practical strategies and activities to support language growth',
-            url: 'https://www.understood.org/',
-            organization: 'Understood.org'
+            title: 'Hanen Centre',
+            description: 'Programs and resources for language development in children',
+            url: 'https://www.hanen.org',
+            organization: 'Hanen Centre'
           },
           {
-            title: 'Child Mind Institute',
-            description: 'Research-based approaches for communication and language challenges',
-            url: 'https://childmind.org/',
-            organization: 'Child Mind Institute'
-          },
-          {
-            title: 'CDC Developmental Milestones',
-            description: 'Information on typical language development and when to seek help',
-            url: 'https://www.cdc.gov/ncbddd/actearly/',
+            title: 'CDC - Learn the Signs. Act Early.',
+            description: 'Developmental milestones and language development resources',
+            url: 'https://www.cdc.gov/ncbddd/actearly',
             organization: 'CDC'
           }
         ]
@@ -1273,7 +1219,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab }) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* General Support */}
               <div className="bg-blue-50 rounded-lg p-6">
-                <h3 className="text-lg font-semibold text-blue-800 mb-3">Getting Started Guide</h3>
+                <h3 className="text-lg font-semibold text-blue-800 mb-3">General Parent Resources</h3>
                 <p className="text-blue-700 mb-4">
                   Learn how to create effective lesson plans and work with your child's learning style.
                 </p>

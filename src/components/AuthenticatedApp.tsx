@@ -370,7 +370,7 @@ const AuthenticatedApp: React.FC = () => {
           <div className="mt-6">
             <button 
               className="btn btn-primary" 
-              onClick={() => startCheckout('price_1RuqITRdA5Qg3GBAPnpycFGL')}
+              onClick={() => startCheckout('price_1S4yAXRdA5Qg3GBAzrsuNSbs')}
             >
               {isTrialEligible ? "Start 14‑day free trial" : "Subscribe now"}
             </button>
