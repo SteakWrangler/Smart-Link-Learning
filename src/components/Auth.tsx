@@ -36,27 +36,7 @@ const Auth: React.FC<AuthProps> = ({ onAuthSuccess, onBack }) => {
   const { toast } = useToast();
   const { user, profile } = useAuth();
 
-  // Check for password reset parameters on component mount
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const resetParam = urlParams.get('reset');
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
-    
-    if (resetParam === 'true' && accessToken && refreshToken) {
-      // Set the session with the tokens from the password reset link
-      supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      }).then(({ data, error }) => {
-        if (!error && data.session) {
-          setShowPasswordReset(true);
-          // Clear the URL parameters
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      });
-    }
-  }, []);
+  // Password reset handling is done in AuthenticatedApp.tsx to avoid conflicts
 
   const clearForm = () => {
     setEmail('');

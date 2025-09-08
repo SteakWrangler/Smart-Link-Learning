@@ -42,11 +42,16 @@ const AuthenticatedApp: React.FC = () => {
 
   // Check for password reset and checkout parameters on component mount
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const resetParam = urlParams.get('reset');
-    const checkoutParam = urlParams.get('checkout');
-    const accessToken = urlParams.get('access_token');
-    const refreshToken = urlParams.get('refresh_token');
+    // Parse both query params (?param=value) and hash params (#param=value)
+    const searchParams = new URLSearchParams(window.location.search);
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    // Check for reset in custom format OR Supabase recovery type
+    const resetParam = searchParams.get('reset') || (hashParams.get('type') === 'recovery');
+    const checkoutParam = searchParams.get('checkout');
+    // Look for tokens in both query and hash parameters
+    const accessToken = searchParams.get('access_token') || hashParams.get('access_token');
+    const refreshToken = searchParams.get('refresh_token') || hashParams.get('refresh_token');
     
     // Handle checkout success
     if (checkoutParam === 'success') {
@@ -58,11 +63,11 @@ const AuthenticatedApp: React.FC = () => {
       window.history.replaceState({}, document.title, window.location.pathname);
     }
     
-    if (resetParam === 'true' && accessToken && refreshToken) {
+    if (resetParam && accessToken && refreshToken) {
       // Store tokens for password reset without auto-authenticating
       setResetTokens({ accessToken, refreshToken });
       setShowPasswordReset(true);
-      // Clear the URL parameters
+      // Clear both URL parameters and hash
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
