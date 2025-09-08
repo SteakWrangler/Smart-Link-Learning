@@ -89,6 +89,7 @@ const AuthenticatedApp: React.FC = () => {
             refreshToken: session.refresh_token 
           });
           setShowPasswordReset(true);
+          console.log('Password reset modal should now be visible, showPasswordReset =', true);
           // Clear URL after successful setup
           window.history.replaceState({}, document.title, window.location.pathname);
         } else if (accessToken && refreshToken) {
