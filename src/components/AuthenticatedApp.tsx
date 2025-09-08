@@ -42,9 +42,18 @@ const AuthenticatedApp: React.FC = () => {
 
   // Check for password reset and checkout parameters on component mount
   useEffect(() => {
+    console.log('AuthenticatedApp useEffect running, current URL:', window.location.href);
+    
     // Parse both query params (?param=value) and hash params (#param=value)
     const searchParams = new URLSearchParams(window.location.search);
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    console.log('URL params:', { 
+      search: window.location.search, 
+      hash: window.location.hash,
+      searchParams: Object.fromEntries(searchParams),
+      hashParams: Object.fromEntries(hashParams)
+    });
     
     // Check for reset in custom format OR Supabase recovery type
     const resetParam = searchParams.get('reset') || (hashParams.get('type') === 'recovery');
@@ -52,6 +61,8 @@ const AuthenticatedApp: React.FC = () => {
     // Look for tokens in both query and hash parameters
     const accessToken = searchParams.get('access_token') || hashParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token') || hashParams.get('refresh_token');
+    
+    console.log('Detected parameters:', { resetParam, checkoutParam, accessToken: !!accessToken, refreshToken: !!refreshToken });
     
     // Handle checkout success
     if (checkoutParam === 'success') {
@@ -78,17 +89,21 @@ const AuthenticatedApp: React.FC = () => {
             refreshToken: session.refresh_token 
           });
           setShowPasswordReset(true);
+          // Clear URL after successful setup
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else if (accessToken && refreshToken) {
           // Fallback for direct token URLs
           console.log('Using URL tokens for password reset');
           setResetTokens({ accessToken, refreshToken });
           setShowPasswordReset(true);
+          // Clear URL after successful setup
+          window.history.replaceState({}, document.title, window.location.pathname);
         } else {
           console.log('No session or tokens available for password reset');
+          // Still clear URL even if reset fails
+          window.history.replaceState({}, document.title, window.location.pathname);
         }
       });
-      // Clear both URL parameters and hash
-      window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
 
