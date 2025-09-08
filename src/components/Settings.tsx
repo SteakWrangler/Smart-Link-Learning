@@ -13,9 +13,10 @@ interface SettingsProps {
   profile: Profile;
   onBack: () => void;
   resetTokens?: {accessToken: string, refreshToken: string} | null;
+  onClearResetTokens?: () => void;
 }
 
-const Settings: React.FC<SettingsProps> = ({ profile, onBack, resetTokens }) => {
+const Settings: React.FC<SettingsProps> = ({ profile, onBack, resetTokens, onClearResetTokens }) => {
   const { toast } = useToast();
   const { fetchProfile, setProfile, isSubscriptionActive } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -185,6 +186,7 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack, resetTokens }) => 
       // Clear reset state if this was a password reset
       if (isPasswordReset) {
         setIsPasswordReset(false);
+        onClearResetTokens?.();
       }
     } catch (error) {
       console.error('Error changing password:', error);
@@ -680,7 +682,14 @@ const Settings: React.FC<SettingsProps> = ({ profile, onBack, resetTokens }) => 
             
             <div className="flex gap-3 mt-6">
               <Button
-                onClick={() => setShowPasswordChange(false)}
+                onClick={() => {
+                  setShowPasswordChange(false);
+                  // Clear reset state when canceling
+                  if (isPasswordReset) {
+                    setIsPasswordReset(false);
+                    onClearResetTokens?.();
+                  }
+                }}
                 variant="outline"
                 className="flex-1"
               >

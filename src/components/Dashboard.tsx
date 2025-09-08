@@ -19,9 +19,10 @@ interface DashboardProps {
   onBack: () => void;
   initialTab?: string;
   resetTokens?: {accessToken: string, refreshToken: string} | null;
+  onClearResetTokens?: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab, resetTokens }) => {
+const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab, resetTokens, onClearResetTokens }) => {
   const { profile, user } = useAuth();
   const { toast } = useToast();
   const [children, setChildren] = useState<Child[]>([]);
@@ -46,12 +47,15 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab, resetTokens }
   const [loadedConversation, setLoadedConversation] = useState<SavedConversation | null>(null);
   const [selectedTipCategory, setSelectedTipCategory] = useState<string>('ai-basics');
 
-  // Set initial tab if provided
+  // Set initial tab if provided, or automatically go to settings for password reset
   useEffect(() => {
-    if (initialTab && ['children', 'conversations', 'support', 'tips', 'faq', 'settings'].includes(initialTab)) {
+    if (resetTokens) {
+      // Automatically navigate to settings tab for password reset flows
+      setActiveTab('settings');
+    } else if (initialTab && ['children', 'conversations', 'support', 'tips', 'faq', 'settings'].includes(initialTab)) {
       setActiveTab(initialTab as 'children' | 'conversations' | 'support' | 'tips' | 'faq' | 'settings');
     }
-  }, [initialTab]);
+  }, [initialTab, resetTokens]);
 
   useEffect(() => {
     if (profile) {
@@ -1283,6 +1287,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onBack, initialTab, resetTokens }
             profile={profile}
             onBack={() => setActiveTab('children')}
             resetTokens={resetTokens}
+            onClearResetTokens={onClearResetTokens}
           />
         )}
       </div>

@@ -494,6 +494,7 @@ const AuthenticatedApp: React.FC = () => {
             onBack={() => setCurrentView('welcome')}
             initialTab={redirectToTab}
             resetTokens={resetTokens}
+            onClearResetTokens={() => setResetTokens(null)}
           />
         )}
         {currentView === 'category-selector' && selectedChild && (
