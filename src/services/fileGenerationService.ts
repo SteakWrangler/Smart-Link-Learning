@@ -149,8 +149,32 @@ class FileGenerationService {
         }
         // If includeAnswers is false, skip this line entirely
       } else if (line.trim().match(/^\d+\./)) {
-        // Numbered question
-        const questionLines = this.splitTextIntoLines(line, pageWidth - (margin * 2), doc);
+        // Numbered question - check if it contains multiple choice answers inline
+        let questionText = line;
+        let hasInlineChoices = false;
+        
+        // Check if this line contains multiple choice answers (A. B. C. D. or A) B) C) D))
+        const choicePattern = /([A-D][.)])\s*([^A-D].*?)(?=\s[A-D][.)]|$)/g;
+        const choices: string[] = [];
+        
+        // Extract choices if they exist
+        let match;
+        while ((match = choicePattern.exec(line)) !== null) {
+          choices.push(`${match[1]} ${match[2].trim()}`);
+        }
+        
+        // If we found choices, separate them from the question
+        if (choices.length >= 2) {
+          hasInlineChoices = true;
+          // Extract just the question part (before the first choice)
+          const firstChoiceIndex = line.search(/[A-D][.)]/);
+          if (firstChoiceIndex > 0) {
+            questionText = line.substring(0, firstChoiceIndex).trim();
+          }
+        }
+        
+        // Add the question text
+        const questionLines = this.splitTextIntoLines(questionText, pageWidth - (margin * 2), doc);
         for (const questionLine of questionLines) {
           if (yPosition > pageHeight - margin) {
             doc.addPage();
@@ -159,7 +183,36 @@ class FileGenerationService {
           doc.text(questionLine, margin, yPosition);
           yPosition += 8;
         }
-        yPosition += 4; // Extra space after question
+        
+        // Add the choices on separate lines if they were inline
+        if (hasInlineChoices) {
+          yPosition += 4; // Extra space before choices
+          for (const choice of choices) {
+            const choiceLines = this.splitTextIntoLines(choice, pageWidth - (margin * 2) - 10, doc);
+            for (const choiceLine of choiceLines) {
+              if (yPosition > pageHeight - margin) {
+                doc.addPage();
+                yPosition = margin;
+              }
+              doc.text(choiceLine, margin + 10, yPosition); // Indent choices
+              yPosition += 8;
+            }
+          }
+        }
+        
+        yPosition += 4; // Extra space after question/choices
+      } else if (line.trim().match(/^[A-D][.)]\s+/)) {
+        // Standalone multiple choice answer (A. or A) followed by text)
+        const choiceLines = this.splitTextIntoLines(line, pageWidth - (margin * 2) - 10, doc);
+        for (const choiceLine of choiceLines) {
+          if (yPosition > pageHeight - margin) {
+            doc.addPage();
+            yPosition = margin;
+          }
+          doc.text(choiceLine, margin + 10, yPosition); // Indent choices
+          yPosition += 8;
+        }
+        yPosition += 2; // Small space after choice
       } else {
         // Regular text line
         const textLines = this.splitTextIntoLines(line, pageWidth - (margin * 2), doc);
@@ -241,8 +294,44 @@ class FileGenerationService {
         }
         // If includeAnswers is false, skip this line entirely
       } else if (line.trim().match(/^\d+\./)) {
-        // Numbered question - add spacing
-        content += line + '\n\n';
+        // Numbered question - check if it contains multiple choice answers inline
+        let questionText = line;
+        let hasInlineChoices = false;
+        
+        // Check if this line contains multiple choice answers (A. B. C. D. or A) B) C) D))
+        const choicePattern = /([A-D][.)])\s*([^A-D].*?)(?=\s[A-D][.)]|$)/g;
+        const choices: string[] = [];
+        
+        // Extract choices if they exist
+        let match;
+        while ((match = choicePattern.exec(line)) !== null) {
+          choices.push(`${match[1]} ${match[2].trim()}`);
+        }
+        
+        // If we found choices, separate them from the question
+        if (choices.length >= 2) {
+          hasInlineChoices = true;
+          // Extract just the question part (before the first choice)
+          const firstChoiceIndex = line.search(/[A-D][.)]/);
+          if (firstChoiceIndex > 0) {
+            questionText = line.substring(0, firstChoiceIndex).trim();
+          }
+        }
+        
+        // Add the question text
+        content += questionText + '\n';
+        
+        // Add the choices on separate lines if they were inline
+        if (hasInlineChoices) {
+          for (const choice of choices) {
+            content += '   ' + choice + '\n'; // Indent choices
+          }
+        }
+        
+        content += '\n'; // Extra space after question/choices
+      } else if (line.trim().match(/^[A-D][.)]\s+/)) {
+        // Standalone multiple choice answer (A. or A) followed by text)
+        content += '   ' + line + '\n'; // Indent choices
       } else {
         // Regular text line
         content += line + '\n';

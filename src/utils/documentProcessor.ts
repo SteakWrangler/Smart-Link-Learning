@@ -75,15 +75,20 @@ const extractTextWithPdfParse = async (file: File): Promise<string> => {
 // Extract text from PDF files
 export const extractTextFromPDF = async (file: File): Promise<string> => {
   try {
-    console.log('Starting PDF text extraction for:', file.name, 'Size:', file.size, 'Type:', file.type);
+    console.log('[DOC-PROCESSOR-DEBUG] 🚀 documentProcessor.ts: Starting PDF extraction...');
+    console.log('[DOC-PROCESSOR-DEBUG] File details:', { name: file.name, size: file.size, type: file.type });
     
     if (file.type !== 'application/pdf') {
+      console.error('[DOC-PROCESSOR-DEBUG] ❌ Invalid file type:', file.type);
       throw new Error('File is not a PDF document');
     }
     
     if (file.size > 10 * 1024 * 1024) {
+      console.error('[DOC-PROCESSOR-DEBUG] ❌ File too large:', file.size);
       throw new Error('PDF file is too large (max 10MB)');
     }
+    
+    console.log('[DOC-PROCESSOR-DEBUG] ✅ Initial validation passed, proceeding to PDF.js extraction...');
     
     // Convert file to array buffer
     const arrayBuffer = await file.arrayBuffer();
@@ -270,31 +275,47 @@ export const extractTextFromDOC = async (file: File): Promise<string> => {
 
 // Main function to extract text from any supported file type
 export const extractTextFromFile = async (file: File): Promise<string> => {
+  console.log('[DOC-PROCESSOR-DEBUG] 🎯 Main extractTextFromFile called');
+  console.log('[DOC-PROCESSOR-DEBUG] File info:', { name: file.name, size: file.size, type: file.type });
+  
   const fileCheck = isFileTypeSupported(file);
+  console.log('[DOC-PROCESSOR-DEBUG] File type support check:', fileCheck);
   
   if (!fileCheck.supported) {
+    console.error('[DOC-PROCESSOR-DEBUG] ❌ File type not supported');
     throw new Error(fileCheck.message || 'File type not supported');
   }
   
   try {
+    console.log('[DOC-PROCESSOR-DEBUG] 🔄 Routing to appropriate extraction method...');
+    
     switch (file.type) {
       case 'application/pdf':
+        console.log('[DOC-PROCESSOR-DEBUG] 📄 Routing to PDF extraction');
         return await extractTextFromPDF(file);
       
       case 'text/plain':
+        console.log('[DOC-PROCESSOR-DEBUG] 📝 Routing to TXT extraction');
         return await extractTextFromTXT(file);
       
       case 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        console.log('[DOC-PROCESSOR-DEBUG] 📄 Routing to DOCX extraction');
         return await extractTextFromDOCX(file);
       
       case 'application/msword':
+        console.log('[DOC-PROCESSOR-DEBUG] 📄 Routing to DOC extraction');
         return await extractTextFromDOC(file);
       
       default:
+        console.error('[DOC-PROCESSOR-DEBUG] ❌ Unsupported file type in switch:', file.type);
         throw new Error(`Unsupported file type: ${file.type}`);
     }
   } catch (error) {
-    console.error('Text extraction failed for file:', file.name, error);
+    console.error('[DOC-PROCESSOR-DEBUG] ❌ Text extraction failed for file:', file.name);
+    console.error('[DOC-PROCESSOR-DEBUG] Error type:', typeof error);
+    console.error('[DOC-PROCESSOR-DEBUG] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[DOC-PROCESSOR-DEBUG] Full error:', error);
+    
     if (error instanceof Error) {
       throw error;
     }

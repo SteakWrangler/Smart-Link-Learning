@@ -45,59 +45,84 @@ export const processDocument = async (
   learnerName: string
 ): Promise<{ extractedText: string; analysis: any; error?: string }> => {
   try {
-    console.log('Starting document processing for:', documentId, 'File type:', file.type);
+    console.log('[DOC-SERVICE-DEBUG] 🚀 Starting document processing...');
+    console.log('[DOC-SERVICE-DEBUG] Document ID:', documentId);
+    console.log('[DOC-SERVICE-DEBUG] File details:', { name: file.name, size: file.size, type: file.type });
+    console.log('[DOC-SERVICE-DEBUG] Learner name:', learnerName);
     
     // Perform security checks for all file types
+    console.log('[DOC-SERVICE-DEBUG] 🔒 Performing security checks...');
     const securityError = performFileSecurityChecks(file);
     if (securityError) {
+      console.error('[DOC-SERVICE-DEBUG] ❌ Security check failed:', securityError);
       throw new Error(securityError);
     }
+    console.log('[DOC-SERVICE-DEBUG] ✅ Security checks passed');
 
     // All supported files can be processed for text extraction
 
     // Sanitize learner name input
+    console.log('[DOC-SERVICE-DEBUG] 🧹 Sanitizing learner name...');
     const sanitizedLearnerName = sanitizeText(learnerName) || 'Student';
+    console.log('[DOC-SERVICE-DEBUG] Sanitized learner name:', sanitizedLearnerName);
     
     // Extract text from file with timeout protection
-    console.log('=== STARTING TEXT EXTRACTION ===');
-    console.log('File type:', file.type);
-    console.log('File size:', file.size);
-    console.log('File name:', file.name);
+    console.log('[DOC-SERVICE-DEBUG] 🔥 === STARTING TEXT EXTRACTION ===');
+    console.log('[DOC-SERVICE-DEBUG] File type:', file.type);
+    console.log('[DOC-SERVICE-DEBUG] File size:', file.size);
+    console.log('[DOC-SERVICE-DEBUG] File name:', file.name);
     
+    console.log('[DOC-SERVICE-DEBUG] Setting up extraction promise with 30s timeout...');
     const extractionPromise = extractTextFromFile(file);
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('File processing timeout')), 30000); // 30 second timeout
+      setTimeout(() => {
+        console.error('[DOC-SERVICE-DEBUG] ⏰ Extraction timeout after 30 seconds!');
+        reject(new Error('File processing timeout'));
+      }, 30000); // 30 second timeout
     });
     
+    console.log('[DOC-SERVICE-DEBUG] 🏃 Racing extraction vs timeout...');
     const extractedText = await Promise.race([extractionPromise, timeoutPromise]);
     
-    console.log('=== TEXT EXTRACTION COMPLETE ===');
-    console.log('Extracted text length:', extractedText.length);
-    console.log('First 200 chars:', extractedText.substring(0, 200));
+    console.log('[DOC-SERVICE-DEBUG] ✅ === TEXT EXTRACTION COMPLETE ===');
+    console.log('[DOC-SERVICE-DEBUG] Extracted text length:', extractedText.length);
+    console.log('[DOC-SERVICE-DEBUG] First 200 chars:', extractedText.substring(0, 200));
     
     // Sanitize extracted text to prevent any potential issues
+    console.log('[DOC-SERVICE-DEBUG] 🧹 Sanitizing extracted text...');
     const sanitizedText = sanitizeText(extractedText);
+    console.log('[DOC-SERVICE-DEBUG] Sanitized text length:', sanitizedText.length);
     
     // Limit extracted content size to prevent storage issues
+    console.log('[DOC-SERVICE-DEBUG] ✂️ Truncating to 50KB limit...');
     const truncatedText = sanitizedText.substring(0, 50000); // 50KB limit
+    console.log('[DOC-SERVICE-DEBUG] Final text length after truncation:', truncatedText.length);
     
     // Analyze the content if it appears to be a test
+    console.log('[DOC-SERVICE-DEBUG] 🔍 Checking if content should be analyzed...');
     let analysis = null;
-    if (file.name.toLowerCase().includes('test') || 
-        truncatedText.toLowerCase().includes('question') ||
-        truncatedText.toLowerCase().includes('answer') ||
-        truncatedText.toLowerCase().includes('math')) {
-      
+    const shouldAnalyze = file.name.toLowerCase().includes('test') || 
+                         truncatedText.toLowerCase().includes('question') ||
+                         truncatedText.toLowerCase().includes('answer') ||
+                         truncatedText.toLowerCase().includes('math');
+    
+    console.log('[DOC-SERVICE-DEBUG] Should analyze:', shouldAnalyze);
+    
+    if (shouldAnalyze) {
       try {
+        console.log('[DOC-SERVICE-DEBUG] 📊 Running content analysis...');
         analysis = analyzeTestContent(truncatedText, sanitizedLearnerName);
-        console.log('Generated analysis:', analysis);
+        console.log('[DOC-SERVICE-DEBUG] ✅ Generated analysis:', analysis);
       } catch (analysisError) {
-        console.warn('Analysis failed, continuing without analysis:', analysisError);
+        console.warn('[DOC-SERVICE-DEBUG] ⚠️ Analysis failed, continuing without analysis:', analysisError);
         // Don't fail the entire process if analysis fails
       }
+    } else {
+      console.log('[DOC-SERVICE-DEBUG] ⏭️ Skipping analysis (not a test document)');
     }
     
     // Update the document in the database
+    console.log('[DOC-SERVICE-DEBUG] 💾 Updating document in database...');
     const { error } = await supabase
       .from('documents')
       .update({
@@ -109,29 +134,37 @@ export const processDocument = async (
       .eq('id', documentId);
     
     if (error) {
-      console.error('Error updating document:', error);
+      console.error('[DOC-SERVICE-DEBUG] ❌ Error updating document:', error);
       throw error;
     }
     
-    console.log('Document processing completed successfully');
+    console.log('[DOC-SERVICE-DEBUG] ✅ Document processing completed successfully!');
+    console.log('[DOC-SERVICE-DEBUG] Final result summary:', {
+      documentId,
+      textLength: truncatedText.length,
+      hasAnalysis: !!analysis
+    });
     
     return {
       extractedText: truncatedText,
       analysis
     };
   } catch (error) {
-    console.error('=== DOCUMENT PROCESSING ERROR ===');
-    console.error('Error details:', error);
-    console.error('Error type:', typeof error);
-    console.error('Error message:', error instanceof Error ? error.message : String(error));
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('[DOC-SERVICE-DEBUG] 💥 === DOCUMENT PROCESSING ERROR ===');
+    console.error('[DOC-SERVICE-DEBUG] Error details:', error);
+    console.error('[DOC-SERVICE-DEBUG] Error type:', typeof error);
+    console.error('[DOC-SERVICE-DEBUG] Error message:', error instanceof Error ? error.message : String(error));
+    console.error('[DOC-SERVICE-DEBUG] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error('[DOC-SERVICE-DEBUG] Full error object:', error);
     
     // Create safe error message for logging
+    console.log('[DOC-SERVICE-DEBUG] 🛡️ Creating safe error message...');
     const safeErrorMessage = createSafeErrorMessage(error);
-    console.log('Safe error message:', safeErrorMessage);
+    console.log('[DOC-SERVICE-DEBUG] Safe error message:', safeErrorMessage);
     
     // Update the document with error status
     try {
+      console.log('[DOC-SERVICE-DEBUG] 💾 Updating document with error status...');
       await supabase
         .from('documents')
         .update({
@@ -141,12 +174,13 @@ export const processDocument = async (
         })
         .eq('id', documentId);
         
-      console.log('Updated database with error status');
+      console.log('[DOC-SERVICE-DEBUG] ✅ Updated database with error status');
     } catch (updateError) {
-      console.error('Error updating document with error status:', updateError);
+      console.error('[DOC-SERVICE-DEBUG] ❌ Error updating document with error status:', updateError);
     }
     
     // Return partial result with error information
+    console.log('[DOC-SERVICE-DEBUG] 🔄 Returning error result');
     return {
       extractedText: '',
       analysis: null,

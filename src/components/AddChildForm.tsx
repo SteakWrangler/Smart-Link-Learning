@@ -14,11 +14,6 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
   onCancel,
   editingChild
 }) => {
-  const [name, setName] = useState(editingChild?.name || '');
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(editingChild?.subjects || []);
-  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
-  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(editingChild?.challenges || []);
-
   const subjects = [
     { id: 'math', label: 'Math', color: 'bg-blue-100 text-blue-700' },
     { id: 'reading', label: 'Reading', color: 'bg-green-100 text-green-700' },
@@ -54,6 +49,28 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
     { id: 'language-delays', label: 'Language Delays', color: 'bg-indigo-100 text-indigo-700' },
     { id: 'general-support', label: 'General Learning Support', color: 'bg-lime-100 text-lime-700' }
   ];
+
+  // Helper functions to convert labels back to IDs for editing
+  const getSubjectIds = (subjectLabels: string[]) => {
+    return subjectLabels.map(label => 
+      subjects.find(s => s.label === label)?.id || label
+    );
+  };
+
+  const getChallengeIds = (challengeLabels: string[]) => {
+    return challengeLabels.map(label => 
+      challenges.find(c => c.label === label)?.id || label
+    );
+  };
+
+  const [name, setName] = useState(editingChild?.name || '');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
+    editingChild?.subjects ? getSubjectIds(editingChild.subjects) : []
+  );
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState(editingChild?.ageGroup || '');
+  const [selectedChallenges, setSelectedChallenges] = useState<string[]>(
+    editingChild?.challenges ? getChallengeIds(editingChild.challenges) : []
+  );
 
   const handleSubjectToggle = (subjectId: string) => {
     setSelectedSubjects(prev => 
@@ -105,7 +122,7 @@ const AddChildForm: React.FC<AddChildFormProps> = ({
     onToggle 
   }: {
     title: string;
-    icon: React.ComponentType<any>;
+    icon: React.ComponentType<{className?: string; size?: number}>;
     items: Array<{ id: string; label: string; color: string }>;
     selectedItems: string[];
     onToggle: (id: string) => void;

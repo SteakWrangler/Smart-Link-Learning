@@ -1195,6 +1195,7 @@ The activity should immerse the student in the theme's world and make the learni
       };
 
       setMessages(prev => [...prev, aiMessageObj]);
+      setHasUnsavedChanges(true);
     } catch (error) {
       console.error('Error generating response:', error);
       
