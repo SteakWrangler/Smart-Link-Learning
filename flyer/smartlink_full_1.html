@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Smart Link Learning – Personalized Learning</title>
+  <style>
+    :root {
+      --blue-900: #1f64c9;  /* hero background */
+      --blue-800: #0f56be;
+      --blue-200: #e7f0ff;
+      --text: #0a1a2b;
+      --muted: #385b86;
+      --white: #ffffff;
+      --accent: #ffd24a;
+      --maxw: 1100px;
+      --radius: 16px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      line-height: 1.4;
+      background: #f6f8fb;
+    }
+
+    .hero {
+      background: var(--blue-900);
+      color: var(--white);
+      padding: clamp(32px, 5vw, 64px) 20px;
+      text-align: center;
+    }
+    .container { max-width: var(--maxw); margin: 0 auto; }
+    .hero h1 {
+      font-size: clamp(28px, 5vw, 56px);
+      letter-spacing: .2px;
+      margin: 0 0 12px;
+      font-weight: 800;
+    }
+    .hero p { 
+      font-size: clamp(14px, 2.2vw, 20px); 
+      margin: 12px auto 0; 
+      max-width: 960px; 
+      color: #e9f1ff; 
+    }
+
+    .content {
+      background: var(--white);
+      border-top: 8px solid var(--blue-800);
+      padding: 28px 20px 20px 20px;
+    }
+
+    /* Two-column main section */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: start;
+    }
+    @media (max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .illustration { order: -1; text-align: center; }
+    }
+
+    h2.section-title {
+      font-size: 28px;
+      color: var(--text);
+      margin: 0 0 14px;
+      font-weight: 800;
+    }
+
+    .bullets { display: grid; gap: 16px; }
+    .item {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .icon {
+      width: 56px; height: 56px;
+      display: grid; place-items: center;
+      background: var(--blue-200);
+      border-radius: 50%;
+      font-size: 26px;
+    }
+    .item h3 {
+      margin: 0 0 8px; font-size: 18px; font-weight: 800; color: var(--text);
+    }
+    .item p { margin: 0; color: var(--muted); font-size: 18px; line-height: 1.5; }
+
+    .illustration img {
+      width: 100%;
+      height: auto;
+      border-radius: 10px;
+      box-shadow: 0 6px 22px rgba(10, 35, 75, .12);
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      margin-top: -80px;
+      align-items: end;
+      margin-bottom: 10px;
+    }
+    @media (max-width: 760px) { .split { grid-template-columns: 1fr; } }
+
+    .card {
+      background: #4cbc7a;
+      padding: 6px 10px;
+      border-radius: var(--radius);
+      border: 1px solid #3ba866;
+      color: #ffffff;
+      display: inline-block;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    .card * { margin-bottom: 0 !important; }
+    .card a {
+      color: #e8f9f0;
+      text-decoration: underline;
+    }
+
+    .who { padding-left: 0; }
+    .who h2 { font-size: 28px !important; margin-bottom: 14px !important; }
+    .who ul { margin: 0; list-style: none; padding: 0; }
+    .who li { margin: 10px 0; font-size: 18px; line-height: 1.4; }
+    .get ul { margin: 2px 0 0 1.1rem; list-style: disc; padding: 0; }
+    .get li { margin: 1px 0; font-size: 13px; line-height: 1.2; }
+    .get h2 { font-size: 18px !important; margin: 0 0 2px !important; font-weight: 700; }
+    .get p { font-size: 13px; margin: 3px 0 0 0 !important; line-height: 1.2; }
+    .get p:last-child { margin-bottom: 0 !important; }
+
+    .footer-note { text-align: center; color: #6c7ea7; font-size: 13px; margin: 24px 0 10px; }
+    a { color: #0c56cf; }
+
+    /* Print/Screenshot optimized for 8.5x11 letter paper */
+    @page {
+      size: letter;
+      margin: 0;
+    }
+    body {
+      max-width: 8.5in;
+      margin: 0 auto;
+    }
+    .container {
+      max-width: 100%;
+    }
+    .hero {
+      padding: 32px 20px;
+    }
+    .hero h1 {
+      font-size: 42px;
+      line-height: 1.1;
+    }
+    .hero p {
+      font-size: 16px;
+    }
+    .content {
+      padding: 28px 20px 20px;
+    }
+    h2.section-title {
+      font-size: 28px;
+      margin-bottom: 14px;
+    }
+    .illustration img {
+      max-width: 280px;
+    }
+    .item {
+      gap: 16px;
+    }
+    .item h3 {
+      font-size: 18px;
+    }
+    .item p {
+      font-size: 18px;
+    }
+    .bullets {
+      gap: 16px;
+    }
+    @media print {
+      body {
+        width: 8.5in;
+        height: 11in;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="container">
+      <h1>Personalized Learning.<br/>Powered by AI.<br/>Built for Every Child.</h1>
+      <p>
+        Smart Link Learning creates instant, customized lessons, worksheets, and activities for students from kindergarten through college — supporting every learner’s unique journey.
+      </p>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="container">
+      <div class="grid">
+        <section>
+          <h2 class="section-title">Why Parents &amp; Teachers Love It</h2>
+          <div class="bullets">
+            <div class="item">
+              <div class="icon">💡</div>
+              <div>
+                <h3>Instant Personalization</h3>
+                <p>AI adapts to age, subjects, and learning needs in seconds</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <div class="icon">📚</div>
+              <div>
+                <h3>Unlimited Resources</h3>
+                <p>Generate lesson plans, worksheets, practice tests, and activities on-demand</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <div class="icon">🧑‍🤝‍🧑</div>
+              <div>
+                <h3>Students</h3>
+                <p>Kindergarten through college, including learners with differences and advanced achievers</p>
+              </div>
+            </div>
+
+            <div class="item">
+              <div class="icon">🚀</div>
+              <div>
+                <h3>Fun &amp; Engaging</h3>
+                <p>Themed adventures like space, dinosaurs, or detective mysteries make learning exciting</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="illustration">
+          <img src="images/boy-girl.png" alt="Students using laptops illustration" />
+        </aside>
+      </div>
+
+      <div class="split">
+        <section class="get card">
+          <h2 class="section-title">Get Started</h2>
+          <ul>
+            <li>Free 14‑Day Trial</li>
+            <li>Affordable subscriptions for families, tutors, and schools</li>
+          </ul>
+          <p><strong>Visit:</strong> <a href="https://smartlinklearning.com">smartlinklearning.com</a></p>
+          <p>Questions? We'd love to hear from you at <a href="mailto:linksmarttechllc@gmail.com">linksmarttechllc@gmail.com</a></p>
+        </section>
+
+        <section class="who">
+          <h2 class="section-title">Who It's For</h2>
+          <ul>
+            <li><strong>Parents</strong> — Homeschooling, after‑school help, or enrichment at home</li>
+            <li><strong>Teachers</strong> — Personalized classroom materials and lesson planning</li>
+            <li><strong>Tutors</strong> — Create individual profiles for multiple students with custom resources for each</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </main>
+
+</body>
+</html>
