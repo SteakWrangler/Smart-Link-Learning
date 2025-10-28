@@ -91,21 +91,23 @@ This document outlines the security features and measures implemented in the Pla
 - [x] GDPR compliance considerations
 - [x] Privacy-focused design choices
 
-## 🚨 Security Incident Response
+## 🚨 Reporting Security Vulnerabilities
 
-### Response Procedures
-1. **Detection**: Automated monitoring and alerting
-2. **Assessment**: Evaluate impact and scope
-3. **Containment**: Isolate affected systems
-4. **Eradication**: Remove security threats
-5. **Recovery**: Restore normal operations
-6. **Lessons Learned**: Document and improve
+If you discover a security vulnerability in this project, please report it responsibly:
 
-### Contact Information
-For security-related concerns about this application:
-- **Email**: [security@playfullearner.com](mailto:security@playfullearner.com)
-- **Response Time**: 48 hours for initial response
+1. **Do not** open a public GitHub issue for security vulnerabilities
+2. Submit a security advisory through GitHub's Security tab
+3. Or contact via email with details of the vulnerability
+4. Allow reasonable time for the issue to be addressed before public disclosure
+
+### What to Include in Your Report
+- Description of the vulnerability
+- Steps to reproduce the issue
+- Potential impact assessment
+- Any suggested fixes (optional)
+
+I take security seriously and will respond to legitimate reports as quickly as possible.
 
 ---
 
-**Note**: This document outlines the security measures implemented in the Playful Learner AI Guide application. These features demonstrate advanced security implementation skills including authentication, authorization, data protection, and privacy considerations. 
+**Note**: This document outlines the security measures implemented in the Smart Link Learning application. These features demonstrate advanced security implementation skills including authentication, authorization, data protection, and privacy considerations. 

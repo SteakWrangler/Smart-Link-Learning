@@ -1,6 +1,6 @@
 # Development Timeline
 
-This document tracks the development milestones and technical achievements of the Playful Learner AI Guide project.
+This document tracks the development milestones and technical achievements of the Smart Link Learning project.
 
 ## 🎯 Project Milestones
 
